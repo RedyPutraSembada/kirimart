@@ -7,7 +7,8 @@ import { auth } from './lib/auth'
 
 const ROUTES = {
 	auth: ['/sign-in', '/sign-up'],
-	protected: ['/admin-dashboard'],
+	admin: ['/admin-dashboard'],
+	seller: ['/seller-dashboard'],
 	closed: ['/sign-up'],
 }
 
@@ -64,18 +65,33 @@ export async function proxy(req) {
 	// ============================================
 	// RULE 2: Protect Admin Route
 	// ============================================
-	const isAdminRoute = ROUTES.protected.some((route) =>
+	const isAdminRoute = ROUTES.admin.some((route) =>
 		pathname.startsWith(route),
 	)
+
 	if (isAdminRoute) {
 		if (!isAuthenticated) {
-			// Belum login: Redirect ke sign-in
 			return createRedirect(req, '/sign-in', true)
 		}
 
-		// Otorisasi Role (Opsional, tapi penting untuk /dashboard)
 		if (userRole !== 'admin') {
-			// Login, tapi bukan Admin: Redirect ke home atau halaman 403
+			return createRedirect(req, '/')
+		}
+	}
+
+	// ============================================
+	// RULE 3: Protect Seller Route
+	// ============================================
+	const isSellerRoute = ROUTES.seller.some((route) =>
+		pathname.startsWith(route),
+	)
+
+	if (isSellerRoute) {
+		if (!isAuthenticated) {
+			return createRedirect(req, '/sign-in', true)
+		}
+
+		if (userRole !== 'seller') {
 			return createRedirect(req, '/')
 		}
 	}
@@ -88,5 +104,5 @@ export async function proxy(req) {
 // ============================================
 
 export const config = {
-	matcher: ['/sign-in', '/sign-up', '/admin-dashboard/:path*'],
+	matcher: ['/sign-in', '/sign-up', '/admin-dashboard/:path*', '/seller-dashboard/:path*'],
 }
