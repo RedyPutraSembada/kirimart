@@ -21,3 +21,8 @@ export const member = ac.newRole({
     project: ['create', 'update', 'delete'],
     ...defaultStatements,
 })
+
+export const seller = ac.newRole({
+    project: ['create', 'read', 'update', 'delete'],
+    ...defaultStatements,
+})

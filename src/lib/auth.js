@@ -5,7 +5,7 @@ import { env } from "@/config/env";
 import * as schema from '@/config/db/schema'
 import { db } from "@/config/db";
 import { admin as adminPlugin } from 'better-auth/plugins'
-import { ac, admin, user, member } from '@/lib/permissions'
+import { ac, admin, user, member, seller } from '@/lib/permissions'
 
 const resend = new Resend(env.RESEND_API_KEY)
 const appName = env.NEXT_PUBLIC_APP_NAME
@@ -60,16 +60,8 @@ export const auth = betterAuth({
                 admin,
                 user,
                 member,
+                seller
             },
         }),
     ],
-    user: {
-        additionalFields: {
-            role: {
-                type: 'string',
-                defaultValue: 'user', // Tetapkan default di sini
-                input: false, // Melarang input dari client (ini kuncinya!)
-            },
-        },
-    },
 })
