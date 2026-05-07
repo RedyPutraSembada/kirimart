@@ -9,6 +9,7 @@ const ROUTES = {
 	auth: ['/sign-in', '/sign-up'],
 	admin: ['/admin-dashboard'],
 	seller: ['/seller-dashboard'],
+	userProtected: ['/create-store'],
 	closed: ['/sign-up'],
 }
 
@@ -96,6 +97,17 @@ export async function proxy(req) {
 		}
 	}
 
+	// ============================================
+	// RULE 4: Protect Generic User Routes (Create Store, Profil, dll)
+	// ============================================
+	const isUserProtectedRoute = ROUTES.userProtected?.some((route) =>
+		pathname.startsWith(route),
+	)
+
+	if (isUserProtectedRoute && !isAuthenticated) {
+		return createRedirect(req, '/sign-in', true)
+	}
+
 	return NextResponse.next()
 }
 
@@ -104,5 +116,5 @@ export async function proxy(req) {
 // ============================================
 
 export const config = {
-	matcher: ['/sign-in', '/sign-up', '/admin-dashboard/:path*', '/seller-dashboard/:path*'],
+	matcher: ['/sign-in', '/sign-up', '/admin-dashboard/:path*', '/seller-dashboard/:path*', '/create-store/:path*'],
 }

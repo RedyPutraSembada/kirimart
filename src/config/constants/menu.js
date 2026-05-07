@@ -1,4 +1,4 @@
-import { Database, LayoutDashboard, Package } from 'lucide-react'
+import { Database, LayoutDashboard, Package, ShoppingCart, Store, Tag, BarChart3 } from 'lucide-react'
 
 export const menus = [
 	{
@@ -6,43 +6,42 @@ export const menus = [
 		url: '/admin-dashboard',
 		icon: LayoutDashboard,
 	},
-	// {
-	// 	title: 'Warehouse',
-	// 	url: '/admin/warehouse',
-	// 	icon: Package,
-	// 	items: [
-	// 		{
-	// 			title: 'List',
-	// 			url: '/admin/warehouse',
-	// 			permissionPath: '/admin/warehouse',
-	// 		},
-	// 		{
-	// 			title: 'Qurban',
-	// 			url: '/admin/warehouse/qurban',
-	// 			permissionPath: '/admin/warehouse/qurban',
-	// 		},
-	// 		{
-	// 			title: 'Grouping Qurban Animals',
-	// 			url: '/admin/warehouse/grouping-qurban-animals',
-	// 			permissionPath: '/admin/warehouse/grouping-qurban-animals',
-	// 		},
-	// 	],
-	// },
-	// {
-	// 	title: 'Master',
-	// 	url: '/admin/master',
-	// 	icon: Database,
-	// 	items: [
-	// 		{
-	// 			title: 'List',
-	// 			url: '/admin/master',
-	// 			permissionPath: '/admin/master',
-	// 		},
-	// 		{
-	// 			title: 'User',
-	// 			url: '/admin/master/user',
-	// 			permissionPath: '/admin/master/user',
-	// 		},
-	// 	],
-	// },
+]
+
+export const menusSeller = [
+	{
+		title: 'Dashboard',
+		url: '/seller-dashboard',
+		icon: LayoutDashboard,
+	},
+	{
+		title: 'Produk',
+		url: '/seller-dashboard/products',
+		icon: Package,
+		items: [
+			{
+				title: 'Semua Produk',
+				url: '/seller-dashboard/products',
+			},
+			{
+				title: 'Tambah Produk',
+				url: '/seller-dashboard/products/new',
+			},
+		],
+	},
+	{
+		title: 'Pesanan',
+		url: '/seller-dashboard/orders',
+		icon: ShoppingCart,
+	},
+	{
+		title: 'Voucher',
+		url: '/seller-dashboard/vouchers',
+		icon: Tag,
+	},
+	{
+		title: 'Profil Toko',
+		url: '/seller-dashboard/store',
+		icon: Store,
+	},
 ]

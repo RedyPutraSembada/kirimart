@@ -1,11 +1,10 @@
 import { DynamicBreadcrumb } from '@/components/global/dynamic-breadcrumb'
 import { ThemeToggle } from '@/components/global/theme-toggle'
-import { AppSidebar } from '@/components/layout/dashboard/app-sidebar'
 import { SellerAppSidebar } from '@/components/layout/seller-dashboard/seller-app-sidebar'
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 
-export default async function AdminLayout({
+export default async function SellerLayout({
 	children,
 }) {
 	return (
@@ -17,7 +16,7 @@ export default async function AdminLayout({
 						<SidebarTrigger className='-ml-1' />
 						<Separator orientation='vertical' className='mr-2 data-[orientation=vertical]:h-4' />
 						<ThemeToggle />
-						<DynamicBreadcrumb basePath='/admin' />
+						<DynamicBreadcrumb basePath='/seller-dashboard' />
 					</div>
 				</header>
 

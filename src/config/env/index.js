@@ -16,10 +16,14 @@ export const env = createEnv({
         // REDIS_MAX_RETRIES_PER_REQUEST: z.coerce.number().nullable().optional(),
         // QUEUE_NAME: z.string().min(1),
     },
+
     client: {
         NEXT_PUBLIC_APP_URL: z.string().min(1),
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(1),
         NEXT_PUBLIC_APP_NAME: z.string().min(1),
+        NEXT_PUBLIC_UPLOAD_URI: z.string().min(1),
+        NEXT_PUBLIC_UPLOAD_API_KEY: z.string().min(1),
+        NEXT_PUBLIC_MAX_FILE_SIZE_MB: z.string().min(1),
     },
     runtimeEnv: {
         DATABASE_URL: process.env.DATABASE_URL,
@@ -34,6 +38,10 @@ export const env = createEnv({
         // REDIS_PASSWORD: process.env.REDIS_PASSWORD,
         // REDIS_DB: process.env.REDIS_DB,
         // REDIS_MAX_RETRIES_PER_REQUEST: process.env.REDIS_MAX_RETRIES_PER_REQUEST,
+
+        NEXT_PUBLIC_UPLOAD_URI: process.env.NEXT_PUBLIC_UPLOAD_URI,
+        NEXT_PUBLIC_UPLOAD_API_KEY: process.env.NEXT_PUBLIC_UPLOAD_API_KEY,
+        NEXT_PUBLIC_MAX_FILE_SIZE_MB: process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB,
 
         NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,

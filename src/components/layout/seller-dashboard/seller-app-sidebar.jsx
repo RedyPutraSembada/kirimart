@@ -11,7 +11,7 @@ import {
 	SidebarRail,
 } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { menus } from '@/config/constants/menu'
+import { menusSeller } from '@/config/constants/menu'
 import { env } from '@/config/env'
 import { useSession } from '@/lib/auth-client'
 import { AppleIcon, Loader2 } from 'lucide-react'
@@ -38,7 +38,7 @@ export function SellerAppSidebar({ ...props }) {
 				</SidebarMenu>
 			</SidebarHeader>
 			<SidebarContent>
-				<SellerNavMain items={menus} />
+				<SellerNavMain items={menusSeller} />
 			</SidebarContent>
 			<SidebarFooter>
 				{isPending || !session ? (
