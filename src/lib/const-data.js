@@ -7,3 +7,15 @@ export const statusProduct = [
     { value: "deleted", label: "Hapus" },
     { value: "sold_out", label: "Terjual Habis" },
 ]
+
+export const discountTypes = [
+    { value: "fixed", label: "Potongan Nominal (Rp)" },
+    { value: "percentage", label: "Potongan Persentase (%)" },
+    { value: "free_shipping", label: "Gratis Ongkir" },
+]
+
+export const statusVoucher = [
+    { value: "active", label: "Aktif" },
+    { value: "inactive", label: "Nonaktif" },
+    { value: "expired", label: "Kedaluwarsa" },
+]

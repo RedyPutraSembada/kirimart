@@ -38,6 +38,16 @@ export const menusSeller = [
 		title: 'Voucher',
 		url: '/seller-dashboard/vouchers',
 		icon: Tag,
+		items: [
+			{
+				title: 'Semua Voucher',
+				url: '/seller-dashboard/vouchers',
+			},
+			{
+				title: 'Buat Voucher',
+				url: '/seller-dashboard/vouchers/create',
+			},
+		],
 	},
 	{
 		title: 'Profil Toko',
