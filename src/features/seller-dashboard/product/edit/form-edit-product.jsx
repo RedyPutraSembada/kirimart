@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
 	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Save, Image as ImageIcon, Plus, X, Loader2 } from "lucide-react"
+import { ArrowLeft, Save, Plus, X, Loader2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { env } from "@/config/env"
@@ -27,46 +27,52 @@ import { toast } from "sonner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { createProductSchema } from "@/lib/validations/seller-dashboard/product/product"
-import { createProduct } from "@/actions/seller-dashboard/product/product.actions"
+import { updateProduct } from "@/actions/seller-dashboard/product/product.actions"
 import { statusProduct } from "@/lib/const-data"
 
 const uriUpload = env.NEXT_PUBLIC_UPLOAD_URI
 const uploadApiKey = env.NEXT_PUBLIC_UPLOAD_API_KEY
 const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB
 
-
-export function FormCreateProduct({ categories }) {
+export function FormEditProduct({ categories, dataProduct }) {
 	const queryClient = useQueryClient()
 	const router = useRouter()
 	const [isPending, setIsPending] = useState(false)
-	const [imagesPreviews, setImagesPreviews] = useState([])
 	const [isLoadingImage, setIsLoadingImage] = useState(false)
+
+	// Gabungkan previewUrl & serverUrl dalam satu array agar selalu sinkron by index
+	const [images, setImages] = useState(
+		dataProduct?.images?.map((image) => ({
+			previewUrl: image.imageUrl,
+			serverUrl: image.imageUrl,
+		})) || []
+	)
 
 	const form = useForm({
 		resolver: zodResolver(createProductSchema),
 		defaultValues: {
-			name: "",
-			description: "",
-			categoryId: "",
-			weightGram: "",
-			status: "active",
-			price: "",
-			stock: "",
-			images: [],
+			name: dataProduct.name || "",
+			description: dataProduct.description || "",
+			categoryId: dataProduct.categoryId ? String(dataProduct.categoryId) : "",
+			weightGram: dataProduct.weightGram || "",
+			status: dataProduct.status || "",
+			price: dataProduct.price || "",
+			stock: dataProduct.stock || "",
+			images: dataProduct?.images?.map((image) => image.imageUrl) || [],
 		},
 	})
 
 	const { clearErrors, setError: setFormError } = form
 
-	const createMutation = useMutation({
-		mutationFn: createProduct,
+	const updateMutation = useMutation({
+		mutationFn: (data) => updateProduct(dataProduct.id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["seller-products"] })
-			toast.success("Produk berhasil ditambahkan!")
+			toast.success("Produk berhasil diperbarui!")
 			router.push("/seller-dashboard/products")
 		},
 		onError: (error) => {
-			toast.error(error?.message ?? "Gagal menambahkan produk.")
+			toast.error(error?.message ?? "Gagal memperbarui produk.")
 			setIsPending(false)
 		},
 	})
@@ -74,7 +80,7 @@ export function FormCreateProduct({ categories }) {
 	async function onSubmit(data) {
 		setIsPending(true)
 		try {
-			await createMutation.mutateAsync(data)
+			await updateMutation.mutateAsync(data)
 		} catch {
 			setIsPending(false)
 		}
@@ -105,7 +111,6 @@ export function FormCreateProduct({ categories }) {
 	const watchedStatus = form.watch("status")
 
 	const selectedCategory = categories.find(c => String(c.id) === watchedCategory)
-	const selectedStatus = statusProduct.find(s => String(s.value) === watchedStatus)
 
 	return (
 		<div className="space-y-6">
@@ -117,8 +122,8 @@ export function FormCreateProduct({ categories }) {
 					</Link>
 				</Button>
 				<div>
-					<h1 className="text-2xl font-bold tracking-tight">Tambah Produk Baru</h1>
-					<p className="text-muted-foreground">Isi detail produk yang ingin Anda jual.</p>
+					<h1 className="text-2xl font-bold tracking-tight">Edit Produk</h1>
+					<p className="text-muted-foreground">Ubah detail produk yang ingin Anda jual.</p>
 				</div>
 			</div>
 
@@ -169,18 +174,13 @@ export function FormCreateProduct({ categories }) {
 									/>
 
 									<div className="grid grid-cols-1 items-start gap-6 sm:grid-cols-3">
-
 										<FormField
 											control={form.control}
 											name="categoryId"
 											render={({ field }) => (
 												<FormItem>
 													<FormLabel>Kategori</FormLabel>
-													<Select
-														onValueChange={field.onChange}
-														defaultValue={field.value}
-														disabled={isPending}
-													>
+													<Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
 														<FormControl>
 															<SelectTrigger className="w-full">
 																<SelectValue placeholder="Pilih kategori" />
@@ -188,9 +188,7 @@ export function FormCreateProduct({ categories }) {
 														</FormControl>
 														<SelectContent>
 															{categories.map((c) => (
-																<SelectItem key={c.id} value={String(c.id)}>
-																	{c.name}
-																</SelectItem>
+																<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
 															))}
 														</SelectContent>
 													</Select>
@@ -206,13 +204,7 @@ export function FormCreateProduct({ categories }) {
 												<FormItem>
 													<FormLabel>Berat (gram)</FormLabel>
 													<FormControl>
-														<Input
-															type="number"
-															placeholder="800"
-															className="w-full"
-															{...field}
-															disabled={isPending}
-														/>
+														<Input type="number" placeholder="800" className="w-full" {...field} disabled={isPending} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -225,11 +217,7 @@ export function FormCreateProduct({ categories }) {
 											render={({ field }) => (
 												<FormItem>
 													<FormLabel>Status Produk</FormLabel>
-													<Select
-														onValueChange={field.onChange}
-														defaultValue={field.value}
-														disabled={isPending}
-													>
+													<Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
 														<FormControl>
 															<SelectTrigger className="w-full">
 																<SelectValue placeholder="Pilih status" />
@@ -237,9 +225,7 @@ export function FormCreateProduct({ categories }) {
 														</FormControl>
 														<SelectContent>
 															{statusProduct.map((c) => (
-																<SelectItem key={c.value} value={c.value}>
-																	{c.label}
-																</SelectItem>
+																<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
 															))}
 														</SelectContent>
 													</Select>
@@ -247,7 +233,6 @@ export function FormCreateProduct({ categories }) {
 												</FormItem>
 											)}
 										/>
-
 									</div>
 								</CardContent>
 							</Card>
@@ -270,7 +255,6 @@ export function FormCreateProduct({ categories }) {
 												</FormItem>
 											)}
 										/>
-
 										<FormField
 											control={form.control}
 											name="stock"
@@ -301,23 +285,23 @@ export function FormCreateProduct({ categories }) {
 													<div className="space-y-3">
 														<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
 															{/* Preview images */}
-															{imagesPreviews.map((preview, index) => (
+															{images.map((img, index) => (
 																<div
 																	key={index}
 																	className="relative aspect-square rounded-lg border bg-muted/50 flex items-center justify-center group overflow-hidden"
 																>
 																	<img
-																		src={preview}
+																		src={img.previewUrl}
 																		alt={`Preview ${index + 1}`}
 																		className="w-full h-full object-cover rounded-lg"
 																	/>
 																	<button
 																		type="button"
 																		onClick={() => {
-																			const newPreviews = imagesPreviews.filter((_, i) => i !== index)
-																			const newUrls = (field.value || []).filter((_, i) => i !== index)
-																			setImagesPreviews(newPreviews)
-																			field.onChange(newUrls)
+																			// Hapus entry dari images state dan sync ke field.value
+																			const newImages = images.filter((_, i) => i !== index)
+																			setImages(newImages)
+																			field.onChange(newImages.map((img) => img.serverUrl))
 																		}}
 																		className="absolute top-1 right-1 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
 																	>
@@ -362,8 +346,13 @@ export function FormCreateProduct({ categories }) {
 																					clearErrors("images")
 																					const uploadedUrl = await uploadImage(file)
 																					if (uploadedUrl) {
-																						field.onChange([...(field.value || []), uploadedUrl])
-																						setImagesPreviews(prev => [...prev, URL.createObjectURL(file)])
+																						const newEntry = {
+																							previewUrl: URL.createObjectURL(file), // hanya untuk preview lokal
+																							serverUrl: uploadedUrl,               // URL asli untuk disimpan
+																						}
+																						const newImages = [...images, newEntry]
+																						setImages(newImages)
+																						field.onChange(newImages.map((img) => img.serverUrl))
 																					}
 																				}
 																			}
@@ -393,7 +382,7 @@ export function FormCreateProduct({ categories }) {
 								<CardContent className="space-y-3 text-sm">
 									<div className="flex justify-between">
 										<span className="text-muted-foreground">Status</span>
-										<span className="font-medium text-amber-600">{selectedStatus?.label}</span>
+										<span className="font-medium text-amber-600">{watchedStatus}</span>
 									</div>
 									<Separator />
 									<div className="flex justify-between">
@@ -417,15 +406,9 @@ export function FormCreateProduct({ categories }) {
 									<Separator />
 									<Button type="submit" className="w-full" disabled={isPending}>
 										{isPending ? (
-											<>
-												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-												Menyimpan...
-											</>
+											<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</>
 										) : (
-											<>
-												<Save className="mr-2 h-4 w-4" />
-												Simpan Produk
-											</>
+											<><Save className="mr-2 h-4 w-4" />Simpan Produk</>
 										)}
 									</Button>
 									<Button variant="outline" className="w-full" type="button" disabled={isPending}>

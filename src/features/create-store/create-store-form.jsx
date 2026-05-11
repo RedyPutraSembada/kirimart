@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
-import { createStoreSchema } from "@/lib/validations/store"
+import { createStoreSchema } from "@/lib/validations/protected/create-store"
 import { createStore } from "@/actions/protected/store.actions"
 import { Button } from "@/components/ui/button"
 import {

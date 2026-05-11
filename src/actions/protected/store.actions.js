@@ -3,7 +3,7 @@
 import { db } from "@/config/db"
 import { addresses, stores } from "@/config/db/schema"
 import { auth } from "@/lib/auth"
-import { createStoreSchema } from "@/lib/validations/store"
+import { createStoreSchema } from "@/lib/validations/protected/create-store"
 import { eq } from "drizzle-orm"
 import { headers } from "next/headers"
 

@@ -25,7 +25,7 @@ export const menusSeller = [
 			},
 			{
 				title: 'Tambah Produk',
-				url: '/seller-dashboard/products/new',
+				url: '/seller-dashboard/products/create',
 			},
 		],
 	},
