@@ -1,4 +1,4 @@
-import { Database, LayoutDashboard, Package, ShoppingCart, Store, Tag, BarChart3 } from 'lucide-react'
+import { Database, LayoutDashboard, Package, ShoppingCart, Store, Tag, BarChart3, ShieldAlert } from 'lucide-react'
 
 export const menus = [
 	{
@@ -10,6 +10,11 @@ export const menus = [
 		title: 'Kategori Produk',
 		url: '/admin-dashboard/categories',
 		icon: Database,
+	},
+	{
+		title: 'Pengguna',
+		url: '/admin-dashboard/users',
+		icon: ShieldAlert,
 	},
 	{
 		title: 'Voucher Platform',
