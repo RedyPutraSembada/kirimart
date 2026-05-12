@@ -9,4 +9,6 @@ export const stores = pgTable("stores", {
 	logoUrl: text("logo_url"),
 	bannerUrl: text("banner_url"),
 	description: text("description"),
+	status: text("status").default("active"),
+	bannedReason: text("banned_reason"),
 })

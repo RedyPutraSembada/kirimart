@@ -12,6 +12,11 @@ export const menus = [
 		icon: Database,
 	},
 	{
+		title: 'Toko',
+		url: '/admin-dashboard/stores',
+		icon: Store,
+	},
+	{
 		title: 'Pengguna',
 		url: '/admin-dashboard/users',
 		icon: ShieldAlert,
