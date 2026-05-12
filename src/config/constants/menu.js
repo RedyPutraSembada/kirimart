@@ -11,6 +11,21 @@ export const menus = [
 		url: '/admin-dashboard/categories',
 		icon: Database,
 	},
+	{
+		title: 'Voucher Platform',
+		url: '/admin-dashboard/vouchers',
+		icon: Tag,
+		items: [
+			{
+				title: 'Semua Voucher',
+				url: '/admin-dashboard/vouchers',
+			},
+			{
+				title: 'Buat Voucher',
+				url: '/admin-dashboard/vouchers/create',
+			},
+		],
+	},
 ]
 
 export const menusSeller = [
