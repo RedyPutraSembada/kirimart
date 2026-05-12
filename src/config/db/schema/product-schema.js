@@ -7,7 +7,8 @@ export const productStatusEnum = pgEnum("status", [
 	"draft",
 	"inactive",
 	"deleted",
-	"sold_out"
+	"sold_out",
+	"banned"
 ]);
 
 export const products = pgTable("products", {
@@ -22,4 +23,5 @@ export const products = pgTable("products", {
 
 	// 2. Gunakan variabel Enum yang sudah dideklarasikan
 	status: productStatusEnum("status").default("active"),
+	bannedReason: text("banned_reason"),
 });

@@ -12,6 +12,11 @@ export const menus = [
 		icon: Database,
 	},
 	{
+		title: 'Produk',
+		url: '/admin-dashboard/products',
+		icon: Package,
+	},
+	{
 		title: 'Toko',
 		url: '/admin-dashboard/stores',
 		icon: Store,
