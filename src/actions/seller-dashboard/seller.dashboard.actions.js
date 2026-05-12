@@ -17,8 +17,12 @@ export async function getMyStore() {
                 message: "Anda tidak memiliki sesi",
             }
         }
-        const [myStore] = await db.select().from(stores).where(eq(stores.userId, session.user.id)).limit(1);
-
+        const myStore = await db.query.stores.findFirst({
+            where: eq(stores.userId, session.user.id),
+            with: {
+                address: true
+            }
+        });
         console.log("myStore", myStore);
         return {
             success: true,

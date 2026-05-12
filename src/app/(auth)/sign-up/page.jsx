@@ -40,7 +40,7 @@ export default function SignUpPage() {
 
 	async function onSubmit(data) {
 		await authClient.signUp.email(
-			{ ...data, callbackURL: '/' },
+			{ ...data, role: 'user', callbackURL: '/user-dashboard' },
 			{
 				onSuccess: () => {
 					toast.success(
@@ -66,7 +66,7 @@ export default function SignUpPage() {
 			await authClient.signIn.social({
 				provider: 'google',
 				role: 'user',
-				callbackURL: '/',
+				callbackURL: '/user-dashboard',
 			})
 		} catch {
 			toast.error('Gagal daftar dengan Google')

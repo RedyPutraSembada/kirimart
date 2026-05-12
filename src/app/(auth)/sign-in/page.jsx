@@ -12,6 +12,7 @@ import * as z from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 // import { Github } from 'lucide-react' // Pastikan sudah install lucide-react
 import { authClient } from '@/lib/auth-client'
+import { useRouter } from 'next/navigation'
 
 const formSchema = z.object({
 	email: z.string().email('Email tidak valid').min(1, 'Email wajib diisi'),
@@ -19,6 +20,7 @@ const formSchema = z.object({
 })
 
 export default function SignInPage() {
+	const router = useRouter()
 	const form = useForm({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
@@ -44,7 +46,7 @@ export default function SignInPage() {
 				onSuccess: (ctx) => {
 					console.log('Login Berhasil:', ctx.data)
 					toast.success('Selamat datang kembali!')
-					// Arahkan user atau lakukan sesuatu
+					router.push('/user-dashboard')
 				},
 				// 3. Menangkap Detail Error
 				onError: (ctx) => {
@@ -64,7 +66,7 @@ export default function SignInPage() {
 			await authClient.signIn.social({
 				provider: 'google',
 				role: 'user',
-				callbackURL: '/', // Tambahkan tujuan setelah login berhasil
+				callbackURL: '/user-dashboard', // Tambahkan tujuan setelah login berhasil
 			})
 		} catch (error) {
 			toast.error('Gagal login dengan Google')

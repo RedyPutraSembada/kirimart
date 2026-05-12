@@ -7,5 +7,7 @@ export const orders = pgTable("orders", {
 	userId: text("user_id").notNull(),
 	status: text("status").notNull().default("pending"), // pending, paid, shipped, completed
 	totalShipping: integer("total_shipping").notNull().default(0),
+	totalWeightGram: integer("total_weight_gram").notNull().default(0),
 	grandTotal: integer("grand_total").notNull(),
+	shippingAddressId: integer("shipping_address_id"),
 })
