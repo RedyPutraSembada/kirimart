@@ -6,6 +6,11 @@ export const menus = [
 		url: '/admin-dashboard',
 		icon: LayoutDashboard,
 	},
+	{
+		title: 'Kategori Produk',
+		url: '/admin-dashboard/categories',
+		icon: Database,
+	},
 ]
 
 export const menusSeller = [

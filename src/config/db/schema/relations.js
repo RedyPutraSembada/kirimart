@@ -58,8 +58,16 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
 }))
 
 // Catalog Relations
-export const categoriesRelations = relations(categories, ({ many }) => ({
+export const categoriesRelations = relations(categories, ({ one, many }) => ({
     products: many(products),
+    parent: one(categories, {
+        fields: [categories.parentId],
+        references: [categories.id],
+        relationName: "category_parent",
+    }),
+    children: many(categories, {
+        relationName: "category_parent",
+    }),
 }))
 
 export const productsRelations = relations(products, ({ one, many }) => ({
