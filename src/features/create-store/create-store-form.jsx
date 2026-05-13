@@ -111,7 +111,7 @@ export function CreateStoreForm() {
 				</div>
 				<h2 className="text-2xl font-bold">Buka Toko Anda</h2>
 				<p className="text-muted-foreground mt-2">
-					Isi detail di bawah ini untuk mulai berjualan di Kirimart.
+					Isi detail di bawah ini untuk mulai berjualan di KawanBelanja.
 				</p>
 			</div>
 
@@ -147,7 +147,7 @@ export function CreateStoreForm() {
 								<FormControl>
 									<div className="flex items-center">
 										<span className="bg-muted px-3 py-2 border border-r-0 rounded-l-md text-muted-foreground text-sm">
-											kirimart.com/
+											kawanbelanja.com/
 										</span>
 										<Input
 											className="rounded-l-none"

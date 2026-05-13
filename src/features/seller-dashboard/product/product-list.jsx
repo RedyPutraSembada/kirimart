@@ -180,7 +180,9 @@ export function ProductList() {
 																<Image
 																	src={p.images[0].imageUrl}
 																	className="text-muted-foreground"
-																	unoptimized width={100} height={100} alt={p.name} />
+																	unoptimized width={100} height={100} 
+																	alt={p.name}
+																	 />
 															</div>
 															<div className="min-w-0">
 																<p className="font-medium truncate max-w-[200px] lg:max-w-[300px]">{p.name}</p>

@@ -110,15 +110,29 @@ export default function UserDashboardLayout({ children }) {
 					<SheetContent side="left">
 						<div className="flex h-full flex-col gap-6 pt-10">
 							<div className="flex items-center px-2">
-								<Link href="/" className="font-bold text-xl tracking-tight text-primary">KiriMart</Link>
+								<Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight">
+									<div className="h-6 w-6 rounded-md overflow-hidden">
+										<img src="/images/kawanbelanja.png" alt="Logo" className="h-full w-full object-contain" />
+									</div>
+									<div className="flex items-center gap-0">
+										<span className="text-primary font-black tracking-tighter">kawan</span>
+										<span className="text-foreground font-black tracking-tighter">belanja</span>
+									</div>
+								</Link>
 							</div>
 							<NavItems />
 						</div>
 					</SheetContent>
 				</Sheet>
 				<div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-					<Link href="/" className="hidden md:flex font-bold text-xl tracking-tight text-primary mr-auto">
-						KiriMart
+					<Link href="/" className="hidden md:flex items-center gap-2 font-bold text-xl tracking-tight mr-auto">
+						<div className="h-6 w-6 rounded-md overflow-hidden">
+							<img src="/images/kawanbelanja.png" alt="Logo" className="h-full w-full object-contain" />
+						</div>
+						<div className="flex items-center gap-0">
+							<span className="text-primary font-black tracking-tighter">kawan</span>
+							<span className="text-foreground font-black tracking-tighter">belanja</span>
+						</div>
 					</Link>
 					<div className="ml-auto flex items-center gap-2">
 						<span className="text-sm font-medium hidden sm:inline-block">

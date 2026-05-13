@@ -182,7 +182,7 @@ function StoreInfoCard({ store, isLoading }) {
 						<div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
 							<div className="flex items-center gap-1">
 								<Globe className="h-3.5 w-3.5" />
-								kirimart.com/{store.domainSlug}
+								kawanbelanja.com/{store.domainSlug}
 							</div>
 						</div>
 						{store.description && (

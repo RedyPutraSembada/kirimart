@@ -78,7 +78,7 @@ export function StoreProfile() {
 							<div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
 								<div className="flex items-center gap-1">
 									<Globe className="h-3.5 w-3.5" />
-									kirimart.com/{store.domainSlug}
+									kawanbelanja.com/{store.domainSlug}
 								</div>
 								{store.address?.provinceId && (
 									<div className="flex items-center gap-1">
@@ -124,7 +124,7 @@ export function StoreProfile() {
 						<div className="space-y-2">
 							<Label>Domain Toko</Label>
 							<div className="flex items-center">
-								<span className="bg-muted px-3 py-2 border border-r-0 rounded-l-md text-muted-foreground text-sm">kirimart.com/</span>
+								<span className="bg-muted px-3 py-2 border border-r-0 rounded-l-md text-muted-foreground text-sm">kawanbelanja.com/</span>
 								<Input className="rounded-l-none" defaultValue={store.domainSlug} />
 							</div>
 						</div>

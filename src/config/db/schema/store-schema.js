@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer } from "drizzle-orm/pg-core"
+import { pgTable, serial, text, integer, boolean } from "drizzle-orm/pg-core"
 
 export const stores = pgTable("stores", {
 	id: serial("id").primaryKey(),
@@ -9,6 +9,7 @@ export const stores = pgTable("stores", {
 	logoUrl: text("logo_url"),
 	bannerUrl: text("banner_url"),
 	description: text("description"),
+	isStar: boolean("is_star").default(false),
 	status: text("status").default("active"),
 	bannedReason: text("banned_reason"),
 })

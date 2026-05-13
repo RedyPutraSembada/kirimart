@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, serial, text, integer, pgEnum, jsonb, decimal } from "drizzle-orm/pg-core"
 
 export const productStatusEnum = pgEnum("status", [
 	"active",
@@ -17,11 +17,17 @@ export const products = pgTable("products", {
 	categoryId: integer("category_id").notNull(),
 	name: text("name").notNull(),
 	price: integer("price").notNull(),
+	originalPrice: integer("original_price"),
 	stock: integer("stock").notNull().default(0),
 	weightGram: integer("weight_gram").notNull(),
 	description: text("description"),
 
-	// 2. Gunakan variabel Enum yang sudah dideklarasikan
+	// Marketing & Trust
+	soldCount: integer("sold_count").default(0),
+	rating: decimal("rating", { precision: 2, scale: 1 }).default("5.0"),
+	discountRules: jsonb("discount_rules"),
+
+	// Status
 	status: productStatusEnum("status").default("active"),
 	bannedReason: text("banned_reason"),
 });
