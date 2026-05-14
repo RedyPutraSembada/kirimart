@@ -1,4 +1,4 @@
-import { CartView } from "@/features/public/cart-view"
+import { CartView } from "@/features/public/cart/cart-view"
 
 export const metadata = {
   title: "Keranjang Belanja - KiriMart",

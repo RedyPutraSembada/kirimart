@@ -1,4 +1,4 @@
-import { CatalogList } from "@/features/public/catalog-list"
+import { CatalogList } from "@/features/public/catalog/catalog-list"
 import { getCategories } from "@/actions/seller-dashboard/product/product.actions"
 
 export const metadata = {

@@ -1,4 +1,4 @@
-import { CheckoutView } from "@/features/public/checkout-view"
+import { CheckoutView } from "@/features/public/checkout/checkout-view"
 
 export const metadata = {
   title: "Checkout - KiriMart",
