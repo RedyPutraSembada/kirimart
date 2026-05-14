@@ -1,27 +1,24 @@
 "use client"
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
-	Form,
-	FormControl,
-	FormDescription,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
+	Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
 	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Save, Plus, X, Loader2 } from "lucide-react"
+import { ArrowLeft, Save, Plus, X, Loader2, Layers, Tag, Image as ImageIcon } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
 import { env } from "@/config/env"
 import { toast } from "sonner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -29,6 +26,7 @@ import Link from "next/link"
 import { createProductSchema } from "@/lib/validations/seller-dashboard/product/product"
 import { updateProduct } from "@/actions/seller-dashboard/product/product.actions"
 import { statusProduct } from "@/lib/const-data"
+import { generateCartesian, attrKey, uploadFile, OptionValuesInput } from "../shared/variant-helpers"
 
 const uriUpload = env.NEXT_PUBLIC_UPLOAD_URI
 const uploadApiKey = env.NEXT_PUBLIC_UPLOAD_API_KEY
@@ -40,13 +38,36 @@ export function FormEditProduct({ categories, dataProduct }) {
 	const [isPending, setIsPending] = useState(false)
 	const [isLoadingImage, setIsLoadingImage] = useState(false)
 
-	// Gabungkan previewUrl & serverUrl dalam satu array agar selalu sinkron by index
 	const [images, setImages] = useState(
 		dataProduct?.images?.map((image) => ({
 			previewUrl: image.imageUrl,
 			serverUrl: image.imageUrl,
 		})) || []
 	)
+
+	// ── Variant state ────────────────────────────────────────────────────────
+	const initVariantData = () => {
+		const map = {}
+		;(dataProduct.variants || []).forEach(v => {
+			map[attrKey(v.attributes)] = {
+				price: v.price, originalPrice: v.originalPrice ?? "",
+				stock: v.stock, sku: v.sku ?? "", imageUrl: v.imageUrl ?? "",
+			}
+		})
+		return map
+	}
+
+	const [variantData, setVariantData] = useState(initVariantData)
+	const [optionValueImages, setOptionValueImages] = useState({})
+	const [allCombinations, setAllCombinations] = useState([])
+	const [enabledKeys, setEnabledKeys] = useState(new Set())
+
+	const variantDataRef = useRef(variantData)
+	useEffect(() => { variantDataRef.current = variantData }, [variantData])
+	const allCombinationsRef = useRef(allCombinations)
+	useEffect(() => { allCombinationsRef.current = allCombinations }, [allCombinations])
+	const enabledKeysRef = useRef(enabledKeys)
+	useEffect(() => { enabledKeysRef.current = enabledKeys }, [enabledKeys])
 
 	const form = useForm({
 		resolver: zodResolver(createProductSchema),
@@ -56,14 +77,76 @@ export function FormEditProduct({ categories, dataProduct }) {
 			categoryId: dataProduct.categoryId ? String(dataProduct.categoryId) : "",
 			weightGram: dataProduct.weightGram || "",
 			status: dataProduct.status || "",
-			price: dataProduct.price || "",
-			stock: dataProduct.stock || "",
+			basePrice: dataProduct.basePrice || "",
+			originalPrice: dataProduct.originalPrice || "",
+			baseStock: dataProduct.baseStock || "",
 			images: dataProduct?.images?.map((image) => image.imageUrl) || [],
+			hasVariants: (dataProduct.options?.length > 0) || false,
+			options: (dataProduct.options || []).map(o => ({
+				name: o.name, values: o.values || [], displayType: o.displayType || "text",
+			})),
+			variants: dataProduct.variants || [],
 		},
 	})
 
 	const { clearErrors, setError: setFormError } = form
+	const { fields: optionFields, append: appendOption, remove: removeOption } = useFieldArray({
+		control: form.control, name: "options",
+	})
 
+	const hasVariants = form.watch("hasVariants")
+	const watchedOptions = form.watch("options")
+
+	// ── Regenerate combinations ──────────────────────────────────────────────
+	useEffect(() => {
+		if (!hasVariants || !watchedOptions?.length) {
+			setAllCombinations([]); setEnabledKeys(new Set()); form.setValue("variants", []); return
+		}
+		const validOpts = watchedOptions.filter(o => o.name?.trim() && o.values?.length > 0)
+		if (!validOpts.length) { setAllCombinations([]); form.setValue("variants", []); return }
+		const combos = generateCartesian(validOpts)
+		setAllCombinations(combos)
+		setEnabledKeys(prev => {
+			const validSet = new Set(combos.map(attrKey))
+			const filtered = new Set([...prev].filter(k => validSet.has(k)))
+			return filtered.size === 0 ? new Set(combos.map(attrKey)) : filtered
+		})
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [JSON.stringify(watchedOptions), hasVariants])
+
+	// ── Sync form.variants ───────────────────────────────────────────────────
+	useEffect(() => {
+		if (!hasVariants) return
+		const bp = form.getValues("basePrice"), bs = form.getValues("baseStock")
+		const vd = variantDataRef.current
+		const nv = allCombinations.filter(c => enabledKeys.has(attrKey(c))).map(c => {
+			const k = attrKey(c), s = vd[k] || {}
+			return {
+				attributes: c,
+				price: s.price !== undefined && s.price !== "" ? s.price : (bp ?? ""),
+				originalPrice: s.originalPrice !== undefined ? s.originalPrice : "",
+				stock: s.stock !== undefined && s.stock !== "" ? s.stock : (bs ?? ""),
+				sku: s.sku ?? "", imageUrl: s.imageUrl ?? "",
+			}
+		})
+		form.setValue("variants", nv, { shouldValidate: false })
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [enabledKeys, allCombinations, hasVariants])
+
+	const updateVariantField = useCallback((combo, fieldName, value) => {
+		setVariantData(prev => ({ ...prev, [attrKey(combo)]: { ...prev[attrKey(combo)], [fieldName]: value } }))
+	}, [])
+
+	const toggleCombo = useCallback((combo) => {
+		const k = attrKey(combo)
+		setEnabledKeys(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n })
+	}, [])
+
+	const toggleAll = useCallback((checked) => {
+		setEnabledKeys(checked ? new Set(allCombinationsRef.current.map(attrKey)) : new Set())
+	}, [])
+
+	// ── Mutations ────────────────────────────────────────────────────────────
 	const updateMutation = useMutation({
 		mutationFn: (data) => updateProduct(dataProduct.id, data),
 		onSuccess: () => {
@@ -71,46 +154,67 @@ export function FormEditProduct({ categories, dataProduct }) {
 			toast.success("Produk berhasil diperbarui!")
 			router.push("/seller-dashboard/products")
 		},
-		onError: (error) => {
-			toast.error(error?.message ?? "Gagal memperbarui produk.")
-			setIsPending(false)
-		},
+		onError: (error) => { toast.error(error?.message ?? "Gagal memperbarui produk."); setIsPending(false) },
 	})
 
 	async function onSubmit(data) {
 		setIsPending(true)
-		try {
-			await updateMutation.mutateAsync(data)
-		} catch {
-			setIsPending(false)
+		const cleaned = {
+			...data,
+			originalPrice: data.originalPrice ? Number(data.originalPrice) : null,
+			variants: data.variants?.map(v => ({
+				...v, price: Number(v.price), stock: Number(v.stock),
+				originalPrice: v.originalPrice ? Number(v.originalPrice) : null,
+				sku: v.sku || null, imageUrl: v.imageUrl || null,
+			})),
 		}
+		try {
+			const result = await updateMutation.mutateAsync(cleaned)
+			if (!result?.success) { toast.error(result?.error ?? "Gagal menyimpan"); setIsPending(false) }
+		} catch { setIsPending(false) }
+	}
+
+	function handleFormSubmit(e) {
+		e.preventDefault()
+		if (hasVariants && allCombinations.length > 0) {
+			const bp = form.getValues("basePrice"), bs = form.getValues("baseStock")
+			const vd = variantDataRef.current, ek = enabledKeysRef.current
+			const fv = allCombinations.filter(c => ek.has(attrKey(c))).map(c => {
+				const k = attrKey(c), s = vd[k] || {}
+				return {
+					attributes: c,
+					price: s.price !== undefined && s.price !== "" ? Number(s.price) : (Number(bp) || 0),
+					originalPrice: s.originalPrice ? Number(s.originalPrice) : null,
+					stock: s.stock !== undefined && s.stock !== "" ? Number(s.stock) : (Number(bs) || 0),
+					sku: s.sku || null, imageUrl: s.imageUrl || null,
+				}
+			})
+			form.setValue("variants", fv, { shouldValidate: false })
+		} else {
+			form.setValue("options", [], { shouldValidate: false })
+			form.setValue("variants", [], { shouldValidate: false })
+		}
+		form.handleSubmit(onSubmit)()
 	}
 
 	async function uploadImage(file) {
 		const formData = new FormData()
 		formData.append("file", file)
 		try {
-			const response = await fetch(`${uriUpload}/upload`, {
-				method: "POST",
-				headers: { "x-api-key": uploadApiKey ?? "" },
-				body: formData,
-			})
-			if (!response.ok) throw new Error(`Error: ${response.statusText}`)
-			const data = await response.json()
-			return data?.file?.url ?? ""
-		} catch {
-			return ""
-		}
+			const r = await fetch(`${uriUpload}/upload`, { method: "POST", headers: { "x-api-key": uploadApiKey ?? "" }, body: formData })
+			if (!r.ok) throw new Error(r.statusText)
+			const d = await r.json()
+			return d?.file?.url ?? ""
+		} catch { return "" }
 	}
 
-	// Watch values for sidebar summary
 	const watchedCategory = form.watch("categoryId")
-	const watchedPrice = form.watch("price")
-	const watchedStock = form.watch("stock")
+	const watchedPrice = form.watch("basePrice")
+	const watchedStock = form.watch("baseStock")
 	const watchedWeight = form.watch("weightGram")
 	const watchedStatus = form.watch("status")
-
 	const selectedCategory = categories.find(c => String(c.id) === watchedCategory)
+	const allChecked = allCombinations.length > 0 && enabledKeys.size === allCombinations.length
 
 	return (
 		<div className="space-y-6">
@@ -128,9 +232,7 @@ export function FormEditProduct({ categories, dataProduct }) {
 			</div>
 
 			<Form {...form}>
-				<form onSubmit={form.handleSubmit(onSubmit, (errors) => {
-					console.log("Validation errors:", JSON.stringify(errors, null, 2))
-				})}>
+				<form onSubmit={handleFormSubmit}>
 					<div className="grid gap-6 lg:grid-cols-3">
 						{/* Main Form */}
 						<div className="lg:col-span-2 space-y-6">
@@ -239,15 +341,25 @@ export function FormEditProduct({ categories, dataProduct }) {
 
 							{/* Harga & Stok */}
 							<Card>
-								<CardHeader><CardTitle>Harga & Stok</CardTitle></CardHeader>
+								<CardHeader>
+									<div className="flex items-center justify-between">
+										<CardTitle>Harga & Stok</CardTitle>
+										<FormField control={form.control} name="hasVariants" render={({ field }) => (
+											<FormItem className="flex flex-row items-center space-x-2 space-y-0">
+												<FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+												<FormLabel className="text-xs font-bold cursor-pointer">Gunakan Varian</FormLabel>
+											</FormItem>
+										)} />
+									</div>
+								</CardHeader>
 								<CardContent>
 									<div className="grid gap-4 sm:grid-cols-2">
 										<FormField
 											control={form.control}
-											name="price"
+											name="basePrice"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Harga (Rp)</FormLabel>
+													<FormLabel>{hasVariants ? "Harga Dasar (Rp)" : "Harga Jual (Rp)"}</FormLabel>
 													<FormControl>
 														<Input type="number" placeholder="250000" {...field} disabled={isPending} />
 													</FormControl>
@@ -257,10 +369,23 @@ export function FormEditProduct({ categories, dataProduct }) {
 										/>
 										<FormField
 											control={form.control}
-											name="stock"
+											name="originalPrice"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Stok</FormLabel>
+													<FormLabel>Harga Coret (Rp) — Opsional</FormLabel>
+													<FormControl>
+														<Input type="number" placeholder="Kosongkan jika tidak ada diskon" {...field} value={field.value ?? ""} disabled={isPending} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="baseStock"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>{hasVariants ? "Stok Dasar" : "Stok"}</FormLabel>
 													<FormControl>
 														<Input type="number" placeholder="100" {...field} disabled={isPending} />
 													</FormControl>
@@ -271,6 +396,97 @@ export function FormEditProduct({ categories, dataProduct }) {
 									</div>
 								</CardContent>
 							</Card>
+
+							{/* ── Pengaturan Varian ── */}
+							{hasVariants && (
+								<Card className="border-primary/20 shadow-md shadow-primary/5">
+									<CardHeader className="bg-primary/5 rounded-t-xl">
+										<div className="flex items-center gap-2">
+											<Layers className="h-5 w-5 text-primary" />
+											<CardTitle className="text-lg">Pengaturan Varian</CardTitle>
+										</div>
+									</CardHeader>
+									<CardContent className="p-6 space-y-8">
+										<div className="space-y-4">
+											<div className="flex items-start gap-3">
+												<div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
+												<div>
+													<p className="font-semibold text-sm">Definisikan Opsi Varian</p>
+													<p className="text-xs text-muted-foreground">Contoh: opsi Warna, Ukuran</p>
+												</div>
+											</div>
+											<div className="space-y-3 pl-9">
+												{optionFields.map((field, index) => {
+													const displayType = watchedOptions[index]?.displayType ?? "text"
+													return (
+														<div key={field.id} className="p-4 rounded-xl border bg-card relative space-y-4">
+															<Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeOption(index)}><X className="h-4 w-4" /></Button>
+															<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-8">
+																<FormField control={form.control} name={`options.${index}.name`} render={({ field }) => (
+																	<FormItem><FormLabel className="text-xs font-semibold">Nama Opsi</FormLabel><FormControl><Input placeholder="Contoh: Warna" {...field} /></FormControl><FormMessage /></FormItem>
+																)} />
+																<FormField control={form.control} name={`options.${index}.displayType`} render={({ field }) => (
+																	<FormItem><FormLabel className="text-xs font-semibold">Tipe Tampilan</FormLabel>
+																		<Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="text">Teks</SelectItem><SelectItem value="image">Gambar</SelectItem></SelectContent></Select><FormMessage />
+																	</FormItem>
+																)} />
+															</div>
+															<FormField control={form.control} name={`options.${index}.values`} render={({ field }) => (
+																<FormItem><FormLabel className="text-xs font-semibold">Nilai Opsi</FormLabel><FormControl>
+																	<OptionValuesInput value={field.value} onChange={field.onChange} displayType={displayType} onUploadImage={async (valIdx, url) => {
+																		setOptionValueImages(prev => ({ ...prev, [index]: { ...prev[index], [valIdx]: url } }))
+																		const optName = form.getValues(`options.${index}.name`), valName = field.value[valIdx]
+																		if (optName && valName) allCombinationsRef.current.forEach(c => { if (c[optName] === valName) updateVariantField(c, "imageUrl", url) })
+																	}} />
+																</FormControl><FormMessage /></FormItem>
+															)} />
+														</div>
+													)
+												})}
+												<Button type="button" variant="outline" size="sm" className="w-full border-dashed" onClick={() => appendOption({ name: "", values: [], displayType: "text" })}><Plus className="mr-2 h-4 w-4" /> Tambah Opsi</Button>
+											</div>
+										</div>
+										{allCombinations.length > 0 && (
+											<div className="space-y-4">
+												<Separator />
+												<div className="flex items-start gap-3">
+													<div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
+													<p className="font-semibold text-sm">Atur Stok dan Harga per Kombinasi</p>
+												</div>
+												<div className="pl-9 space-y-2">
+													<div className="flex items-center justify-between px-1">
+														<label className="flex items-center gap-2 text-xs cursor-pointer"><Checkbox checked={allChecked} onCheckedChange={toggleAll} /><span className="font-medium">Pilih Semua</span></label>
+														<Badge variant="outline" className="text-xs">{enabledKeys.size}/{allCombinations.length}</Badge>
+													</div>
+													<div className="rounded-xl border overflow-x-auto">
+														<table className="w-full text-xs min-w-[600px]">
+															<thead><tr className="bg-muted/50 border-b">
+																<th className="p-3 text-center w-10">&#10003;</th>
+																<th className="p-3 text-left">Kombinasi</th>
+																<th className="p-3 text-left w-[120px]">Harga</th>
+																<th className="p-3 text-left w-[120px]">Harga Coret</th>
+																<th className="p-3 text-left w-[90px]">Stok</th>
+																<th className="p-3 text-left w-[110px]">SKU</th>
+															</tr></thead>
+															<tbody className="divide-y">{allCombinations.map((combo, i) => {
+																const key = attrKey(combo), on = enabledKeys.has(key)
+																return (<tr key={i} className={on ? "" : "opacity-35"}>
+																	<td className="p-3 text-center"><Checkbox checked={on} onCheckedChange={() => toggleCombo(combo)} /></td>
+																	<td className="p-3"><div className="flex gap-1 flex-wrap">{Object.values(combo).map(v => <Badge key={v} variant="secondary" className="text-xs">{v}</Badge>)}</div></td>
+																	<td className="p-2">{on ? <Input type="number" className="h-8 text-xs" defaultValue={variantData[key]?.price ?? form.getValues("basePrice") ?? ""} onChange={e => updateVariantField(combo, "price", e.target.value)} /> : "-"}</td>
+																	<td className="p-2">{on ? <Input type="number" className="h-8 text-xs" placeholder="Opsional" defaultValue={variantData[key]?.originalPrice ?? ""} onChange={e => updateVariantField(combo, "originalPrice", e.target.value)} /> : "-"}</td>
+																	<td className="p-2">{on ? <Input type="number" className="h-8 text-xs" defaultValue={variantData[key]?.stock ?? form.getValues("baseStock") ?? ""} onChange={e => updateVariantField(combo, "stock", e.target.value)} /> : "-"}</td>
+																	<td className="p-2">{on ? <Input className="h-8 text-xs" placeholder="SKU" defaultValue={variantData[key]?.sku ?? ""} onChange={e => updateVariantField(combo, "sku", e.target.value)} /> : "-"}</td>
+																</tr>)
+															})}</tbody>
+														</table>
+													</div>
+												</div>
+											</div>
+										)}
+									</CardContent>
+								</Card>
+							)}
 
 							{/* Foto Produk */}
 							<Card>
@@ -372,7 +588,7 @@ export function FormEditProduct({ categories, dataProduct }) {
 										)}
 									/>
 								</CardContent>
-							</Card>
+								</Card>
 						</div>
 
 						{/* Sidebar */}

@@ -193,11 +193,16 @@ export function ProductList() {
 													<TableCell>
 														<Badge variant="secondary" className="font-normal">{p.category.name}</Badge>
 													</TableCell>
-													<TableCell className="text-right font-medium">{fmt(p.price)}</TableCell>
-													<TableCell className="text-center">
-														<span className={p.stock === 0 ? st.cls : p.stock <= 5 ? st.cls : ""}>{p.stock}</span>
+													<TableCell className="text-right">
+														<div className="flex flex-col items-end">
+															<span className="font-medium">{fmt(p.basePrice)}</span>
+															{p.originalPrice && <span className="text-xs text-muted-foreground line-through">{fmt(p.originalPrice)}</span>}
+														</div>
 													</TableCell>
-													<TableCell className="text-center text-muted-foreground">{p.sold}</TableCell>
+													<TableCell className="text-center">
+														<span className={p.baseStock === 0 ? st.cls : p.baseStock <= 5 ? st.cls : ""}>{p.baseStock}</span>
+													</TableCell>
+													<TableCell className="text-center text-muted-foreground">{p.soldCount ?? 0}</TableCell>
 													<TableCell className="text-center"><Badge variant="outline" className={st.cls}>{st.label}</Badge></TableCell>
 													<TableCell className="text-center">
 														<DropdownMenu>

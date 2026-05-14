@@ -81,9 +81,11 @@ export function Navbar() {
             />
           </div>
           <ThemeToggle />
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative">
-            <ShoppingCart className="h-4 w-4" />
-            <span className="absolute top-1 right-1 h-3.5 w-3.5 rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center">0</span>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative" asChild>
+            <Link href="/cart">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="absolute top-1 right-1 h-3.5 w-3.5 rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center">3</span>
+            </Link>
           </Button>
           <Button asChild variant="default" size="sm" className="rounded-full px-6 h-9 text-xs font-bold shadow-md shadow-primary/20 transition-transform active:scale-95 bg-primary hover:bg-primary/90">
             <Link href="/sign-in">Masuk</Link>

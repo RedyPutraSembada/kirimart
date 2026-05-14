@@ -179,11 +179,14 @@ export function ProductList() {
 														<span className="text-xs text-muted-foreground">/{p.store?.domainSlug || "-"}</span>
 													</div>
 												</TableCell>
-												<TableCell className="text-right font-medium">
-													{fmt(p.price)}
+												<TableCell className="text-right">
+													<div className="flex flex-col items-end">
+														<span className="font-medium">{fmt(p.basePrice)}</span>
+														{p.originalPrice && <span className="text-xs text-muted-foreground line-through">{fmt(p.originalPrice)}</span>}
+													</div>
 												</TableCell>
 												<TableCell className="text-right">
-													{p.stock}
+													{p.baseStock}
 												</TableCell>
 												<TableCell className="text-center">
 													{p.status === "banned" ? (

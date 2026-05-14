@@ -3,7 +3,7 @@ import { account, session, user } from "./auth-schema"
 import { addresses } from "./address-schema"
 import { stores } from "./store-schema"
 import { categories } from "./category-schema"
-import { products } from "./product-schema"
+import { products, productOptions, productVariants } from "./product-schema"
 import { productImages } from "./product-image-schema"
 import { carts } from "./cart-schema"
 import { cartItems } from "./cart-item-schema"
@@ -74,12 +74,22 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     store: one(stores, { fields: [products.storeId], references: [stores.id] }),
     category: one(categories, { fields: [products.categoryId], references: [categories.id] }),
     images: many(productImages),
+    options: many(productOptions),
+    variants: many(productVariants),
     cartItems: many(cartItems),
     orderItems: many(orderItems),
 }))
 
 export const productImagesRelations = relations(productImages, ({ one }) => ({
     product: one(products, { fields: [productImages.productId], references: [products.id] }),
+}))
+
+export const productOptionsRelations = relations(productOptions, ({ one }) => ({
+    product: one(products, { fields: [productOptions.productId], references: [products.id] }),
+}))
+
+export const productVariantsRelations = relations(productVariants, ({ one }) => ({
+    product: one(products, { fields: [productVariants.productId], references: [products.id] }),
 }))
 
 // Cart Relations
