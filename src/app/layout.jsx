@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/providers/provider";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,11 @@ export default function RootLayout({ children }) {
     >
       <body className='flex min-h-full flex-col' suppressHydrationWarning>
         <Providers>{children}</Providers>
+        <Script
+          src={process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL}
+          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );

@@ -58,16 +58,12 @@ export function CreateStoreForm() {
 			return result
 		},
 		onSuccess: (data) => {
-			if (!data.success) {
-				toast.error(data.message)
-				return
-			}
 			queryClient.invalidateQueries({ queryKey: ['my-store'] })
-			toast.success("Toko berhasil dibuat")
+			toast.success("Toko berhasil dibuat! Selamat berjualan.")
 			router.push("/seller-dashboard")
 		},
 		onError: (error) => {
-			setError(error)
+			toast.error(error.message || "Gagal membuat toko. Silakan coba lagi.")
 			setIsPending(false)
 		},
 	})
@@ -75,10 +71,12 @@ export function CreateStoreForm() {
 	const { clearErrors, setError: setFormError } = form
 
 	async function onSubmit(data) {
+		setIsPending(true)
 		try {
 			await createMutation.mutateAsync(data)
 		} catch (err) {
 			setError(err)
+			setIsPending(false)
 		}
 	}
 

@@ -1,5 +1,6 @@
 import { createAuthClient } from 'better-auth/react'
 import { adminClient } from 'better-auth/client/plugins'
+import { emailOTPClient } from 'better-auth/client/plugins'
 import { ac, admin, user, member, seller } from '@/lib/permissions'
 import { env } from '@/config/env'
 
@@ -15,6 +16,7 @@ export const authClient = createAuthClient({
                 seller
             },
         }),
+        emailOTPClient(),
     ],
 })
 

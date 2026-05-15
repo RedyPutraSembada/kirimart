@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: [
+    'unintermingled-noncoincident-chandler.ngrok-free.app',
+  ],
   images: {
     remotePatterns: [
       {

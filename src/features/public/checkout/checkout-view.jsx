@@ -1,15 +1,22 @@
 "use client"
 
-import { useState } from "react"
-import { MapPin, Truck, ShieldCheck, ChevronDown, CreditCard, Wallet, Building2, Tag, ChevronRight, Clock, Package } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { MapPin, Truck, ShieldCheck, Tag, Clock, Package, CreditCard, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
+import { toast } from "sonner"
+import { createPaymentTransaction, getMyPendingPayments } from "@/actions/public/payment/payment.actions"
+
+// ============================================
+// STATIC / TESTING DATA
+// ============================================
 
 const MOCK_ADDRESS = {
   label: "Rumah",
@@ -48,30 +55,72 @@ const MOCK_CHECKOUT = {
   ],
 }
 
-const PAYMENT_METHODS = [
-  { id: "va_bca", name: "BCA Virtual Account", icon: Building2, group: "Transfer Bank" },
-  { id: "va_bni", name: "BNI Virtual Account", icon: Building2, group: "Transfer Bank" },
-  { id: "va_mandiri", name: "Mandiri Virtual Account", icon: Building2, group: "Transfer Bank" },
-  { id: "ewallet_gopay", name: "GoPay", icon: Wallet, group: "E-Wallet" },
-  { id: "ewallet_ovo", name: "OVO", icon: Wallet, group: "E-Wallet" },
-  { id: "ewallet_dana", name: "DANA", icon: Wallet, group: "E-Wallet" },
-  { id: "cc", name: "Kartu Kredit / Debit", icon: CreditCard, group: "Kartu" },
-]
-
 const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 
+// ============================================
+// CHECKOUT VIEW COMPONENT
+// ============================================
+
 export function CheckoutView() {
+  const router = useRouter()
+
   const [selectedShipping, setSelectedShipping] = useState(() => {
     const init = {}
     MOCK_CHECKOUT.stores.forEach(s => { init[s.id] = s.shipping[0].id })
     return init
   })
-  const [selectedPayment, setSelectedPayment] = useState("va_bca")
   const [notes, setNotes] = useState({})
   const [voucherCode, setVoucherCode] = useState("")
+
+  // Payment state
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [pendingPayments, setPendingPayments] = useState([])
+  const [isResumingPayment, setIsResumingPayment] = useState(false)
 
   const address = MOCK_ADDRESS
+
+  // Cek apakah ada transaksi pending saat halaman dibuka
+  useEffect(() => {
+    async function checkPending() {
+      const result = await getMyPendingPayments()
+      if (result.success && result.data?.length > 0) {
+        setPendingPayments(result.data)
+      }
+    }
+    checkPending()
+  }, [])
+
+  // Resume pembayaran — re-open Snap popup dengan token yang sudah ada
+  const handleResumePayment = async (payment) => {
+    if (!payment.snapToken) {
+      toast.error("Token pembayaran tidak ditemukan. Silakan buat transaksi baru.")
+      return
+    }
+
+    if (typeof window.snap === 'undefined') {
+      toast.error("Sistem pembayaran sedang dimuat. Silakan coba lagi.")
+      return
+    }
+
+    setIsResumingPayment(true)
+
+    window.snap.pay(payment.snapToken, {
+      onSuccess: (snapResult) => {
+        router.push(`/checkout/status?status=finish&order_id=${payment.orderId}`)
+      },
+      onPending: (snapResult) => {
+        router.push(`/checkout/status?status=unfinish&order_id=${payment.orderId}`)
+      },
+      onError: (snapResult) => {
+        router.push(`/checkout/status?status=error&order_id=${payment.orderId}`)
+      },
+      onClose: () => {
+        toast.info("Pembayaran belum selesai. Anda bisa melanjutkan kapan saja dari halaman ini.")
+        setIsResumingPayment(false)
+      },
+    })
+  }
 
   // Calculate totals
   const subtotal = MOCK_CHECKOUT.stores.reduce((sum, s) => sum + s.items.reduce((is, i) => is + i.price * i.qty, 0), 0)
@@ -82,20 +131,115 @@ export function CheckoutView() {
   const serviceFee = 1000
   const grandTotal = subtotal + totalShipping + serviceFee
 
+  // Open drawer untuk konfirmasi
   const handleCheckout = () => {
-    setIsProcessing(true)
-    setTimeout(() => { setIsProcessing(false); alert("Pesanan berhasil dibuat! (Demo)") }, 1500)
+    setDrawerOpen(true)
   }
 
-  const paymentGroups = PAYMENT_METHODS.reduce((acc, m) => {
-    if (!acc[m.group]) acc[m.group] = []
-    acc[m.group].push(m)
-    return acc
-  }, {})
+  // Konfirmasi pembayaran → create transaction → open Snap
+  const handleConfirmPayment = async () => {
+    setIsProcessing(true)
+
+    try {
+      // Susun data checkout lengkap
+      const checkoutData = {
+        address,
+        stores: MOCK_CHECKOUT.stores.map(store => ({
+          ...store,
+          selectedShipping: store.shipping.find(s => s.id === selectedShipping[store.id]),
+          notes: notes[store.id] || '',
+        })),
+        voucherCode,
+        subtotal,
+        totalShipping,
+        serviceFee,
+        grandTotal,
+      }
+
+      // Panggil server action → buat record di DB + dapat snap token
+      const result = await createPaymentTransaction(checkoutData)
+
+      if (!result.success) {
+        toast.error(result.error || "Gagal membuat transaksi")
+        setIsProcessing(false)
+        return
+      }
+
+      // Tutup drawer
+      setDrawerOpen(false)
+
+      // Cek apakah Snap JS sudah loaded
+      if (typeof window.snap === 'undefined') {
+        toast.error("Sistem pembayaran sedang dimuat. Silakan coba lagi dalam beberapa detik.")
+        setIsProcessing(false)
+        return
+      }
+
+      // Buka Snap popup
+      window.snap.pay(result.snapToken, {
+        onSuccess: (snapResult) => {
+          console.log("[SNAP] Payment success:", snapResult)
+          router.push(`/checkout/status?status=finish&order_id=${result.orderId}`)
+        },
+        onPending: (snapResult) => {
+          console.log("[SNAP] Payment pending:", snapResult)
+          router.push(`/checkout/status?status=unfinish&order_id=${result.orderId}`)
+        },
+        onError: (snapResult) => {
+          console.log("[SNAP] Payment error:", snapResult)
+          router.push(`/checkout/status?status=error&order_id=${result.orderId}`)
+        },
+        onClose: () => {
+          console.log("[SNAP] Popup closed by user")
+          toast.info("Pembayaran belum selesai. Anda dapat melanjutkan pembayaran nanti.")
+          setIsProcessing(false)
+        },
+      })
+    } catch (error) {
+      console.error("[CHECKOUT] Error:", error)
+      toast.error("Terjadi kesalahan. Silakan coba lagi.")
+      setIsProcessing(false)
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 md:px-6 py-4 md:py-8 max-w-7xl">
       <h1 className="text-xl md:text-2xl font-bold mb-6">Checkout</h1>
+
+      {/* Banner Transaksi Pending */}
+      {pendingPayments.length > 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/5 mb-6">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold">Anda memiliki transaksi yang belum diselesaikan</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Lanjutkan pembayaran sebelum batas waktu berakhir</p>
+                </div>
+                {pendingPayments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-background/80 border border-border/60">
+                    <div className="min-w-0">
+                      <p className="text-xs font-mono font-semibold truncate">{payment.orderId}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {fmt(payment.totalAmount)} · {new Date(payment.createdAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="shrink-0 h-8 text-xs font-semibold"
+                      onClick={() => handleResumePayment(payment)}
+                      disabled={isResumingPayment}
+                    >
+                      {isResumingPayment ? <Loader2 className="h-3 w-3 animate-spin" /> : "Lanjutkan Pembayaran"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column */}
@@ -198,7 +342,7 @@ export function CheckoutView() {
             </Card>
           ))}
 
-          {/* Payment */}
+          {/* Payment Info — Powered by Midtrans */}
           <Card className="border-border/60">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
@@ -206,35 +350,22 @@ export function CheckoutView() {
                 <CardTitle className="text-base">Metode Pembayaran</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {Object.entries(paymentGroups).map(([group, methods]) => (
-                <div key={group} className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{group}</p>
-                  <div className="space-y-1.5">
-                    {methods.map(m => {
-                      const Icon = m.icon
-                      return (
-                        <button
-                          key={m.id}
-                          onClick={() => setSelectedPayment(m.id)}
-                          className={cn(
-                            "w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
-                            selectedPayment === m.id
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                              : "border-border hover:border-primary/30"
-                          )}
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <span className="text-sm font-medium">{m.name}</span>
-                          {selectedPayment === m.id && <div className="ml-auto h-2 w-2 rounded-full bg-primary" />}
-                        </button>
-                      )
-                    })}
-                  </div>
+            <CardContent>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 border border-border/60">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
+                  <CreditCard className="h-5 w-5 text-white" />
                 </div>
-              ))}
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">Midtrans Payment Gateway</p>
+                  <p className="text-xs text-muted-foreground">
+                    Transfer Bank, GoPay, QRIS, ShopeePay, Kartu Kredit & lainnya
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px] shrink-0">Secure</Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2 px-1">
+                Pilih metode pembayaran setelah menekan tombol &quot;Bayar Sekarang&quot;
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -275,8 +406,19 @@ export function CheckoutView() {
                   <span className="text-lg font-bold text-primary">{fmt(grandTotal)}</span>
                 </div>
 
-                <Button className="w-full h-11 font-bold text-sm" onClick={handleCheckout} disabled={isProcessing}>
-                  {isProcessing ? "Memproses..." : "Bayar Sekarang"}
+                <Button
+                  className="w-full h-11 font-bold text-sm"
+                  onClick={handleCheckout}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Memproses...
+                    </>
+                  ) : (
+                    "Bayar Sekarang"
+                  )}
                 </Button>
 
                 <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
@@ -292,6 +434,100 @@ export function CheckoutView() {
           </div>
         </div>
       </div>
+
+      {/* ============================================ */}
+      {/* DRAWER KONFIRMASI PEMBAYARAN */}
+      {/* ============================================ */}
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-md">
+            <DrawerHeader>
+              <DrawerTitle className="text-lg">Konfirmasi Pembayaran</DrawerTitle>
+              <DrawerDescription>Pastikan pesanan Anda sudah benar sebelum melanjutkan</DrawerDescription>
+            </DrawerHeader>
+
+            <div className="px-4 pb-2 max-h-[50vh] overflow-y-auto">
+              {/* Order Summary per Store */}
+              <div className="space-y-4">
+                {MOCK_CHECKOUT.stores.map((store) => {
+                  const selectedShip = store.shipping.find(s => s.id === selectedShipping[store.id])
+                  return (
+                    <div key={store.id} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-bold">{store.name}</span>
+                      </div>
+                      <div className="pl-5 space-y-1">
+                        {store.items.map(item => (
+                          <div key={item.id} className="flex justify-between text-xs">
+                            <span className="text-muted-foreground line-clamp-1 mr-4">
+                              {item.name} <span className="text-foreground">×{item.qty}</span>
+                            </span>
+                            <span className="font-medium shrink-0">{fmt(item.price * item.qty)}</span>
+                          </div>
+                        ))}
+                        {selectedShip && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              Ongkir {selectedShip.name} ({selectedShip.courier})
+                            </span>
+                            <span className="font-medium shrink-0">{fmt(selectedShip.price)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Totals */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-medium">{fmt(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Total Ongkir</span>
+                  <span className="font-medium">{fmt(totalShipping)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Biaya Layanan</span>
+                  <span className="font-medium">{fmt(serviceFee)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-sm font-bold">Total Pembayaran</span>
+                  <span className="text-sm font-bold text-primary">{fmt(grandTotal)}</span>
+                </div>
+              </div>
+            </div>
+
+            <DrawerFooter>
+              <Button
+                onClick={handleConfirmPayment}
+                disabled={isProcessing}
+                className="w-full h-11 font-bold"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Membuat Transaksi...
+                  </>
+                ) : (
+                  `Konfirmasi & Bayar ${fmt(grandTotal)}`
+                )}
+              </Button>
+              <DrawerClose asChild>
+                <Button variant="outline" className="w-full" disabled={isProcessing}>
+                  Batal
+                </Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }

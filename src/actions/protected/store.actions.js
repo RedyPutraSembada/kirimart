@@ -18,9 +18,9 @@ export async function createStore(formData) {
 			return { success: false, error: "Unauthorized. Anda harus login." }
 		}
 
-		if (session.user.role === "seller") {
-			return { success: false, error: "Anda sudah memiliki toko." }
-		}
+		// if (session.user.role === "seller") {
+		// 	return { success: false, error: "Anda sudah memiliki toko." }
+		// }
 
 		// 2. Validasi Data dengan Zod
 		const validatedFields = createStoreSchema.safeParse(formData)
