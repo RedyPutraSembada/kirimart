@@ -98,6 +98,14 @@ function CheckoutStatusContent() {
               </Button>
             )}
 
+            {status === "unfinish" && orderId !== "-" && (
+              <Button asChild className="w-full">
+                <Link href={`/checkout/payment/instruction?order_id=${orderId}`}>
+                  Lihat Instruksi Pembayaran
+                </Link>
+              </Button>
+            )}
+
             <Button variant={status === "error" ? "outline" : "default"} asChild className="w-full">
               <Link href="/">
                 <ShoppingBag className="mr-2 h-4 w-4" />

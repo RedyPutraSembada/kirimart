@@ -1,14 +1,44 @@
 import { CatalogList } from "@/features/public/catalog/catalog-list"
-import { getCategories } from "@/actions/seller-dashboard/product/product.actions"
+import { getPublicCategories, getCatalogProducts } from "@/actions/public/storefront.actions"
 
 export const metadata = {
   title: "Katalog Produk - KawanBelanja",
   description: "Temukan berbagai produk unggulan mulai dari Game, Pulsa, hingga Fashion.",
 }
 
-export default async function KatalogPage() {
-  const categoriesResponse = await getCategories()
+export default async function KatalogPage({ searchParams }) {
+  const params = await searchParams
+  const categoriesResponse = await getPublicCategories()
   const categories = categoriesResponse.success ? categoriesResponse.data : []
 
-  return <CatalogList initialCategories={categories} />
+  // Resolve category: bisa via ?categoryId=5 (id) atau ?category=aksesoris (slug)
+  let resolvedCategoryId = params?.categoryId || ""
+  if (!resolvedCategoryId && params?.category) {
+    const matched = categories.find(
+      c => c.slug === params.category || String(c.id) === params.category
+    )
+    if (matched) resolvedCategoryId = String(matched.id)
+  }
+
+  // SSR initial products based on URL search params
+  const initialFilters = {
+    search: params?.search || "",
+    categoryId: resolvedCategoryId,
+    sort: params?.sort || "popular",
+    page: 1,
+    perPage: 20,
+  }
+
+  const productsResponse = await getCatalogProducts(initialFilters)
+  const initialProducts = productsResponse.success ? productsResponse.data : []
+  const initialTotal = productsResponse.success ? productsResponse.total : 0
+
+  return (
+    <CatalogList
+      initialCategories={categories}
+      initialProducts={initialProducts}
+      initialTotal={initialTotal}
+      initialFilters={initialFilters}
+    />
+  )
 }

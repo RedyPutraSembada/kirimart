@@ -1,4 +1,4 @@
-import { Database, LayoutDashboard, Package, ShoppingCart, Store, Tag, BarChart3, ShieldAlert } from 'lucide-react'
+import { Database, LayoutDashboard, Package, ShoppingCart, Store, Tag, BarChart3, ShieldAlert, Wallet, Banknote, Settings } from 'lucide-react'
 
 export const menus = [
 	{
@@ -40,6 +40,16 @@ export const menus = [
 				url: '/admin-dashboard/vouchers/create',
 			},
 		],
+	},
+	{
+		title: 'Penarikan Dana',
+		url: '/admin-dashboard/withdrawals',
+		icon: Banknote,
+	},
+	{
+		title: 'Pengaturan',
+		url: '/admin-dashboard/settings',
+		icon: Settings,
 	},
 ]
 
@@ -88,5 +98,10 @@ export const menusSeller = [
 		title: 'Profil Toko',
 		url: '/seller-dashboard/store',
 		icon: Store,
+	},
+	{
+		title: 'Keuangan',
+		url: '/seller-dashboard/finance',
+		icon: Wallet,
 	},
 ]

@@ -1,8 +1,16 @@
 import { StoreView } from "@/features/public/store-view"
+import { getStoreBySlug } from "@/actions/public/storefront.actions"
+import { notFound } from "next/navigation"
 
 export async function generateMetadata({ params }) {
   const slug = (await params).slug
-  const name = slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+  const res = await getStoreBySlug(slug)
+  
+  if (!res.success) {
+    return { title: 'Toko Tidak Ditemukan' }
+  }
+
+  const name = res.data.name
   
   return {
     title: `${name} - KawanBelanja`,
@@ -12,8 +20,11 @@ export async function generateMetadata({ params }) {
 
 export default async function StorePage({ params }) {
   const slug = (await params).slug
-  // In a real app, you would fetch store data by slug here
-  const store = { name: slug, domainSlug: slug }
+  const res = await getStoreBySlug(slug)
 
-  return <StoreView store={store} />
+  if (!res.success) {
+    notFound()
+  }
+
+  return <StoreView store={res.data} />
 }

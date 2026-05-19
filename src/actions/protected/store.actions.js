@@ -32,7 +32,7 @@ export async function createStore(formData) {
 			}
 		}
 
-		const { name, domainSlug, province, city, detailAddress, logo, banner, description } =
+		const { name, domainSlug, province, city, detailAddress, logo, banner, description, bankName, bankAccountNumber, bankAccountHolder } =
 			validatedFields.data
 
 		// 3. Cek apakah domain_slug sudah dipakai orang lain
@@ -69,6 +69,9 @@ export async function createStore(formData) {
 				logoUrl: logo || null,
 				bannerUrl: banner || null,
 				description: description || null,
+				bankName: bankName,
+				bankAccountNumber: bankAccountNumber,
+				bankAccountHolder: bankAccountHolder,
 			})
 
 			// C. Update Role User menjadi Seller (Gunakan Better Auth API jika ada, atau update manual)

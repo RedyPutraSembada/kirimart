@@ -19,8 +19,10 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { getCategories } from "@/actions/seller-dashboard/product/product.actions"
+import { getCartSummary } from "@/actions/public/cart.actions"
 import { ThemeToggle } from "@/components/global/theme-toggle"
 import { useSession, signOut } from "@/lib/auth-client"
+import { useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 // ============================================
@@ -47,6 +49,15 @@ export function Navbar() {
   const userName = session?.user?.name
   const userEmail = session?.user?.email
   const userImage = session?.user?.image
+
+  // Cart badge — reactive via React Query
+  const { data: cartData } = useQuery({
+    queryKey: ["cart-summary"],
+    queryFn: getCartSummary,
+    enabled: isLoggedIn,
+    refetchOnWindowFocus: true,
+  })
+  const cartCount = cartData?.data?.totalItems || 0
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -133,7 +144,9 @@ export function Navbar() {
           <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative" asChild>
             <Link href="/cart">
               <ShoppingCart className="h-4 w-4" />
-              <span className="absolute top-1 right-1 h-3.5 w-3.5 rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center">3</span>
+              {cartCount > 0 && (
+                <span className="absolute top-1 right-1 h-3.5 w-3.5 rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center">{cartCount > 99 ? "99+" : cartCount}</span>
+              )}
             </Link>
           </Button>
 

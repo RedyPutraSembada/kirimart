@@ -2,58 +2,21 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { MapPin, Truck, ShieldCheck, Tag, Clock, Package, CreditCard, Loader2, AlertCircle } from "lucide-react"
+import { MapPin, Truck, ShieldCheck, Tag, Clock, Package, Loader2, AlertCircle, ChevronRight, ArrowLeft, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { createPaymentTransaction, getMyPendingPayments } from "@/actions/public/payment/payment.actions"
-
-// ============================================
-// STATIC / TESTING DATA
-// ============================================
-
-const MOCK_ADDRESS = {
-  label: "Rumah",
-  name: "Budi Santoso",
-  phone: "08123456789",
-  detail: "Jl. Merdeka No. 123, RT 05/RW 02, Kel. Menteng, Kec. Menteng",
-  city: "Jakarta Pusat",
-  province: "DKI Jakarta",
-  postalCode: "10310",
-}
-
-const MOCK_CHECKOUT = {
-  stores: [
-    {
-      id: 1, name: "Cartiera Official", slug: "cartiera-official", logo: "/images/kawanbelanja.png",
-      items: [
-        { id: 1, name: "Loco Polo Cartiera Scuba 280 GSM Boxy Polo Shirt Pria", img: "/images/ml.png", variant: "Jet Black, M", price: 139885, qty: 2, weight: 300 },
-        { id: 2, name: "Cartiera Essential Jogger Pants - Relaxed Fit", img: "/images/ml.png", variant: "Grey, L", price: 189000, qty: 1, weight: 450 },
-      ],
-      shipping: [
-        { id: "regular", name: "Reguler", courier: "J&T Express", price: 15000, eta: "3-5 hari" },
-        { id: "express", name: "Express", courier: "JNE YES", price: 28000, eta: "1-2 hari" },
-        { id: "same_day", name: "Same Day", courier: "GoSend", price: 45000, eta: "Hari ini" },
-      ],
-    },
-    {
-      id: 2, name: "Nike Indonesia", slug: "nike-indonesia", logo: "/images/kawanbelanja.png",
-      items: [
-        { id: 3, name: "Nike Air Max 270 React - Triple Black Edition", img: "/images/ml.png", variant: "Black, 42", price: 1899000, qty: 1, weight: 800 },
-      ],
-      shipping: [
-        { id: "regular", name: "Reguler", courier: "SiCepat REG", price: 18000, eta: "3-4 hari" },
-        { id: "express", name: "Express", courier: "SiCepat BEST", price: 32000, eta: "1-2 hari" },
-      ],
-    },
-  ],
-}
+import { useQuery } from "@tanstack/react-query"
+import { getCheckoutData, getPlatformFeeConfig } from "@/actions/public/checkout.actions"
+import { validateVoucherCode } from "@/actions/public/voucher.actions"
+import { calculateCommission } from "@/lib/platform-fee"
+import Image from "next/image"
+import Link from "next/link"
 
 const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 
@@ -64,182 +27,185 @@ const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency:
 export function CheckoutView() {
   const router = useRouter()
 
-  const [selectedShipping, setSelectedShipping] = useState(() => {
-    const init = {}
-    MOCK_CHECKOUT.stores.forEach(s => { init[s.id] = s.shipping[0].id })
-    return init
+  // Fetch data checkout dari server (cart items + alamat + ongkir)
+  const { data: queryData, isLoading, isError, refetch } = useQuery({
+    queryKey: ["checkout-data"],
+    queryFn: getCheckoutData,
   })
+
+  // Fetch platform fee config (komisi & biaya layanan)
+  const { data: feeConfigData } = useQuery({
+    queryKey: ["platform-fee-config"],
+    queryFn: getPlatformFeeConfig,
+  })
+  const commissionTiers = feeConfigData?.data?.commissionTiers || []
+
+  const checkoutStores = queryData?.data?.stores || []
+  const userAddresses = queryData?.data?.addresses || []
+  const defaultAddressId = queryData?.data?.selectedAddressId || null
+
+  // State
+  const [selectedAddressId, setSelectedAddressId] = useState(null)
+  const [selectedShipping, setSelectedShipping] = useState({})
   const [notes, setNotes] = useState({})
   const [voucherCode, setVoucherCode] = useState("")
+  const [appliedVouchers, setAppliedVouchers] = useState([]) // Max 2 (1 Global + 1 Store)
 
   // Payment state
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [pendingPayments, setPendingPayments] = useState([])
-  const [isResumingPayment, setIsResumingPayment] = useState(false)
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false)
 
-  const address = MOCK_ADDRESS
-
-  // Cek apakah ada transaksi pending saat halaman dibuka
+  // Set initial selected address & shipping ketika data pertama kali dimuat
   useEffect(() => {
-    async function checkPending() {
-      const result = await getMyPendingPayments()
-      if (result.success && result.data?.length > 0) {
-        setPendingPayments(result.data)
-      }
+    if (defaultAddressId && !selectedAddressId) {
+      setSelectedAddressId(defaultAddressId)
     }
-    checkPending()
-  }, [])
+  }, [defaultAddressId, selectedAddressId])
 
-  // Resume pembayaran — re-open Snap popup dengan token yang sudah ada
-  const handleResumePayment = async (payment) => {
-    if (!payment.snapToken) {
-      toast.error("Token pembayaran tidak ditemukan. Silakan buat transaksi baru.")
-      return
+  useEffect(() => {
+    if (checkoutStores.length > 0 && Object.keys(selectedShipping).length === 0) {
+      const init = {}
+      checkoutStores.forEach(s => {
+        if (s.shipping?.[0]) init[s.id] = s.shipping[0].id
+      })
+      setSelectedShipping(init)
     }
+  }, [checkoutStores, selectedShipping])
 
-    if (typeof window.snap === 'undefined') {
-      toast.error("Sistem pembayaran sedang dimuat. Silakan coba lagi.")
-      return
-    }
-
-    setIsResumingPayment(true)
-
-    window.snap.pay(payment.snapToken, {
-      onSuccess: (snapResult) => {
-        router.push(`/checkout/status?status=finish&order_id=${payment.orderId}`)
-      },
-      onPending: (snapResult) => {
-        router.push(`/checkout/status?status=unfinish&order_id=${payment.orderId}`)
-      },
-      onError: (snapResult) => {
-        router.push(`/checkout/status?status=error&order_id=${payment.orderId}`)
-      },
-      onClose: () => {
-        toast.info("Pembayaran belum selesai. Anda bisa melanjutkan kapan saja dari halaman ini.")
-        setIsResumingPayment(false)
-      },
-    })
-  }
+  // Ambil alamat terpilih
+  const address = userAddresses.find(a => a.id === selectedAddressId) || userAddresses[0] || null
 
   // Calculate totals
-  const subtotal = MOCK_CHECKOUT.stores.reduce((sum, s) => sum + s.items.reduce((is, i) => is + i.price * i.qty, 0), 0)
-  const totalShipping = MOCK_CHECKOUT.stores.reduce((sum, s) => {
-    const ship = s.shipping.find(sh => sh.id === selectedShipping[s.id])
+  const subtotal = checkoutStores.reduce((sum, s) => sum + s.items.reduce((is, i) => is + i.price * i.qty, 0), 0)
+  const totalShipping = checkoutStores.reduce((sum, s) => {
+    const ship = s.shipping?.find(sh => sh.id === selectedShipping[s.id])
     return sum + (ship?.price || 0)
   }, 0)
-  const serviceFee = 1000
-  const grandTotal = subtotal + totalShipping + serviceFee
+  // Hitung biaya layanan (komisi platform saja — biaya PG dihitung di halaman payment method)
+  const serviceFee = checkoutStores.reduce((sum, store) => {
+    const storeSubtotal = store.items.reduce((s, i) => s + i.price * i.qty, 0)
+    return sum + calculateCommission(storeSubtotal, commissionTiers)
+  }, 0)
 
-  // Open drawer untuk konfirmasi
-  const handleCheckout = () => {
-    setDrawerOpen(true)
+  // Total Diskon dari Vouchers
+  const totalDiscount = appliedVouchers.reduce((sum, v) => sum + v.discountAmount, 0)
+  
+  // Grand total di halaman ini belum termasuk biaya PG (dihitung di halaman berikutnya)
+  const grandTotal = Math.max(0, subtotal + totalShipping + serviceFee - totalDiscount)
+
+  // Checkout Data State (untuk mempermudah passing ke server)
+  const currentCheckoutState = {
+    stores: checkoutStores.map(store => ({
+      ...store,
+      selectedShipping: store.shipping?.find(s => s.id === selectedShipping[store.id]) || null,
+    }))
   }
 
-  // Konfirmasi pembayaran → create transaction → open Snap
-  const handleConfirmPayment = async () => {
-    setIsProcessing(true)
+  // ============================================
+  // VOUCHER LOGIC
+  // ============================================
 
+  const handleApplyVoucher = async () => {
+    if (!voucherCode.trim()) return
+
+    setIsApplyingVoucher(true)
     try {
-      // Susun data checkout lengkap
-      const checkoutData = {
-        address,
-        stores: MOCK_CHECKOUT.stores.map(store => ({
-          ...store,
-          selectedShipping: store.shipping.find(s => s.id === selectedShipping[store.id]),
-          notes: notes[store.id] || '',
-        })),
-        voucherCode,
-        subtotal,
-        totalShipping,
-        serviceFee,
-        grandTotal,
-      }
-
-      // Panggil server action → buat record di DB + dapat snap token
-      const result = await createPaymentTransaction(checkoutData)
-
-      if (!result.success) {
-        toast.error(result.error || "Gagal membuat transaksi")
-        setIsProcessing(false)
+      const res = await validateVoucherCode(voucherCode.trim(), currentCheckoutState)
+      
+      if (!res.success) {
+        toast.error(res.error)
+        setIsApplyingVoucher(false)
         return
       }
 
-      // Tutup drawer
-      setDrawerOpen(false)
+      const newVoucher = res.data
+      
+      // Slotting Logic: Max 1 Global + 1 Store. (Tidak bisa 2 Store / 2 Global)
+      let newApplied = [...appliedVouchers]
 
-      // Cek apakah Snap JS sudah loaded
-      if (typeof window.snap === 'undefined') {
-        toast.error("Sistem pembayaran sedang dimuat. Silakan coba lagi dalam beberapa detik.")
-        setIsProcessing(false)
-        return
+      if (newVoucher.voucher.isGlobal) {
+        // Replace existing global voucher if any
+        newApplied = newApplied.filter(v => !v.voucher.isGlobal)
+        newApplied.push(newVoucher)
+        toast.success("Voucher platform berhasil dipasang!")
+      } else {
+        // Replace existing store voucher if any
+        newApplied = newApplied.filter(v => v.voucher.isGlobal)
+        newApplied.push(newVoucher)
+        toast.success("Voucher toko berhasil dipasang!")
       }
 
-      // Buka Snap popup
-      window.snap.pay(result.snapToken, {
-        onSuccess: (snapResult) => {
-          console.log("[SNAP] Payment success:", snapResult)
-          router.push(`/checkout/status?status=finish&order_id=${result.orderId}`)
-        },
-        onPending: (snapResult) => {
-          console.log("[SNAP] Payment pending:", snapResult)
-          router.push(`/checkout/status?status=unfinish&order_id=${result.orderId}`)
-        },
-        onError: (snapResult) => {
-          console.log("[SNAP] Payment error:", snapResult)
-          router.push(`/checkout/status?status=error&order_id=${result.orderId}`)
-        },
-        onClose: () => {
-          console.log("[SNAP] Popup closed by user")
-          toast.info("Pembayaran belum selesai. Anda dapat melanjutkan pembayaran nanti.")
-          setIsProcessing(false)
-        },
-      })
+      setAppliedVouchers(newApplied)
+      setVoucherCode("")
     } catch (error) {
-      console.error("[CHECKOUT] Error:", error)
-      toast.error("Terjadi kesalahan. Silakan coba lagi.")
-      setIsProcessing(false)
+      toast.error("Terjadi kesalahan saat memvalidasi voucher.")
+    } finally {
+      setIsApplyingVoucher(false)
     }
   }
 
+  const handleRemoveVoucher = (voucherCodeToRemove) => {
+    setAppliedVouchers(prev => prev.filter(v => v.voucher.code !== voucherCodeToRemove))
+    toast.success("Voucher dilepas.")
+  }
+
+  // Open payment method selection page
+  const handleCheckout = () => {
+    if (!address) {
+      toast.error("Tambahkan alamat pengiriman terlebih dahulu.")
+      return
+    }
+    setIsProcessing(true)
+    router.push("/checkout/payment")
+  }
+
+  // ============================================
+  // LOADING STATE
+  // ============================================
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 md:px-6 py-16 flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-sm font-medium text-muted-foreground">Memuat data checkout...</p>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="container mx-auto px-4 md:px-6 py-16 text-center space-y-4">
+        <p className="text-red-500 font-semibold">Gagal memuat data checkout.</p>
+        <Button onClick={() => refetch()} variant="outline">Coba Lagi</Button>
+      </div>
+    )
+  }
+
+  // ============================================
+  // EMPTY STATE (tidak ada barang untuk di-checkout)
+  // ============================================
+  if (checkoutStores.length === 0) {
+    return (
+      <div className="container mx-auto px-4 md:px-6 py-16 max-w-4xl text-center space-y-4">
+        <Package className="h-16 w-16 mx-auto text-muted-foreground/40" />
+        <h2 className="text-xl font-bold">Tidak Ada Barang untuk Checkout</h2>
+        <p className="text-sm text-muted-foreground">Pilih barang dari keranjang terlebih dahulu, atau keranjang Anda mungkin kosong.</p>
+        <Button asChild><Link href="/cart">Kembali ke Keranjang</Link></Button>
+      </div>
+    )
+  }
+
+  // ============================================
+  // MAIN RENDER
+  // ============================================
   return (
     <div className="container mx-auto px-4 md:px-6 py-4 md:py-8 max-w-7xl">
-      <h1 className="text-xl md:text-2xl font-bold mb-6">Checkout</h1>
-
-      {/* Banner Transaksi Pending */}
-      {pendingPayments.length > 0 && (
-        <Card className="border-amber-500/30 bg-amber-500/5 mb-6">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-              <div className="flex-1 space-y-3">
-                <div>
-                  <p className="text-sm font-semibold">Anda memiliki transaksi yang belum diselesaikan</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Lanjutkan pembayaran sebelum batas waktu berakhir</p>
-                </div>
-                {pendingPayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-background/80 border border-border/60">
-                    <div className="min-w-0">
-                      <p className="text-xs font-mono font-semibold truncate">{payment.orderId}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {fmt(payment.totalAmount)} · {new Date(payment.createdAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="shrink-0 h-8 text-xs font-semibold"
-                      onClick={() => handleResumePayment(payment)}
-                      disabled={isResumingPayment}
-                    >
-                      {isResumingPayment ? <Loader2 className="h-3 w-3 animate-spin" /> : "Lanjutkan Pembayaran"}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h1 className="text-xl md:text-2xl font-bold">Checkout</h1>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column */}
@@ -253,28 +219,45 @@ export function CheckoutView() {
                   <MapPin className="h-4 w-4 text-primary" />
                   <CardTitle className="text-base">Alamat Pengiriman</CardTitle>
                 </div>
-                <Button variant="ghost" size="sm" className="text-xs text-primary font-semibold h-7">Ganti Alamat</Button>
+                {userAddresses.length > 1 && (
+                  <Button variant="ghost" size="sm" className="text-xs text-primary font-semibold h-7">Ganti Alamat</Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">{address.name}</span>
-                <Badge variant="outline" className="text-[10px] h-5">{address.label}</Badge>
-                <span className="text-sm text-muted-foreground">{address.phone}</span>
-              </div>
-              <p className="text-sm text-muted-foreground">{address.detail}, {address.city}, {address.province} {address.postalCode}</p>
+              {address ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">{address.recipientName || "Penerima"}</span>
+                    <span className="text-sm text-muted-foreground">{address.recipientPhone || "-"}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{address.detailAddress} {address.zipcode && `(${address.zipcode})`}</p>
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground mb-2">Belum ada alamat pengiriman.</p>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/user/addresses">Tambah Alamat</Link>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Store Orders */}
-          {MOCK_CHECKOUT.stores.map((store, sIdx) => (
+          {checkoutStores.map((store, sIdx) => (
             <Card key={store.id} className="border-border/60">
               <CardHeader className="pb-3 px-4 pt-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-7 w-7 rounded-full overflow-hidden bg-white border shrink-0">
-                    <img src={store.logo} alt={store.name} className="h-full w-full object-contain" />
+                  <div className="h-7 w-7 rounded-full overflow-hidden bg-white border shrink-0 relative">
+                    {store.logo ? (
+                      <Image src={store.logo} alt={store.name} fill unoptimized className="object-contain" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-[10px]">🏪</div>
+                    )}
                   </div>
                   <span className="text-sm font-bold">{store.name}</span>
+                  {store.isStar && <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[9px] font-bold px-1.5 py-0 h-4 border-none">Star</Badge>}
                   <span className="text-[10px] text-muted-foreground">Pesanan {sIdx + 1}</span>
                 </div>
               </CardHeader>
@@ -282,13 +265,17 @@ export function CheckoutView() {
                 {/* Items */}
                 <div className="space-y-3">
                   {store.items.map(item => (
-                    <div key={item.id} className="flex gap-3">
-                      <div className="h-16 w-16 rounded-lg overflow-hidden bg-muted border shrink-0">
-                        <img src={item.img} alt={item.name} className="h-full w-full object-cover" />
+                    <div key={item.cartItemId} className="flex gap-3">
+                      <div className="h-16 w-16 rounded-lg overflow-hidden bg-muted border shrink-0 relative">
+                        {item.img ? (
+                          <Image src={item.img} alt={item.name} fill unoptimized className="object-cover" />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">📦</div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium line-clamp-1">{item.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{item.variant}</p>
+                        {item.variant && <p className="text-xs text-muted-foreground mt-0.5">{item.variant}</p>}
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-sm font-bold">{fmt(item.price)}</span>
                           <span className="text-xs text-muted-foreground">&times;{item.qty}</span>
@@ -318,7 +305,7 @@ export function CheckoutView() {
                     <span className="text-sm font-semibold">Opsi Pengiriman</span>
                   </div>
                   <div className="space-y-2">
-                    {store.shipping.map(ship => (
+                    {store.shipping?.map(ship => (
                       <button
                         key={ship.id}
                         onClick={() => setSelectedShipping(prev => ({ ...prev, [store.id]: ship.id }))}
@@ -375,12 +362,52 @@ export function CheckoutView() {
           <div className="lg:sticky lg:top-24 space-y-4">
             {/* Voucher */}
             <Card className="border-border/60">
-              <CardContent className="p-4">
+              <CardContent className="p-4 space-y-4">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-primary shrink-0" />
-                  <Input placeholder="Kode Voucher" value={voucherCode} onChange={e => setVoucherCode(e.target.value)} className="h-9 text-xs" />
-                  <Button variant="outline" size="sm" className="h-9 text-xs font-semibold shrink-0 px-4">Pakai</Button>
+                  <Input 
+                    placeholder="Kode Voucher" 
+                    value={voucherCode} 
+                    onChange={e => setVoucherCode(e.target.value.toUpperCase())} 
+                    className="h-9 text-xs uppercase" 
+                    onKeyDown={e => e.key === 'Enter' && handleApplyVoucher()}
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-9 text-xs font-semibold shrink-0 px-4"
+                    onClick={handleApplyVoucher}
+                    disabled={isApplyingVoucher || !voucherCode.trim()}
+                  >
+                    {isApplyingVoucher ? <Loader2 className="h-3 w-3 animate-spin" /> : "Pakai"}
+                  </Button>
                 </div>
+
+                {appliedVouchers.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <p className="text-xs font-semibold text-muted-foreground">Voucher Terpakai:</p>
+                    {appliedVouchers.map((v, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-primary/5 border border-primary/20 p-2 rounded-lg">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-primary truncate">{v.voucher.code}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {v.voucher.isGlobal ? "Voucher Platform" : "Voucher Toko"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-green-600">-{fmt(v.discountAmount)}</span>
+                          <button 
+                            onClick={() => handleRemoveVoucher(v.voucher.code)}
+                            className="text-muted-foreground hover:text-red-500 transition-colors p-1"
+                            title="Hapus Voucher"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -397,9 +424,15 @@ export function CheckoutView() {
                   <span className="font-medium">{fmt(totalShipping)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Biaya Layanan</span>
+                  <span className="text-muted-foreground">Biaya Layanan & Penanganan</span>
                   <span className="font-medium">{fmt(serviceFee)}</span>
                 </div>
+                {totalDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Diskon Voucher</span>
+                    <span className="font-bold text-green-600">-{fmt(totalDiscount)}</span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between">
                   <span className="font-bold">Total Pembayaran</span>
@@ -409,7 +442,7 @@ export function CheckoutView() {
                 <Button
                   className="w-full h-11 font-bold text-sm"
                   onClick={handleCheckout}
-                  disabled={isProcessing}
+                  disabled={isProcessing || !address}
                 >
                   {isProcessing ? (
                     <>
@@ -417,7 +450,7 @@ export function CheckoutView() {
                       Memproses...
                     </>
                   ) : (
-                    "Bayar Sekarang"
+                    "Lanjut ke Pembayaran →"
                   )}
                 </Button>
 
@@ -435,99 +468,6 @@ export function CheckoutView() {
         </div>
       </div>
 
-      {/* ============================================ */}
-      {/* DRAWER KONFIRMASI PEMBAYARAN */}
-      {/* ============================================ */}
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DrawerContent>
-          <div className="mx-auto w-full max-w-md">
-            <DrawerHeader>
-              <DrawerTitle className="text-lg">Konfirmasi Pembayaran</DrawerTitle>
-              <DrawerDescription>Pastikan pesanan Anda sudah benar sebelum melanjutkan</DrawerDescription>
-            </DrawerHeader>
-
-            <div className="px-4 pb-2 max-h-[50vh] overflow-y-auto">
-              {/* Order Summary per Store */}
-              <div className="space-y-4">
-                {MOCK_CHECKOUT.stores.map((store) => {
-                  const selectedShip = store.shipping.find(s => s.id === selectedShipping[store.id])
-                  return (
-                    <div key={store.id} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-xs font-bold">{store.name}</span>
-                      </div>
-                      <div className="pl-5 space-y-1">
-                        {store.items.map(item => (
-                          <div key={item.id} className="flex justify-between text-xs">
-                            <span className="text-muted-foreground line-clamp-1 mr-4">
-                              {item.name} <span className="text-foreground">×{item.qty}</span>
-                            </span>
-                            <span className="font-medium shrink-0">{fmt(item.price * item.qty)}</span>
-                          </div>
-                        ))}
-                        {selectedShip && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              Ongkir {selectedShip.name} ({selectedShip.courier})
-                            </span>
-                            <span className="font-medium shrink-0">{fmt(selectedShip.price)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <Separator className="my-4" />
-
-              {/* Totals */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">{fmt(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Total Ongkir</span>
-                  <span className="font-medium">{fmt(totalShipping)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Biaya Layanan</span>
-                  <span className="font-medium">{fmt(serviceFee)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between">
-                  <span className="text-sm font-bold">Total Pembayaran</span>
-                  <span className="text-sm font-bold text-primary">{fmt(grandTotal)}</span>
-                </div>
-              </div>
-            </div>
-
-            <DrawerFooter>
-              <Button
-                onClick={handleConfirmPayment}
-                disabled={isProcessing}
-                className="w-full h-11 font-bold"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Membuat Transaksi...
-                  </>
-                ) : (
-                  `Konfirmasi & Bayar ${fmt(grandTotal)}`
-                )}
-              </Button>
-              <DrawerClose asChild>
-                <Button variant="outline" className="w-full" disabled={isProcessing}>
-                  Batal
-                </Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </div>
-        </DrawerContent>
-      </Drawer>
     </div>
   )
 }

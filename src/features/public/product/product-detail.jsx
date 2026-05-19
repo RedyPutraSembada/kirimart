@@ -1,66 +1,19 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Star, MapPin, ChevronRight, Heart, Share2, Plus, Minus, ShieldCheck, Truck, MessageCircle, Check } from "lucide-react"
+import { useState, useMemo, useEffect } from "react"
+import Image from "next/image"
+import { Star, MapPin, ChevronRight, Heart, Share2, Plus, Minus, ShieldCheck, Truck, MessageCircle, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-
-const MOCK_PRODUCT = {
-  id: 101,
-  name: "Loco Polo Cartiera Scuba 280 GSM Boxy Polo Shirt Pria",
-  cat: "Fashion Pria",
-  basePrice: 139885,
-  originalPrice: 199000,
-  images: [
-    "/images/ml.png",
-    "/images/ml.png",
-    "/images/ml.png",
-    "/images/ml.png",
-  ],
-  rating: 4.9,
-  reviewCount: 15800,
-  soldCount: 50000,
-  description: `Loco Polo Cartiera Scuba 280 GSM Boxy Polo Shirt Pria
-
-• Bahan Scuba premium 280 GSM, tebal & tidak mudah kusut
-• Kerah polo klasik dengan kancing berkualitas
-• Potongan boxy fit, nyaman untuk segala aktivitas
-• Cocok untuk casual maupun semi-formal
-• Tersedia dalam berbagai warna dan ukuran
-
-Panduan Ukuran:
-S  : Lebar 52cm, Panjang 68cm
-M  : Lebar 54cm, Panjang 70cm
-L  : Lebar 56cm, Panjang 72cm
-XL : Lebar 58cm, Panjang 74cm
-XXL: Lebar 60cm, Panjang 76cm`,
-  store: {
-    name: "Cartiera Official",
-    logo: "/images/kawanbelanja.png",
-    city: "Jakarta Selatan",
-    isStar: true,
-    slug: "cartiera-official",
-    productCount: 128,
-    responseRate: 98,
-  },
-  options: [
-    { id: 1, name: "Pilih warna", displayType: "image", values: ["Jet Black", "Brown", "White", "Grey", "Maroon", "Emerald Green", "Marine Blue"], position: 1 },
-    { id: 2, name: "Pilih ukuran", displayType: "text", values: ["S", "M", "L", "XL", "XXL"], position: 2 },
-  ],
-  variants: [
-    { id: 1, attributes: { "Pilih warna": "Jet Black", "Pilih ukuran": "S" }, price: 139885, stock: 1192, img: "/images/ml.png" },
-    { id: 2, attributes: { "Pilih warna": "Jet Black", "Pilih ukuran": "M" }, price: 139885, stock: 500, img: "/images/ml.png" },
-    { id: 3, attributes: { "Pilih warna": "Jet Black", "Pilih ukuran": "L" }, price: 139885, stock: 300, img: "/images/ml.png" },
-    { id: 4, attributes: { "Pilih warna": "Brown", "Pilih ukuran": "S" }, price: 145000, stock: 200, img: "/images/ml.png" },
-    { id: 5, attributes: { "Pilih warna": "Brown", "Pilih ukuran": "M" }, price: 145000, stock: 100, img: "/images/ml.png" },
-    { id: 6, attributes: { "Pilih warna": "White", "Pilih ukuran": "M" }, price: 142000, stock: 80, img: "/images/ml.png" },
-    { id: 7, attributes: { "Pilih warna": "White", "Pilih ukuran": "L" }, price: 142000, stock: 60, img: "/images/ml.png" },
-  ],
-}
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { addToCart } from "@/actions/public/cart.actions"
+import { setCheckoutItems } from "@/actions/public/checkout.actions"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 const fmtNum = (n) => {
@@ -69,32 +22,113 @@ const fmtNum = (n) => {
   return String(n)
 }
 
-export function ProductDetail({ id }) {
-  const product = MOCK_PRODUCT
-  const [activeImg, setActiveImg] = useState(0)
+export function ProductDetail({ product }) {
+  // Prepare data from DB shape
+  const images = product.images?.map(img => img.imageUrl) || []
+  const options = product.options || []
+  const variants = product.variants || []
+  const store = product.store || {}
+  const hasVariants = options.length > 0 && variants.length > 0
+
+  const [activeImgUrl, setActiveImgUrl] = useState(images[0])
+  
+  // Sync image when product changes (for Next.js soft navigation)
+  useEffect(() => {
+    setActiveImgUrl(images[0])
+  }, [product.id])
+
   const [selectedAttributes, setSelectedAttributes] = useState(() => {
+    if (!hasVariants) return {}
     const init = {}
-    product.options.forEach(o => { init[o.name] = o.values[0] })
+    options.forEach(o => { init[o.name] = o.values[0] })
     return init
   })
   const [qty, setQty] = useState(1)
   const [showFullDesc, setShowFullDesc] = useState(false)
+  const queryClient = useQueryClient()
+  const router = useRouter()
+
+  // Mutation: Add to Cart
+  const addToCartMutation = useMutation({
+    mutationFn: addToCart,
+    onSuccess: (result) => {
+      if (result.success) {
+        toast.success(result.message)
+        queryClient.invalidateQueries({ queryKey: ["cart-summary"] })
+        queryClient.invalidateQueries({ queryKey: ["cart-details"] })
+      } else {
+        toast.error(result.error)
+      }
+    },
+    onError: () => {
+      toast.error("Terjadi kesalahan. Silakan coba lagi.")
+    },
+  })
+
+  const handleAddToCart = () => {
+    addToCartMutation.mutate({
+      productId: product.id,
+      variantId: hasVariants && selectedVariant ? selectedVariant.id : null,
+      qty,
+    })
+  }
+
+  // Mutation: Buy Now
+  const buyNowMutation = useMutation({
+    mutationFn: async (payload) => {
+      // 1. Tambahkan ke keranjang
+      const res = await addToCart(payload)
+      if (!res.success) throw new Error(res.error)
+      
+      // 2. Set checkout cookie dengan item ini saja
+      const res2 = await setCheckoutItems([res.cartItemId])
+      if (!res2.success) throw new Error(res2.error)
+      
+      return res
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart-summary"] })
+      queryClient.invalidateQueries({ queryKey: ["cart-details"] })
+      // Redirect ke checkout
+      router.push("/checkout")
+    },
+    onError: (error) => {
+      toast.error(error.message || "Gagal memproses pembelian langsung.")
+    }
+  })
+
+  const handleBuyNow = () => {
+    buyNowMutation.mutate({
+      productId: product.id,
+      variantId: hasVariants && selectedVariant ? selectedVariant.id : null,
+      qty,
+    })
+  }
 
   const selectedVariant = useMemo(() => {
-    return product.variants.find(v =>
+    if (!hasVariants) return null
+    return variants.find(v =>
       Object.entries(selectedAttributes).every(([key, val]) => v.attributes[key] === val)
     )
-  }, [selectedAttributes, product.variants])
+  }, [selectedAttributes, variants, hasVariants])
+
+  // Automatically update main image when a variant is selected
+  useEffect(() => {
+    if (selectedVariant?.imageUrl) {
+      setActiveImgUrl(selectedVariant.imageUrl)
+    }
+  }, [selectedVariant])
 
   const isOptionDisabled = (optionName, value) => {
+    if (!hasVariants) return false
     const potentialSelection = { ...selectedAttributes, [optionName]: value }
-    return !product.variants.some(v =>
+    return !variants.some(v =>
       Object.entries(potentialSelection).every(([key, val]) => v.attributes[key] === val)
     )
   }
 
-  const currentPrice = selectedVariant ? selectedVariant.price : product.basePrice
-  const currentStock = selectedVariant ? selectedVariant.stock : 0
+  const currentPrice = hasVariants && selectedVariant ? selectedVariant.price : product.basePrice
+  const currentStock = hasVariants ? (selectedVariant ? selectedVariant.stock : 0) : (product.baseStock || 0)
   const discountPercent = product.originalPrice ? Math.round((1 - currentPrice / product.originalPrice) * 100) : 0
 
   return (
@@ -105,7 +139,7 @@ export function ProductDetail({ id }) {
         <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-6 overflow-x-auto">
           <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">Home</Link>
           <ChevronRight className="h-3 w-3 shrink-0" />
-          <Link href="/katalog" className="hover:text-primary transition-colors whitespace-nowrap">{product.cat}</Link>
+          <Link href={`/katalog${product.category ? `?categoryId=${product.category.id}` : ''}`} className="hover:text-primary transition-colors whitespace-nowrap">{product.category?.name || 'Katalog'}</Link>
           <ChevronRight className="h-3 w-3 shrink-0" />
           <span className="text-foreground font-medium truncate max-w-[250px]">{product.name}</span>
         </nav>
@@ -116,12 +150,18 @@ export function ProductDetail({ id }) {
           <div className="lg:col-span-5 space-y-3">
             {/* Main Image */}
             <div className="aspect-square rounded-2xl overflow-hidden bg-card border border-border/50 relative group">
-              <img
-                src={selectedVariant?.img || product.images[activeImg]}
-                alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              {product.store.isStar && (
+              {activeImgUrl ? (
+                <Image
+                  src={activeImgUrl}
+                  alt={product.name}
+                  fill
+                  unoptimized
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-6xl text-muted-foreground">📦</div>
+              )}
+              {store.isStar && (
                 <Badge className="absolute top-4 left-4 bg-primary hover:bg-primary text-[10px] font-black px-2.5 py-1 shadow-lg">STAR+</Badge>
               )}
               {discountPercent > 0 && (
@@ -129,20 +169,22 @@ export function ProductDetail({ id }) {
               )}
             </div>
             {/* Thumbnails */}
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {product.images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveImg(i)}
-                  className={cn(
-                    "h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border-2 transition-all shrink-0",
-                    activeImg === i ? "border-primary ring-2 ring-primary/20" : "border-border/50 hover:border-primary/40"
-                  )}
-                >
-                  <img src={img} alt={`Preview ${i + 1}`} className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
+            {images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {images.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImgUrl(img)}
+                    className={cn(
+                      "h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 relative",
+                      activeImgUrl === img ? "border-primary ring-2 ring-primary/20" : "border-border/50 hover:border-primary/40"
+                    )}
+                  >
+                    <Image src={img} alt={`Preview ${i + 1}`} fill unoptimized className="object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ─── CENTER: Product Info ─── */}
@@ -152,12 +194,11 @@ export function ProductDetail({ id }) {
             <div>
               <h1 className="text-lg md:text-xl font-bold leading-snug text-foreground">{product.name}</h1>
               <div className="flex items-center gap-3 mt-2 text-xs">
-                <span className="text-muted-foreground">Terjual <span className="font-semibold text-foreground">{fmtNum(product.soldCount)}+</span></span>
+                <span className="text-muted-foreground">Terjual <span className="font-semibold text-foreground">{fmtNum(product.soldCount || 0)}+</span></span>
                 <Separator orientation="vertical" className="h-3" />
                 <div className="flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  <span className="font-semibold text-foreground">{product.rating}</span>
-                  <span className="text-muted-foreground">({fmtNum(product.reviewCount)} rating)</span>
+                  <span className="font-semibold text-foreground">{product.rating || "5.0"}</span>
                 </div>
               </div>
             </div>
@@ -175,66 +216,72 @@ export function ProductDetail({ id }) {
 
             <Separator />
 
-            {/* Dynamic Options */}
-            <div className="space-y-5">
-              {product.options.map((option) => (
-                <div key={option.id} className="space-y-2.5">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-semibold text-foreground">{option.name}:</span>
-                    <span className="text-muted-foreground">{selectedAttributes[option.name]}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {option.values.map((val) => {
-                      const disabled = isOptionDisabled(option.name, val)
-                      const selected = selectedAttributes[option.name] === val
-                      return (
-                        <button
-                          key={val}
-                          disabled={disabled}
-                          onClick={() => setSelectedAttributes(prev => ({ ...prev, [option.name]: val }))}
-                          className={cn(
-                            "relative px-3 py-1.5 rounded-lg border transition-all text-xs font-medium flex items-center gap-1.5",
-                            selected
-                              ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/30"
-                              : "border-border hover:border-primary/40 text-foreground",
-                            disabled && "opacity-30 cursor-not-allowed line-through bg-muted"
-                          )}
-                        >
-                          {option.displayType === "image" && (
-                            <div className="h-5 w-5 rounded overflow-hidden bg-muted border">
-                              <img src={product.images[0]} alt={val} className="h-full w-full object-cover" />
-                            </div>
-                          )}
-                          {val}
-                          {selected && (
-                            <Check className="h-3 w-3 text-primary" />
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
+            {/* Dynamic Options (hanya jika ada varian) */}
+            {hasVariants && (
+              <>
+                <div className="space-y-5">
+                  {options.map((option) => (
+                    <div key={option.id} className="space-y-2.5">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold text-foreground">{option.name}:</span>
+                        <span className="text-muted-foreground">{selectedAttributes[option.name]}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {option.values.map((val) => {
+                          const disabled = isOptionDisabled(option.name, val)
+                          const selected = selectedAttributes[option.name] === val
+                          return (
+                            <button
+                              key={val}
+                              disabled={disabled}
+                              onClick={() => setSelectedAttributes(prev => ({ ...prev, [option.name]: val }))}
+                              className={cn(
+                                "relative px-3 py-1.5 rounded-lg border transition-all text-xs font-medium flex items-center gap-1.5",
+                                selected
+                                  ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/30"
+                                  : "border-border hover:border-primary/40 text-foreground",
+                                disabled && "opacity-30 cursor-not-allowed line-through bg-muted"
+                              )}
+                            >
+                              {option.displayType === "image" && images[0] && (
+                                <div className="h-5 w-5 rounded overflow-hidden bg-muted border relative">
+                                  <Image src={images[0]} alt={val} fill unoptimized className="object-cover" />
+                                </div>
+                              )}
+                              {val}
+                              {selected && (
+                                <Check className="h-3 w-3 text-primary" />
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            <Separator />
+                <Separator />
+              </>
+            )}
 
             {/* Description */}
             <div className="space-y-2">
               <h3 className="font-semibold text-sm">Detail Produk</h3>
               <div className={cn("text-sm text-muted-foreground whitespace-pre-line leading-relaxed", !showFullDesc && "line-clamp-5")}>
-                {product.description}
+                {product.description || "Tidak ada deskripsi."}
               </div>
-              <button onClick={() => setShowFullDesc(!showFullDesc)} className="text-primary text-xs font-semibold hover:underline">
-                {showFullDesc ? "Sembunyikan" : "Lihat Selengkapnya"}
-              </button>
+              {product.description && product.description.length > 200 && (
+                <button onClick={() => setShowFullDesc(!showFullDesc)} className="text-primary text-xs font-semibold hover:underline">
+                  {showFullDesc ? "Sembunyikan" : "Lihat Selengkapnya"}
+                </button>
+              )}
             </div>
 
             {/* Shipping & Info */}
             <div className="space-y-2.5">
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <Truck className="h-4 w-4 text-primary shrink-0" />
-                <span>Ongkir Reguler mulai <span className="font-semibold text-foreground">Rp 9.000</span></span>
+                <span>Berat: <span className="font-semibold text-foreground">{product.weightGram || 0}g</span></span>
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
@@ -252,7 +299,7 @@ export function ProductDetail({ id }) {
                   <h3 className="font-semibold text-sm">Atur jumlah</h3>
 
                   {/* Selected variant summary */}
-                  {selectedVariant && (
+                  {hasVariants && selectedVariant && (
                     <div className="flex flex-wrap gap-1">
                       {Object.entries(selectedVariant.attributes).map(([, val]) => (
                         <Badge key={val} variant="secondary" className="text-[10px] font-medium">{val}</Badge>
@@ -263,20 +310,22 @@ export function ProductDetail({ id }) {
                   {/* Qty */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center border rounded-lg">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-l-lg" onClick={() => setQty(Math.max(1, qty - 1))} disabled={!selectedVariant}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-l-lg" onClick={() => setQty(Math.max(1, qty - 1))} disabled={hasVariants && !selectedVariant}>
                         <Minus className="h-3.5 w-3.5" />
                       </Button>
                       <span className="w-10 text-center text-sm font-semibold select-none">{qty}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-r-lg" onClick={() => setQty(Math.min(currentStock, qty + 1))} disabled={!selectedVariant}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-r-lg" onClick={() => setQty(Math.min(currentStock, qty + 1))} disabled={hasVariants && !selectedVariant}>
                         <Plus className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      Stok: <span className={cn("font-semibold", currentStock <= 10 ? "text-red-500" : "text-foreground")}>{selectedVariant ? currentStock : "-"}</span>
+                      Stok: <span className={cn("font-semibold", currentStock <= 10 ? "text-red-500" : "text-foreground")}>
+                        {hasVariants ? (selectedVariant ? currentStock : "-") : currentStock}
+                      </span>
                     </span>
                   </div>
 
-                  {!selectedVariant && (
+                  {hasVariants && !selectedVariant && (
                     <p className="text-xs text-amber-600 font-medium bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">Kombinasi varian tidak tersedia. Pilih opsi lain.</p>
                   )}
 
@@ -288,9 +337,28 @@ export function ProductDetail({ id }) {
 
                   {/* Buttons */}
                   <div className="space-y-2">
-                    <Button className="w-full h-10 font-bold text-sm" disabled={!selectedVariant}>+ Keranjang</Button>
-                    <Button variant="outline" className="w-full h-10 font-bold text-sm border-primary text-primary hover:bg-primary/5" disabled={!selectedVariant}>
-                      Beli Langsung
+                    <Button
+                      className="w-full h-10 font-bold text-sm"
+                      disabled={(hasVariants && !selectedVariant) || addToCartMutation.isPending || buyNowMutation.isPending}
+                      onClick={handleAddToCart}
+                    >
+                      {addToCartMutation.isPending ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menambahkan...</>
+                      ) : (
+                        "+ Keranjang"
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-10 font-bold text-sm border-primary text-primary hover:bg-primary/5" 
+                      disabled={(hasVariants && !selectedVariant) || addToCartMutation.isPending || buyNowMutation.isPending}
+                      onClick={handleBuyNow}
+                    >
+                      {buyNowMutation.isPending ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
+                      ) : (
+                        "Beli Langsung"
+                      )}
                     </Button>
                   </div>
 
@@ -311,27 +379,21 @@ export function ProductDetail({ id }) {
               <Card className="border-border/60 shadow-sm">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-11 w-11 rounded-full overflow-hidden bg-white border shrink-0">
-                      <img src={product.store.logo} alt={product.store.name} className="h-full w-full object-contain" />
+                    <div className="h-11 w-11 rounded-full overflow-hidden bg-white border shrink-0 relative">
+                      {store.logoUrl ? (
+                        <Image src={store.logoUrl} alt={store.name || "Toko"} fill unoptimized className="object-contain" />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-lg">🏪</div>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <h4 className="text-sm font-bold truncate">{product.store.name}</h4>
-                        {product.store.isStar && <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[9px] font-bold px-1.5 py-0 h-4 border-none">Star</Badge>}
+                        <h4 className="text-sm font-bold truncate">{store.name || "Toko"}</h4>
+                        {store.isStar && <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[9px] font-bold px-1.5 py-0 h-4 border-none">Star</Badge>}
                       </div>
                       <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <MapPin className="h-3 w-3" /> {product.store.city}
+                        <MapPin className="h-3 w-3" /> {store.address?.cityId || "Indonesia"}
                       </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-center">
-                    <div className="bg-muted/40 rounded-lg py-1.5 px-2">
-                      <p className="text-xs font-bold text-foreground">{product.store.productCount}</p>
-                      <p className="text-[10px] text-muted-foreground">Produk</p>
-                    </div>
-                    <div className="bg-muted/40 rounded-lg py-1.5 px-2">
-                      <p className="text-xs font-bold text-foreground">{product.store.responseRate}%</p>
-                      <p className="text-[10px] text-muted-foreground">Chat Dibalas</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -339,7 +401,7 @@ export function ProductDetail({ id }) {
                       <MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Chat
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1 h-8 text-xs font-semibold rounded-lg" asChild>
-                      <Link href={`/store/${product.store.slug}`}>Kunjungi Toko</Link>
+                      <Link href={`/store/${store.domainSlug || store.id}`}>Kunjungi Toko</Link>
                     </Button>
                   </div>
                 </CardContent>

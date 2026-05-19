@@ -48,6 +48,9 @@ export function CreateStoreForm() {
 			logo: "",
 			banner: "",
 			description: "",
+			bankName: "",
+			bankAccountNumber: "",
+			bankAccountHolder: "",
 		},
 	})
 
@@ -339,6 +342,56 @@ export function CreateStoreForm() {
 					/>
 
 
+					{/* ─── Informasi Rekening Bank ─── */}
+					<div className="border-t pt-6">
+						<h3 className="text-sm font-semibold mb-1">Informasi Rekening Bank</h3>
+						<p className="text-xs text-muted-foreground mb-4">Wajib diisi. Digunakan untuk pencairan dana penjualan Anda.</p>
+						
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<FormField
+								control={form.control}
+								name="bankName"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Nama Bank</FormLabel>
+										<FormControl>
+											<Input placeholder="BCA, Mandiri, BNI, dll" {...field} disabled={isPending} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="bankAccountNumber"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Nomor Rekening</FormLabel>
+										<FormControl>
+											<Input placeholder="1234567890" {...field} disabled={isPending} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+						<FormField
+							control={form.control}
+							name="bankAccountHolder"
+							render={({ field }) => (
+								<FormItem className="mt-4">
+									<FormLabel>Nama Pemilik Rekening</FormLabel>
+									<FormControl>
+										<Input placeholder="Sesuai buku tabungan" {...field} disabled={isPending} />
+									</FormControl>
+									<FormDescription>
+										Pastikan nama sesuai dengan rekening bank Anda.
+									</FormDescription>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</div>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<FormField

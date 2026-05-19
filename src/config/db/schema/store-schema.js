@@ -12,4 +12,12 @@ export const stores = pgTable("stores", {
 	isStar: boolean("is_star").default(false),
 	status: text("status").default("active"),
 	bannedReason: text("banned_reason"),
+	// Keuangan: Informasi Rekening Bank
+	bankName: text("bank_name"),
+	bankAccountNumber: text("bank_account_number"),
+	bankAccountHolder: text("bank_account_holder"),
+	// Keuangan: Saldo
+	balance: integer("balance").notNull().default(0),
+	withdrawnAmount: integer("withdrawn_amount").notNull().default(0),
 })
+

@@ -13,6 +13,7 @@ import { orders } from "./order-schema"
 import { orderItems } from "./order-item-schema"
 import { shipments } from "./shipment-schema"
 import { reviews } from "./review-schema"
+import { withdrawals } from "./withdrawal-schema"
 import { conversations } from "./conversation-schema"
 import { messages } from "./message-schema"
 
@@ -54,6 +55,7 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
     products: many(products),
     vouchers: many(vouchers),
     orders: many(orders),
+    withdrawals: many(withdrawals),
     conversations: many(conversations),
 }))
 
@@ -88,8 +90,10 @@ export const productOptionsRelations = relations(productOptions, ({ one }) => ({
     product: one(products, { fields: [productOptions.productId], references: [products.id] }),
 }))
 
-export const productVariantsRelations = relations(productVariants, ({ one }) => ({
+export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
     product: one(products, { fields: [productVariants.productId], references: [products.id] }),
+    cartItems: many(cartItems),
+    orderItems: many(orderItems),
 }))
 
 // Cart Relations
@@ -101,6 +105,7 @@ export const cartsRelations = relations(carts, ({ one, many }) => ({
 export const cartItemsRelations = relations(cartItems, ({ one }) => ({
     cart: one(carts, { fields: [cartItems.cartId], references: [carts.id] }),
     product: one(products, { fields: [cartItems.productId], references: [products.id] }),
+    variant: one(productVariants, { fields: [cartItems.variantId], references: [productVariants.id] }),
 }))
 
 // Transaction Relations
@@ -124,6 +129,7 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     order: one(orders, { fields: [orderItems.orderId], references: [orders.id] }),
     product: one(products, { fields: [orderItems.productId], references: [products.id] }),
+    variant: one(productVariants, { fields: [orderItems.variantId], references: [productVariants.id] }),
     review: one(reviews),
 }))
 
@@ -146,4 +152,8 @@ export const conversationsRelations = relations(conversations, ({ one, many }) =
 export const messagesRelations = relations(messages, ({ one }) => ({
     conversation: one(conversations, { fields: [messages.conversationId], references: [conversations.id] }),
     sender: one(user, { fields: [messages.senderId], references: [user.id] }),
+}))
+
+export const withdrawalsRelations = relations(withdrawals, ({ one }) => ({
+    store: one(stores, { fields: [withdrawals.storeId], references: [stores.id] }),
 }))

@@ -26,6 +26,8 @@ const API_BASE_URL = isProduction
 	? 'https://api.midtrans.com'
 	: 'https://api.sandbox.midtrans.com'
 
+const CORE_API_CHARGE_URL = `${API_BASE_URL}/v2/charge`
+
 // ============================================
 // HELPER: Authorization Header
 // ============================================
@@ -77,6 +79,78 @@ export async function createSnapTransaction(parameter) {
 	}
 
 	return data // { token, redirect_url }
+}
+
+// ============================================
+// CREATE CORE API CHARGE
+// ============================================
+
+/**
+ * Membuat transaksi via Core API (bukan Snap).
+ * Dengan Core API, kita menentukan payment_type secara eksplisit.
+ * 
+ * Response tergantung payment_type:
+ * - bank_transfer: { va_numbers: [{ bank, va_number }], ... }
+ * - echannel (Mandiri): { bill_key, biller_code, ... }
+ * - gopay: { actions: [{ name, method, url }], ... }
+ * - qris: { actions: [{ name, method, url }], ... }
+ * - shopeepay: { actions: [{ name, method, url }], ... }
+ * 
+ * @param {Object} parameter - Parameter transaksi lengkap
+ * @returns {Promise<Object>} Response dari Midtrans Core API
+ */
+export async function createCoreApiCharge(parameter) {
+	const response = await fetch(CORE_API_CHARGE_URL, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'Accept': 'application/json',
+			'Authorization': getAuthHeader(),
+		},
+		body: JSON.stringify(parameter),
+	})
+
+	const data = await response.json()
+
+	if (!response.ok || (data.status_code && parseInt(data.status_code) >= 400)) {
+		console.error('[MIDTRANS] Core API charge error:', data)
+		const errorMessage = data.status_message || 'Gagal membuat transaksi pembayaran'
+		throw new Error(errorMessage)
+	}
+
+	return data
+}
+
+// ============================================
+// CANCEL TRANSACTION
+// ============================================
+
+/**
+ * Membatalkan transaksi yang masih pending di Midtrans.
+ * Digunakan ketika user ingin ganti metode pembayaran.
+ * 
+ * @param {string} orderId - Order ID dari transaksi yang ingin dibatalkan
+ * @returns {Promise<Object>} Response dari Midtrans
+ */
+export async function cancelTransaction(orderId) {
+	const response = await fetch(`${API_BASE_URL}/v2/${orderId}/cancel`, {
+		method: 'POST',
+		headers: {
+			'Accept': 'application/json',
+			'Authorization': getAuthHeader(),
+		},
+	})
+
+	const data = await response.json()
+
+	// Cancel bisa return 200 atau 412 (sudah settlement/cancelled)
+	// Keduanya kita anggap OK
+	if (!response.ok && response.status !== 412) {
+		console.error('[MIDTRANS] Cancel error:', data)
+		throw new Error(data.status_message || 'Gagal membatalkan transaksi')
+	}
+
+	return data
 }
 
 // ============================================

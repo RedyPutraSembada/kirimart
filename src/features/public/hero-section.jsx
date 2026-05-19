@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles } from "lucide-react"
 import Link from "next/link"
@@ -59,10 +60,12 @@ export function HeroSection() {
           {/* Right Banner */}
           <div className="relative">
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted shadow-xl">
-              <img
+              <Image
                 src="/images/bannerml.png"
                 alt="Marketplace Banner"
-                className="w-full h-full object-cover"
+                fill
+                unoptimized
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
               <div className="absolute bottom-6 left-6 right-6 text-white">

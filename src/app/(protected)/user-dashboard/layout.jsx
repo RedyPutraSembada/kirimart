@@ -41,9 +41,6 @@ export default function UserDashboardLayout({ children }) {
 		if (!isPending && !session) {
 			router.push("/sign-in")
 		}
-		if (!isPending && session && session.user.role !== "user") {
-			router.push("/")
-		}
 	}, [session, isPending, router])
 
 	if (isPending) {

@@ -13,4 +13,9 @@ export const createStoreSchema = z.object({
 	logo: z.string().nullable().optional(),
 	banner: z.string().nullable().optional(),
 	description: z.string().nullable().optional(),
+	// Informasi Rekening Bank (Wajib saat mendaftar)
+	bankName: z.string().min(2, "Nama bank wajib diisi"),
+	bankAccountNumber: z.string().min(5, "Nomor rekening minimal 5 digit").max(30, "Nomor rekening terlalu panjang"),
+	bankAccountHolder: z.string().min(3, "Nama pemilik rekening wajib diisi"),
 })
+
