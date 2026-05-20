@@ -1,19 +1,43 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useMutation } from "@tanstack/react-query"
+import { toggleFollowStore, checkIsFollowingStore } from "@/actions/public/store-follow.actions"
 
-import { MapPin, Globe, Star, ShoppingBag, Clock, ShieldCheck } from "lucide-react"
+import { MapPin, Globe, Star, ShoppingBag, Clock, ShieldCheck, UserPlus, UserCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 import { ProductCard } from "@/components/public/product-card"
+import { toast } from "sonner"
 
 
 
 export function StoreView({ store = {} }) {
   const [sortBy, setSortBy] = useState("newest")
+  const [isFollowing, setIsFollowing] = useState(false)
+
+  // Cek status follow saat pertama kali load
+  useEffect(() => {
+    if (store.id) {
+      checkIsFollowingStore(store.id).then(res => setIsFollowing(res.isFollowing))
+    }
+  }, [store.id])
+
+  const followMutation = useMutation({
+    mutationFn: () => toggleFollowStore(store.id),
+    onSuccess: (result) => {
+      if (result.success) {
+        setIsFollowing(result.isFollowing)
+        toast.success(result.message)
+      } else {
+        toast.error(result.error)
+      }
+    },
+    onError: () => toast.error("Gagal memproses permintaan."),
+  })
 
   const sortedProducts = useMemo(() => {
     if (!store.products || store.products.length === 0) return []
@@ -36,6 +60,9 @@ export function StoreView({ store = {} }) {
   const handlePriceSort = () => {
     setSortBy(current => current === "price_asc" ? "price_desc" : "price_asc")
   }
+
+  const storeRating = store.rating ? parseFloat(store.rating) : 5.0
+  const totalReviews = store.totalReviews || 0
 
   return (
     <div className="space-y-10 pb-20">
@@ -69,14 +96,31 @@ export function StoreView({ store = {} }) {
               </div>
               <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground font-medium">
                 {store.address?.cityId && <div className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-primary" /> {store.address.cityId}</div>}
-                <div className="flex items-center gap-1.5"><Star className="h-4 w-4 text-amber-500 fill-amber-500" /> 5.0 <span className="opacity-60">(0 ulasan)</span></div>
-                <div className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-blue-500" /> 09:00 - 21:00</div>
+                <div className="flex items-center gap-1.5">
+                  <Star className="h-4 w-4 text-amber-500 fill-amber-500" /> {storeRating.toFixed(1)}
+                  <span className="opacity-60">({totalReviews} ulasan)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-blue-500" /> {store.openTime || "09:00"} - {store.closeTime || "21:00"}
+                </div>
               </div>
             </div>
 
             <div className="flex gap-3 mb-2">
-              <Button className="rounded-full px-8 h-12 font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
-                Ikuti Toko
+              <Button
+                className={`rounded-full px-8 h-12 font-bold shadow-xl transition-transform hover:scale-105 ${
+                  isFollowing
+                    ? "bg-muted text-foreground hover:bg-muted/80 shadow-none border"
+                    : "shadow-primary/20"
+                }`}
+                onClick={() => followMutation.mutate()}
+                disabled={followMutation.isPending}
+              >
+                {isFollowing ? (
+                  <><UserCheck className="h-4 w-4 mr-2" /> Mengikuti</>
+                ) : (
+                  <><UserPlus className="h-4 w-4 mr-2" /> Ikuti Toko</>
+                )}
               </Button>
               <Button variant="outline" className="rounded-full px-8 h-12 font-bold border-2 hover:bg-muted transition-all">
                 Chat
@@ -104,19 +148,32 @@ export function StoreView({ store = {} }) {
                   <span className="font-bold text-foreground">{store.products?.length || 0}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Waktu Respon</span>
-                  <span className="font-bold text-foreground">~5 Menit</span>
+                  <span className="text-muted-foreground">Pengikut</span>
+                  <span className="font-bold text-foreground">{store.followerCount || 0}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Rating</span>
+                  <span className="font-bold text-foreground flex items-center gap-1">
+                    <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                    {storeRating.toFixed(1)}
+                  </span>
                 </div>
               </div>
 
-              <div className="space-y-3 pt-6 border-t">
-                <div className="flex items-center gap-3 text-xs text-emerald-600 font-bold bg-emerald-500/10 px-4 py-2 rounded-xl">
-                  <ShieldCheck className="h-4 w-4" /> Penjual Tepercaya
+              {(store.isVerified || store.isOfficial) && (
+                <div className="space-y-3 pt-6 border-t">
+                  {store.isVerified && (
+                    <div className="flex items-center gap-3 text-xs text-emerald-600 font-bold bg-emerald-500/10 px-4 py-2 rounded-xl">
+                      <ShieldCheck className="h-4 w-4" /> Penjual Tepercaya
+                    </div>
+                  )}
+                  {store.isOfficial && (
+                    <div className="flex items-center gap-3 text-xs text-blue-600 font-bold bg-blue-500/10 px-4 py-2 rounded-xl">
+                      <ShoppingBag className="h-4 w-4" /> Produk Original 100%
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-blue-600 font-bold bg-blue-500/10 px-4 py-2 rounded-xl">
-                  <ShoppingBag className="h-4 w-4" /> Produk Original 100%
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </aside>

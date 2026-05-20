@@ -108,7 +108,7 @@ export async function getCheckoutData() {
 							with: {
 								images: true,
 								store: {
-									columns: { id: true, name: true, domainSlug: true, isStar: true, logoUrl: true, addressId: true },
+									columns: { id: true, name: true, domainSlug: true, isStar: true, logoUrl: true, addressId: true, enabledCouriers: true },
 									with: {
 										address: true, // Alamat asal toko (untuk kalkulasi ongkir nanti)
 									},
@@ -153,8 +153,10 @@ export async function getCheckoutData() {
 					slug: store.domainSlug,
 					logo: store.logoUrl,
 					isStar: store.isStar,
-					// Alamat asal toko (untuk ongkir)
+					// Alamat asal toko (untuk ongkir Biteship)
+					originAreaId: store.address?.biteshipAreaId || null,
 					originCityId: store.address?.cityId || null,
+					enabledCouriers: store.enabledCouriers || "jne,sicepat,jnt,anteraja",
 					items: [],
 				})
 			}
@@ -189,16 +191,7 @@ export async function getCheckoutData() {
 			})
 		}
 
-		// 5. Hitung opsi ongkos kirim mock per toko (berdasarkan berat total)
-		const storesData = Array.from(storeMap.values()).filter(s => s.items.length > 0).map(store => {
-			const totalWeight = store.items.reduce((sum, item) => sum + (item.weight * item.qty), 0)
-			return {
-				...store,
-				shipping: generateMockShipping(totalWeight),
-			}
-		})
-
-		// 6. Ambil semua alamat user
+		// 5. Ambil semua alamat user (untuk dipilih sebagai tujuan)
 		const userAddresses = await db.select().from(addresses).where(
 			and(
 				eq(addresses.userId, session.user.id),
@@ -208,13 +201,41 @@ export async function getCheckoutData() {
 
 		// Filter hanya alamat user (storeId null)
 		const personalAddresses = userAddresses.filter(a => !a.storeId)
+		const selectedAddress = personalAddresses[0] || null
+		const destAreaId = selectedAddress?.biteshipAreaId || null
+
+		// 6. Hitung opsi ongkir LIVE per toko dari Biteship
+		const { getBiteshipRates } = await import("@/actions/public/biteship.actions")
+
+		const storesData = []
+		for (const store of Array.from(storeMap.values()).filter(s => s.items.length > 0)) {
+			let shipping = []
+			let shippingError = null
+
+			if (destAreaId && store.originAreaId) {
+				// Panggil Biteship Rates API (1 hit = Rp 5 per toko)
+				const ratesResult = await getBiteshipRates(
+					store.originAreaId,
+					destAreaId,
+					store.items,
+					store.enabledCouriers
+				)
+				if (ratesResult.success) {
+					shipping = ratesResult.data
+				} else {
+					shippingError = ratesResult.error
+				}
+			}
+
+			storesData.push({ ...store, shipping, shippingError })
+		}
 
 		return {
 			success: true,
 			data: {
 				stores: storesData,
 				addresses: personalAddresses,
-				selectedAddressId: personalAddresses[0]?.id || null,
+				selectedAddressId: selectedAddress?.id || null,
 			},
 		}
 	} catch (error) {
@@ -224,50 +245,57 @@ export async function getCheckoutData() {
 }
 
 // ============================================
-// MOCK SHIPPING CALCULATOR
+// GET SHIPPING RATES (dipanggil saat user ganti alamat)
 // ============================================
 
 /**
- * Menghitung opsi ongkos kirim berdasarkan berat.
- * Struktur data meniru response KiriminAja agar mudah diganti nanti.
+ * Mengambil ulang tarif ongkir saat user mengganti alamat tujuan.
+ * Dipanggil secara terpisah agar tidak perlu reload seluruh data checkout.
  *
- * @param {number} weightGram - Total berat dalam gram
- * @returns {Array} Daftar opsi pengiriman
+ * @param {number} addressId - ID alamat tujuan yang dipilih
+ * @param {Array} storeShippingRequests - [{ storeId, originAreaId, enabledCouriers, items }]
+ * @returns {{ success: boolean, data?: Object<storeId, shipping[]> }}
  */
-function generateMockShipping(weightGram) {
-	// Hitung berat dalam kg (pembulatan ke atas)
-	const weightKg = Math.ceil(weightGram / 1000) || 1
+export async function getShippingRatesForAddress(addressId, storeShippingRequests) {
+	try {
+		const session = await getAuthSession()
+		if (!session) {
+			return { success: false, error: "Silakan login terlebih dahulu." }
+		}
 
-	// Base rates per kg (meniru tarif umum ekspedisi Indonesia)
-	return [
-		{
-			id: "reguler",
-			name: "Reguler",
-			courier: "J&T Express",
-			service: "EZ",
-			price: 9000 * weightKg,
-			eta: "3-5 hari",
-			etaDays: { min: 3, max: 5 },
-		},
-		{
-			id: "express",
-			name: "Express",
-			courier: "JNE",
-			service: "YES",
-			price: 18000 * weightKg,
-			eta: "1-2 hari",
-			etaDays: { min: 1, max: 2 },
-		},
-		{
-			id: "same_day",
-			name: "Same Day",
-			courier: "GoSend",
-			service: "Instant",
-			price: 25000 + (5000 * weightKg),
-			eta: "Hari ini",
-			etaDays: { min: 0, max: 0 },
-		},
-	]
+		// Ambil alamat tujuan
+		const [destAddress] = await db.select()
+			.from(addresses)
+			.where(eq(addresses.id, addressId))
+			.limit(1)
+
+		if (!destAddress?.biteshipAreaId) {
+			return { success: false, error: "Alamat tujuan belum memiliki data wilayah Biteship." }
+		}
+
+		const { getBiteshipRates } = await import("@/actions/public/biteship.actions")
+
+		const ratesMap = {}
+		for (const req of storeShippingRequests) {
+			if (!req.originAreaId) {
+				ratesMap[req.storeId] = []
+				continue
+			}
+
+			const result = await getBiteshipRates(
+				req.originAreaId,
+				destAddress.biteshipAreaId,
+				req.items,
+				req.enabledCouriers || "jne,sicepat,jnt,anteraja"
+			)
+			ratesMap[req.storeId] = result.success ? result.data : []
+		}
+
+		return { success: true, data: ratesMap }
+	} catch (error) {
+		console.error("[getShippingRatesForAddress]", error)
+		return { success: false, error: "Gagal mengambil tarif ongkir." }
+	}
 }
 
 // ============================================

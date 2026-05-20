@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import { completeOrderAndReview } from "@/actions/user-dashboard/order.actions"
+import { trackOrderShipment } from "@/actions/public/tracking.actions"
 import { useGetOrderDetail } from "@/app/data/user-dashboard/order-data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
 	Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, ArrowLeft, Truck, Package, CheckCircle2, ClipboardCopy, Receipt, MapPin, Star, PackageCheck } from "lucide-react"
+import { Loader2, ArrowLeft, Truck, Package, CheckCircle2, ClipboardCopy, Receipt, MapPin, Star, PackageCheck, Navigation } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
 import Link from "next/link"
@@ -21,6 +22,7 @@ const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency:
 export function OrderDetail({ orderId }) {
 	const queryClient = useQueryClient()
 	const [showReviewDialog, setShowReviewDialog] = useState(false)
+	const [showTrackingDialog, setShowTrackingDialog] = useState(false)
 	const [reviewsState, setReviewsState] = useState([]) // { orderItemId, productId, rating, comment }
 
 	const { data: queryData, isLoading, isError, refetch } = useGetOrderDetail(orderId)
@@ -41,6 +43,15 @@ export function OrderDetail({ orderId }) {
 	})
 
 	const order = queryData?.data
+
+	// Live tracking data dari Biteship — shared dengan modal (queryKey sama)
+	const shouldTrack = !isLoading && !!order && ['shipped', 'completed'].includes(order?.status) && !!order?.shipment?.awbNumber
+	const { data: liveTracking } = useQuery({
+		queryKey: ["tracking", orderId],
+		queryFn: () => trackOrderShipment(orderId),
+		enabled: shouldTrack,
+		refetchInterval: 30000,
+	})
 
 	if (isLoading) {
 		return (
@@ -106,25 +117,43 @@ export function OrderDetail({ orderId }) {
 
 	const currentStatusIndex = statuses.findIndex(s => s.id === order.status)
 
-	// Timeline based on real status
-	const timeline = []
-	timeline.push({ date: order.createdAt, status: 'Pesanan dibuat.' })
+	// Build unified timeline: static events + live tracking data
+	const buildTimeline = () => {
+		const tl = []
+		tl.push({ date: order.createdAt, status: 'Pesanan dibuat.' })
 
-	if (['paid', 'processing', 'shipped', 'completed'].includes(order.status)) {
-		timeline.push({ date: order.payment?.paidAt || order.createdAt, status: 'Pembayaran berhasil. Pesanan diteruskan ke penjual.' })
-	}
-	if (['processing', 'shipped', 'completed'].includes(order.status)) {
-		timeline.push({ date: null, status: 'Pesanan sedang dikemas oleh penjual.' })
-	}
-	if (['shipped', 'completed'].includes(order.status)) {
-		timeline.push({ date: null, status: `Paket diserahkan ke pihak kurir (${order.shipment?.courier || 'Kurir'}). Resi: ${order.shipment?.awbNumber || '-'}` })
-	}
-	if (order.status === 'completed') {
-		timeline.push({ date: null, status: 'Pesanan telah selesai dan diterima oleh pembeli.' })
+		if (['paid', 'processing', 'shipped', 'completed'].includes(order.status)) {
+			tl.push({ date: order.payment?.paidAt || order.createdAt, status: 'Pembayaran berhasil. Pesanan diteruskan ke penjual.' })
+		}
+		if (['processing', 'shipped', 'completed'].includes(order.status)) {
+			tl.push({ date: null, status: 'Pesanan sedang dikemas oleh penjual.' })
+		}
+
+		// Jika ada live tracking data, gunakan itu (bukan text statis)
+		// Biteship timeline sudah sorted newest-first, kita reverse agar jadi oldest-first
+		// lalu final .reverse() di bawah akan membuat semuanya newest-first
+		if (liveTracking?.success && liveTracking.data?.timeline?.length > 0) {
+			const oldestFirst = [...liveTracking.data.timeline].reverse()
+			oldestFirst.forEach(t => {
+				tl.push({
+					date: t.date,
+					status: t.note || shipmentStatusLabel[t.status] || t.status,
+				})
+			})
+		} else if (['shipped', 'completed'].includes(order.status)) {
+			// Fallback statis jika live tracking belum tersedia
+			tl.push({ date: null, status: `Paket diproses oleh ${order.shipment?.courier?.toUpperCase() || 'kurir'}. Resi: ${order.shipment?.awbNumber || '-'}` })
+		}
+
+		if (order.status === 'completed') {
+			tl.push({ date: null, status: 'Pesanan telah selesai dan diterima oleh pembeli.' })
+		}
+
+		return tl
 	}
 
 	// Reverse so latest is on top
-	const sortedTimeline = [...timeline].reverse()
+	const sortedTimeline = [...buildTimeline()].reverse()
 
 	return (
 		<div className="space-y-6">
@@ -179,15 +208,37 @@ export function OrderDetail({ orderId }) {
 							)}
 
 							{/* Tombol Pesanan Diterima */}
-							{order.status === 'shipped' && (
-								<div className="mt-8 p-4 bg-primary/5 border border-primary/20 rounded-lg text-center space-y-2">
-									<p className="text-sm font-medium text-foreground">Pesanan Anda sudah dikirim. Sudah menerima paketnya?</p>
-									<Button onClick={handleOpenReviewDialog} className="shadow-lg">
-										<CheckCircle2 className="h-4 w-4 mr-2" />
-										Pesanan Diterima
-									</Button>
+						{order.status === 'shipped' && (() => {
+							const isDelivered = liveTracking?.data?.status === 'delivered' || order.shipment?.status === 'delivered'
+							return (
+								<div className={`mt-8 p-4 rounded-lg text-center space-y-3 border
+									${isDelivered
+										? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800'
+										: 'bg-primary/5 border-primary/20'}`}>
+									{isDelivered ? (
+										<>
+											<div className="flex items-center justify-center gap-2">
+												<CheckCircle2 className="h-5 w-5 text-emerald-600" />
+												<p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Paket Sudah Tiba!</p>
+											</div>
+											<p className="text-xs text-emerald-600 dark:text-emerald-500">Konfirmasi penerimaan dan berikan ulasan untuk penjual.</p>
+										</>
+									) : (
+										<p className="text-sm font-medium text-foreground">Pesanan Anda sedang dikirim. Sudah menerima paketnya?</p>
+									)}
+									<div className="flex gap-2 justify-center">
+										<Button variant="outline" onClick={() => setShowTrackingDialog(true)}>
+											<Navigation className="h-4 w-4 mr-2" />
+											Lacak Resi
+										</Button>
+										<Button onClick={handleOpenReviewDialog} className={isDelivered ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg" : "shadow-lg"}>
+											<CheckCircle2 className="h-4 w-4 mr-2" />
+											Pesanan Diterima & Beri Ulasan
+										</Button>
+									</div>
 								</div>
-							)}
+							)
+						})()}
 						</CardContent>
 					</Card>
 
@@ -263,9 +314,17 @@ export function OrderDetail({ orderId }) {
 								<p className="text-xs text-muted-foreground line-clamp-3">{order.payment?.metadataLocal?.address?.detail}</p>
 							</div>
 
-							{/* Timeline Pelacakan */}
+							{/* Live Tracking Timeline */}
 							<div className="pt-4 border-t space-y-4">
-								<p className="text-xs font-semibold">Status Pelacakan</p>
+								<div className="flex items-center justify-between">
+									<p className="text-xs font-semibold">Status Pelacakan</p>
+									{order.shipment?.awbNumber && (
+										<Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => setShowTrackingDialog(true)}>
+											<Navigation className="h-3 w-3 mr-1" />
+											Lihat Detail
+										</Button>
+									)}
+								</div>
 								<div className="relative pl-4 border-l-2 border-border/50 space-y-4">
 									{sortedTimeline.map((tl, i) => (
 										<div key={i} className="relative">
@@ -407,6 +466,101 @@ export function OrderDetail({ orderId }) {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Dialog: Lacak Resi */}
+			<Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
+				<DialogContent className="max-w-md">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<Navigation className="h-5 w-5 text-primary" />
+							Lacak Resi #{order.id}
+						</DialogTitle>
+						<DialogDescription>Lacak posisi paket secara real-time.</DialogDescription>
+					</DialogHeader>
+					<BuyerTrackingContent trackingData={liveTracking} />
+				</DialogContent>
+			</Dialog>
+		</div>
+	)
+}
+
+// Label status detail berdasarkan shipments.status dari Biteship
+const shipmentStatusLabel = {
+	pending: "Menunggu Proses",
+	confirmed: "Menunggu Penjemputan",
+	allocated: "Kurir Dialokasikan",
+	picking_up: "Kurir Sedang Menjemput",
+	picked: "Paket Dijemput",
+	in_transit: "Dalam Perjalanan",
+	dropping_off: "Kurir Mengantar",
+	delivered: "Tiba di Tujuan",
+	returned: "Dikembalikan",
+	cancelled: "Dibatalkan",
+}
+
+function BuyerTrackingContent({ trackingData }) {
+	if (!trackingData) {
+		return (
+			<div className="flex flex-col items-center justify-center py-8 gap-3">
+				<Loader2 className="h-6 w-6 animate-spin text-primary" />
+				<p className="text-sm text-muted-foreground">Memuat data pelacakan...</p>
+			</div>
+		)
+	}
+
+	if (!trackingData?.success) {
+		return (
+			<div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+				<p className="text-sm text-red-600">{trackingData?.error || "Gagal memuat data pelacakan."}</p>
+			</div>
+		)
+	}
+
+	const { awbNumber, courier, service, status, timeline, _fallback } = trackingData.data
+
+	return (
+		<div className="space-y-4 max-h-[50vh] overflow-y-auto">
+			<div className="rounded-lg border p-3 bg-muted/30 space-y-2">
+				<div className="flex justify-between items-center">
+					<div>
+						<p className="text-xs text-muted-foreground">Nomor Resi</p>
+						<p className="font-mono font-bold text-sm tracking-wider">{awbNumber}</p>
+					</div>
+					<Badge variant="outline" className="text-xs capitalize">
+						{shipmentStatusLabel[status] || status}
+					</Badge>
+				</div>
+				<p className="text-xs text-muted-foreground">{courier?.toUpperCase()} — {service}</p>
+			</div>
+
+			{_fallback && (
+				<div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md p-2">
+					⚠️ Data dari database lokal (mode sandbox). Tracking live tidak tersedia.
+				</div>
+			)}
+
+			<div className="relative pl-6 space-y-4">
+				{timeline.map((t, i) => (
+					<div key={i} className="relative">
+						{i < timeline.length - 1 && (
+							<div className="absolute left-[-18px] top-3 bottom-[-20px] w-0.5 bg-border" />
+						)}
+						<div className={`absolute left-[-22px] top-1 h-2.5 w-2.5 rounded-full border-2 bg-background
+							${i === 0 ? "border-primary ring-4 ring-primary/20" : "border-muted-foreground/30"}`}
+						/>
+						<div>
+							<p className={`text-xs font-medium ${i === 0 ? "text-foreground" : "text-muted-foreground"}`}>
+								{t.note || shipmentStatusLabel[t.status] || t.status}
+							</p>
+							{t.date && (
+								<p className="text-[10px] text-muted-foreground mt-0.5">
+									{new Date(t.date).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+								</p>
+							)}
+						</div>
+					</div>
+				))}
+			</div>
 		</div>
 	)
 }

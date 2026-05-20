@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean } from "drizzle-orm/pg-core"
+import { pgTable, serial, text, integer, boolean, decimal } from "drizzle-orm/pg-core"
 
 export const stores = pgTable("stores", {
 	id: serial("id").primaryKey(),
@@ -19,5 +19,17 @@ export const stores = pgTable("stores", {
 	// Keuangan: Saldo
 	balance: integer("balance").notNull().default(0),
 	withdrawnAmount: integer("withdrawn_amount").notNull().default(0),
+	// Pengiriman: Kurir yang diaktifkan seller (wajib diisi)
+	enabledCouriers: text("enabled_couriers"), // "jne,sicepat,jnt" — comma separated
+	// Profil Toko: Jam Operasional
+	openTime: text("open_time").default("09:00"),
+	closeTime: text("close_time").default("21:00"),
+	// Profil Toko: Badge
+	isVerified: boolean("is_verified").default(false), // Badge: Penjual Tepercaya
+	isOfficial: boolean("is_official").default(false), // Badge: Produk Original 100%
+	// Profil Toko: Agregasi (di-update otomatis saat ada review baru)
+	rating: decimal("rating", { precision: 2, scale: 1 }).default("5.0"),
+	totalReviews: integer("total_reviews").notNull().default(0),
+	followerCount: integer("follower_count").notNull().default(0),
 })
 

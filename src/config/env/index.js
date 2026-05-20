@@ -16,6 +16,10 @@ export const env = createEnv({
         MIDTRANS_IS_PRODUCTION: z.string().default("false"),
         MIDTRANS_MERCHANT_ID: z.string().min(1),
 
+        // Biteship Shipping API
+        BITESHIP_API_KEY: z.string().min(1),
+        BITESHIP_WEBHOOK_SECRET: z.string().optional(),
+
         // REDIS_HOST: z.string().min(1),
         // REDIS_PORT: z.coerce.number().int(),
         // REDIS_PASSWORD: z.string().optional(),
@@ -49,6 +53,10 @@ export const env = createEnv({
         MIDTRANS_CLIENT_KEY: process.env.MIDTRANS_CLIENT_KEY,
         MIDTRANS_IS_PRODUCTION: process.env.MIDTRANS_IS_PRODUCTION,
         MIDTRANS_MERCHANT_ID: process.env.MIDTRANS_MERCHANT_ID,
+
+        // Biteship
+        BITESHIP_API_KEY: process.env.BITESHIP_API_KEY,
+        BITESHIP_WEBHOOK_SECRET: process.env.BITESHIP_WEBHOOK_SECRET,
 
         // REDIS_HOST: process.env.REDIS_HOST,
         // REDIS_PORT: process.env.REDIS_PORT,

@@ -1,6 +1,7 @@
 export * from './auth-schema'
 export * from './address-schema'
 export * from './store-schema'
+export * from './store-follower-schema'
 export * from './category-schema'
 export * from './product-schema'
 export * from './product-image-schema'

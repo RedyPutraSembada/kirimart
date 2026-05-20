@@ -151,7 +151,7 @@ export async function completeOrderAndReview(orderId, reviewsData) {
 				)
 			}
 
-			// 3. Hitung ulang rating untuk setiap produk yang di-review
+			// 4. Hitung ulang rating untuk setiap produk yang di-review
 			const productIds = [...new Set(reviewsData.map(r => r.productId))]
 			for (const productId of productIds) {
 				const [result] = await tx
@@ -168,7 +168,29 @@ export async function completeOrderAndReview(orderId, reviewsData) {
 					.where(eq(products.id, productId))
 			}
 
-			// 4. Tambahkan saldo ke dompet toko
+			// 5. Hitung ulang rating TOKO (rata-rata dari semua review produk di toko ini)
+			const [storeRatingResult] = await tx
+				.select({
+					avgRating: avg(reviews.rating),
+					totalReviews: sql`COUNT(*)::int`,
+				})
+				.from(reviews)
+				.innerJoin(products, eq(reviews.productId, products.id))
+				.where(eq(products.storeId, order.storeId))
+
+			const storeRating = storeRatingResult?.avgRating
+				? parseFloat(parseFloat(storeRatingResult.avgRating).toFixed(1))
+				: 5.0
+			const storeTotalReviews = storeRatingResult?.totalReviews || 0
+
+			await tx.update(stores)
+				.set({
+					rating: String(storeRating),
+					totalReviews: storeTotalReviews,
+				})
+				.where(eq(stores.id, order.storeId))
+
+			// 6. Tambahkan saldo ke dompet toko
 			// Seller mendapat: grandTotal - ongkir - komisi platform
 			// Ongkir → untuk kurir, platformFee → untuk platform
 			const sellerIncome = order.grandTotal - (order.totalShipping || 0) - (order.platformFee || 0)

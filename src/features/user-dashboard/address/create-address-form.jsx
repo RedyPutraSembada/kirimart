@@ -1,16 +1,15 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm, FormProvider } from "react-hook-form"
 import { ArrowLeft, Save } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
+import { CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { AddressForm } from "@/components/shared/address-form"
 import { saveUserAddressAction } from "@/actions/user-dashboard/address.actions"
-
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 export function CreateAddressForm() {
@@ -37,16 +36,32 @@ export function CreateAddressForm() {
 		defaultValues: {
 			recipientName: "",
 			recipientPhone: "",
+			label: "",
+			biteshipAreaId: "",
+			provinceName: "",
+			cityName: "",
+			kecamatanName: "",
 			provinceId: "",
 			cityId: "",
 			kecamatanId: "",
 			kelurahanId: "",
 			zipcode: "",
 			detailAddress: "",
+			latitude: null,
+			longitude: null,
 		}
 	})
 
 	const onSubmit = async (data) => {
+		// Validasi manual: biteshipAreaId wajib ada
+		if (!data.biteshipAreaId) {
+			toast.error("Pilih wilayah terlebih dahulu menggunakan kolom pencarian.")
+			return
+		}
+		if (!data.detailAddress.trim()) {
+			toast.error("Alamat lengkap wajib diisi.")
+			return
+		}
 		await saveMutation.mutateAsync(data)
 	}
 
@@ -67,18 +82,12 @@ export function CreateAddressForm() {
 			<Card>
 				<FormProvider {...methods}>
 					<form onSubmit={methods.handleSubmit(onSubmit)}>
-						<AddressForm 
-							title="Alamat Pengiriman (Pembeli)" 
-							description="Penting: Alamat ini akan digunakan untuk menghitung tarif ongkos kirim saat Anda berbelanja." 
+						<AddressForm
+							title="Alamat Pengiriman (Pembeli)"
+							description="Cari wilayah Anda untuk mendapatkan data logistik yang akurat. Data dari Biteship."
 						/>
-						
-						<CardContent className="pt-0">
-							<div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:bg-amber-950/30 dark:border-amber-800 mb-4 mt-2">
-								<p className="text-sm text-amber-800 dark:text-amber-300">
-									⚠️ <strong>Catatan Sistem:</strong> Pencarian alamat saat ini menggunakan <em>Mock Data</em>. Pilihan provinsi yang tersedia hanya DKI Jakarta, DI Yogyakarta, dan Jawa Barat untuk keperluan ujicoba.
-								</p>
-							</div>
 
+						<CardContent className="pt-0">
 							<div className="flex items-center justify-end gap-4 mt-6">
 								<Button variant="outline" type="button" asChild disabled={saveMutation.isPending}>
 									<Link href="/user-dashboard/address">Batal</Link>

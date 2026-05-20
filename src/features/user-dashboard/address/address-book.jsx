@@ -54,44 +54,47 @@ export function AddressBook() {
 				</Card>
 			) : (
 				<div className="grid gap-4 md:grid-cols-2">
-					{addresses.map((address, index) => (
-						<Card key={address.id} className="relative overflow-hidden">
-							{index === 0 && (
-								<div className="absolute top-0 right-0">
-									<Badge className="rounded-tl-none rounded-br-none border-none">Utama</Badge>
-								</div>
-							)}
-							<CardHeader className="pb-3">
-								<CardTitle className="text-base flex items-center gap-2">
-									<MapPin className="h-4 w-4 text-primary" />
-									{address.recipientName}
-								</CardTitle>
-								<CardDescription>{address.recipientPhone}</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-4">
-								<div className="text-sm">
-									<p>{address.detailAddress}</p>
-									<p className="text-muted-foreground mt-1">
-										Kec. {address.kecamatanId}, Kota/Kab. {address.cityId}
-									</p>
-									<p className="text-muted-foreground">
-										Provinsi {address.provinceId}, {address.zipcode}
-									</p>
-								</div>
-								
-								<div className="flex items-center gap-2 pt-2 border-t">
-									<Button variant="outline" size="sm" className="w-full">
-										<Edit2 className="mr-2 h-3.5 w-3.5" />
-										Ubah
-									</Button>
-									<Button variant="outline" size="sm" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50">
-										<Trash2 className="mr-2 h-3.5 w-3.5" />
-										Hapus
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-					))}
+					{addresses.map((address) => (
+					<Card key={address.id} className="relative overflow-hidden">
+						{address.isDefault && (
+							<div className="absolute top-0 right-0">
+								<Badge className="rounded-tl-none rounded-br-none border-none">Utama</Badge>
+							</div>
+						)}
+						<CardHeader className="pb-3">
+							<CardTitle className="text-base flex items-center gap-2">
+								<MapPin className="h-4 w-4 text-primary" />
+								{address.recipientName || "Penerima"}
+								{address.label && (
+									<Badge variant="outline" className="text-[10px] font-normal">{address.label}</Badge>
+								)}
+							</CardTitle>
+							<CardDescription>{address.recipientPhone || "-"}</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="text-sm">
+								<p>{address.detailAddress}</p>
+								<p className="text-muted-foreground mt-1">
+									{address.kecamatanName || address.kecamatanId || "-"}, {address.cityName || address.cityId || "-"}
+								</p>
+								<p className="text-muted-foreground">
+									{address.provinceName || address.provinceId || "-"}, {address.zipcode || "-"}
+								</p>
+							</div>
+							
+							<div className="flex items-center gap-2 pt-2 border-t">
+								<Button variant="outline" size="sm" className="w-full">
+									<Edit2 className="mr-2 h-3.5 w-3.5" />
+									Ubah
+								</Button>
+								<Button variant="outline" size="sm" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50">
+									<Trash2 className="mr-2 h-3.5 w-3.5" />
+									Hapus
+								</Button>
+							</div>
+						</CardContent>
+					</Card>
+				))}
 				</div>
 			)}
 		</div>

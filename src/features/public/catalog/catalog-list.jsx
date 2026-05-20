@@ -12,6 +12,9 @@ import { ProductCard } from "@/components/public/product-card"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
+} from "@/components/ui/sheet"
 import { getCatalogProducts } from "@/actions/public/storefront.actions"
 import { useDebouncedCallback } from "use-debounce"
 
@@ -28,7 +31,6 @@ export function CatalogList({
   const [priceMin, setPriceMin] = useState("")
   const [priceMax, setPriceMax] = useState("")
   const [page, setPage] = useState(1)
-  const [showFilter, setShowFilter] = useState(false)
 
   // Debounce search input
   const debouncedSetSearch = useDebouncedCallback((value) => {
@@ -83,6 +85,55 @@ export function CatalogList({
   const hasActiveFilter = selectedCatId || priceMin || priceMax || debouncedSearch
   const selectedCatName = selectedCatId ? initialCategories.find(c => String(c.id) === String(selectedCatId))?.name : null
 
+  const FilterContent = (
+    <div className="space-y-6">
+      {/* Categories */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3">Kategori</h3>
+        <div className="space-y-1.5">
+          {initialCategories.map(cat => (
+            <label key={cat.id} className="flex items-center gap-2.5 py-1 cursor-pointer text-sm group">
+              <Checkbox checked={String(selectedCatId) === String(cat.id)} onCheckedChange={() => toggleCat(String(cat.id))} />
+              <span className={`text-xs transition-colors ${String(selectedCatId) === String(cat.id) ? "font-semibold text-primary" : "text-muted-foreground group-hover:text-foreground"}`}>{cat.name}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Price Range */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3">Harga</h3>
+        <div className="space-y-2">
+          <Input placeholder="Minimum" type="number" value={priceMin} onChange={e => { setPriceMin(e.target.value); setPage(1) }} className="h-8 text-xs rounded-lg" />
+          <Input placeholder="Maksimum" type="number" value={priceMax} onChange={e => { setPriceMax(e.target.value); setPage(1) }} className="h-8 text-xs rounded-lg" />
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Quick Filters */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3">Lainnya</h3>
+        <div className="space-y-1.5">
+          <label className="flex items-center gap-2.5 py-1 cursor-pointer">
+            <Checkbox />
+            <span className="text-xs text-muted-foreground">Star Seller</span>
+          </label>
+          <label className="flex items-center gap-2.5 py-1 cursor-pointer">
+            <Checkbox />
+            <span className="text-xs text-muted-foreground">Gratis Ongkir</span>
+          </label>
+          <label className="flex items-center gap-2.5 py-1 cursor-pointer">
+            <Checkbox />
+            <span className="text-xs text-muted-foreground">Diskon</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="container mx-auto px-4 md:px-6 py-6 max-w-7xl">
       {/* Header */}
@@ -102,10 +153,22 @@ export function CatalogList({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-10 rounded-xl lg:hidden gap-2 font-medium" onClick={() => setShowFilter(!showFilter)}>
-              <SlidersHorizontal className="h-4 w-4" /> Filter
-              {hasActiveFilter && <span className="h-2 w-2 rounded-full bg-primary" />}
-            </Button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="h-10 rounded-xl lg:hidden gap-2 font-medium">
+                  <SlidersHorizontal className="h-4 w-4" /> Filter
+                  {hasActiveFilter && <span className="h-2 w-2 rounded-full bg-primary" />}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[300px] sm:w-[350px]">
+                <SheetHeader className="mb-6">
+                  <SheetTitle>Filter Produk</SheetTitle>
+                </SheetHeader>
+                <div className="overflow-y-auto h-[calc(100vh-100px)] pr-2">
+                  {FilterContent}
+                </div>
+              </SheetContent>
+            </Sheet>
             <Select value={sortBy} onValueChange={(val) => { setSortBy(val); setPage(1) }}>
               <SelectTrigger className="w-[160px] h-10 rounded-xl text-xs">
                 <SelectValue placeholder="Urutkan" />
@@ -143,52 +206,9 @@ export function CatalogList({
       </div>
 
       <div className="flex gap-6">
-        {/* Sidebar Filter — Desktop always, Mobile toggled */}
-        <aside className={`w-56 shrink-0 space-y-6 ${showFilter ? "block" : "hidden"} lg:block`}>
-          {/* Categories */}
-          <div>
-            <h3 className="text-sm font-semibold mb-3">Kategori</h3>
-            <div className="space-y-1.5">
-              {initialCategories.map(cat => (
-                <label key={cat.id} className="flex items-center gap-2.5 py-1 cursor-pointer text-sm group">
-                  <Checkbox checked={String(selectedCatId) === String(cat.id)} onCheckedChange={() => toggleCat(String(cat.id))} />
-                  <span className={`text-xs transition-colors ${String(selectedCatId) === String(cat.id) ? "font-semibold text-primary" : "text-muted-foreground group-hover:text-foreground"}`}>{cat.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Price Range */}
-          <div>
-            <h3 className="text-sm font-semibold mb-3">Harga</h3>
-            <div className="space-y-2">
-              <Input placeholder="Minimum" type="number" value={priceMin} onChange={e => { setPriceMin(e.target.value); setPage(1) }} className="h-8 text-xs rounded-lg" />
-              <Input placeholder="Maksimum" type="number" value={priceMax} onChange={e => { setPriceMax(e.target.value); setPage(1) }} className="h-8 text-xs rounded-lg" />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Quick Filters */}
-          <div>
-            <h3 className="text-sm font-semibold mb-3">Lainnya</h3>
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2.5 py-1 cursor-pointer">
-                <Checkbox />
-                <span className="text-xs text-muted-foreground">Star Seller</span>
-              </label>
-              <label className="flex items-center gap-2.5 py-1 cursor-pointer">
-                <Checkbox />
-                <span className="text-xs text-muted-foreground">Gratis Ongkir</span>
-              </label>
-              <label className="flex items-center gap-2.5 py-1 cursor-pointer">
-                <Checkbox />
-                <span className="text-xs text-muted-foreground">Diskon</span>
-              </label>
-            </div>
-          </div>
+        {/* Sidebar Filter — Desktop always */}
+        <aside className="w-56 shrink-0 hidden lg:block">
+          {FilterContent}
         </aside>
 
         {/* Product Grid */}
@@ -234,3 +254,4 @@ export function CatalogList({
     </div>
   )
 }
+

@@ -68,9 +68,12 @@ export function CheckoutView() {
       checkoutStores.forEach(s => {
         if (s.shipping?.[0]) init[s.id] = s.shipping[0].id
       })
-      setSelectedShipping(init)
+      if (Object.keys(init).length > 0) {
+        setSelectedShipping(init)
+      }
     }
-  }, [checkoutStores, selectedShipping])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkoutStores])
 
   // Ambil alamat terpilih
   const address = userAddresses.find(a => a.id === selectedAddressId) || userAddresses[0] || null
@@ -230,14 +233,20 @@ export function CheckoutView() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm">{address.recipientName || "Penerima"}</span>
                     <span className="text-sm text-muted-foreground">{address.recipientPhone || "-"}</span>
+                    {address.label && (
+                      <span className="text-[10px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded">{address.label}</span>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground">{address.detailAddress} {address.zipcode && `(${address.zipcode})`}</p>
+                  <p className="text-sm text-muted-foreground">{address.detailAddress}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {address.kecamatanName || address.kecamatanId || ""}{address.cityName ? `, ${address.cityName}` : ""}{address.provinceName ? `, ${address.provinceName}` : ""} {address.zipcode && `(${address.zipcode})`}
+                  </p>
                 </>
               ) : (
                 <div className="text-center py-4">
                   <p className="text-sm text-muted-foreground mb-2">Belum ada alamat pengiriman.</p>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href="/user/addresses">Tambah Alamat</Link>
+                    <Link href="/user-dashboard/address/create">Tambah Alamat</Link>
                   </Button>
                 </div>
               )}
@@ -304,26 +313,52 @@ export function CheckoutView() {
                     <Truck className="h-4 w-4 text-primary" />
                     <span className="text-sm font-semibold">Opsi Pengiriman</span>
                   </div>
-                  <div className="space-y-2">
-                    {store.shipping?.map(ship => (
-                      <button
-                        key={ship.id}
-                        onClick={() => setSelectedShipping(prev => ({ ...prev, [store.id]: ship.id }))}
-                        className={cn(
-                          "w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all",
-                          selectedShipping[store.id] === ship.id
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                            : "border-border hover:border-primary/30"
-                        )}
-                      >
-                        <div>
-                          <p className="text-xs font-semibold">{ship.name} <span className="font-normal text-muted-foreground">- {ship.courier}</span></p>
-                          <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5"><Clock className="h-3 w-3" /> Estimasi {ship.eta}</p>
-                        </div>
-                        <span className="text-xs font-bold">{fmt(ship.price)}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {!address?.biteshipAreaId ? (
+                    <div className="p-3 rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/30 dark:border-amber-800">
+                      <p className="text-xs text-amber-800 dark:text-amber-300">
+                        ⚠️ Tambahkan alamat pengiriman terlebih dahulu untuk melihat opsi kurir.
+                      </p>
+                    </div>
+                  ) : !store.originAreaId ? (
+                    <div className="p-3 rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/30 dark:border-amber-800">
+                      <p className="text-xs text-amber-800 dark:text-amber-300">
+                        ⚠️ Toko ini belum mengatur alamat penjemputan. Hubungi penjual.
+                      </p>
+                    </div>
+                  ) : store.shippingError ? (
+                    <div className="p-3 rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/30 dark:border-red-800">
+                      <p className="text-xs text-red-800 dark:text-red-300">
+                        ⚠️ Gagal mengambil ongkir: {store.shippingError}
+                      </p>
+                    </div>
+                  ) : store.shipping?.length === 0 ? (
+                    <div className="p-3 rounded-lg border border-muted bg-muted/30">
+                      <p className="text-xs text-muted-foreground">
+                        Tidak ada kurir tersedia untuk rute ini. Coba alamat lain.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {store.shipping?.map(ship => (
+                        <button
+                          key={ship.id}
+                          onClick={() => setSelectedShipping(prev => ({ ...prev, [store.id]: ship.id }))}
+                          className={cn(
+                            "w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all",
+                            selectedShipping[store.id] === ship.id
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                              : "border-border hover:border-primary/30"
+                          )}
+                        >
+                          <div>
+                            <p className="text-xs font-semibold">{ship.name} <span className="font-normal text-muted-foreground">- {ship.courier}</span></p>
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5"><Clock className="h-3 w-3" /> Estimasi {ship.eta}</p>
+                          </div>
+                          <span className="text-xs font-bold">{fmt(ship.price)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

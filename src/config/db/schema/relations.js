@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm"
 import { account, session, user } from "./auth-schema"
 import { addresses } from "./address-schema"
 import { stores } from "./store-schema"
+import { storeFollowers } from "./store-follower-schema"
 import { categories } from "./category-schema"
 import { products, productOptions, productVariants } from "./product-schema"
 import { productImages } from "./product-image-schema"
@@ -57,6 +58,7 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
     orders: many(orders),
     withdrawals: many(withdrawals),
     conversations: many(conversations),
+    followers: many(storeFollowers),
 }))
 
 // Catalog Relations
@@ -157,3 +159,9 @@ export const messagesRelations = relations(messages, ({ one }) => ({
 export const withdrawalsRelations = relations(withdrawals, ({ one }) => ({
     store: one(stores, { fields: [withdrawals.storeId], references: [stores.id] }),
 }))
+
+// Store Follower Relations
+export const storeFollowersRelations = relations(storeFollowers, ({ one }) => ({
+    user: one(user, { fields: [storeFollowers.userId], references: [user.id] }),
+    store: one(stores, { fields: [storeFollowers.storeId], references: [stores.id] }),
+}))
