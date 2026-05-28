@@ -1,0 +1,1449 @@
+{
+	"info": {
+		"_postman_id": "2240db60-b1a7-47df-997e-7fa527913af5",
+		"name": "Biteship Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "23400824",
+		"_collection_link": "https://planetary-space-257657.postman.co/workspace/Biteship~331883ad-21c5-457a-a3d4-e990a28dab30/collection/23400824-2240db60-b1a7-47df-997e-7fa527913af5?action=share&source=collection_link&creator=23400824"
+	},
+	"item": [
+		{
+			"name": "Rates API By Area Id",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"origin_area_id\": \"IDNP6IDNC148IDND836IDZ12410\",\n  \"destination_area_id\": \"IDNP6IDNC148IDND836IDZ12430\",\n  \"couriers\": \"paxel,jne,sicepat\",\n  \"items\": [\n    {\n      \"name\": \"Shoes\",\n      \"description\": \"Black colored size 45\",\n      \"value\": 199000,\n      \"length\": 30,\n      \"width\": 15,\n      \"height\": 20,\n      \"weight\": 200,\n      \"quantity\": 2\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/rates/couriers",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"rates",
+						"couriers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rates API By Postal Code",
+			"protocolProfileBehavior": {
+				"strictSSL": true,
+				"followRedirects": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"origin_postal_code\":  12530,\n    \"destination_postal_code\": 10110,\n    \"couriers\": \"ninja,sap\",\n    \"items\": [\n        {\n            \"name\": \"Book\",\n            \"description\": \"Zero to One\",\n            \"length\": 10,\n            \"width\": 10,\n            \"height\": 1,\n            \"weight\": 1000,\n            \"quantity\": 1,\n            \"value\": 149000\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/rates/couriers",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"rates",
+						"couriers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rates API By Mix",
+			"protocolProfileBehavior": {
+				"strictSSL": true,
+				"followRedirects": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"origin_postal_code\": 12440,\n  \"destination_latitude\": -6.2441792,\n  \"destination_longitude\": 106.783529,\n  \"couriers\": \"paxel,jne,sicepat\",\n  \"items\": [\n    {\n      \"name\": \"Shoes\",\n      \"description\": \"Black colored size 45\",\n      \"value\": 199000,\n      \"length\": 30,\n      \"width\": 15,\n      \"height\": 20,\n      \"weight\": 200,\n      \"quantity\": 2\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/rates/couriers",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"rates",
+						"couriers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rates API By Type",
+			"protocolProfileBehavior": {
+				"strictSSL": true,
+				"followRedirects": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"type\": \"origin_suggestion_to_closest_destination\",\n  \"destination_latitude\": -6.2441792,\n  \"destination_longitude\": 106.783529,\n  \"couriers\": \"paxel,jne,sicepat\",\n  \"items\": [\n    {\n      \"name\": \"Shoes\",\n      \"description\": \"Black colored size 45\",\n      \"value\": 199000,\n      \"length\": 30,\n      \"width\": 15,\n      \"height\": 20,\n      \"weight\": 200,\n      \"quantity\": 2\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/rates/couriers",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"rates",
+						"couriers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rates API By items more than 10 kg",
+			"protocolProfileBehavior": {
+				"strictSSL": true,
+				"followRedirects": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"origin_postal_code\":  12530,\n    \"destination_postal_code\": 10110,\n    \"couriers\": \"sap\",\n    \"items\": [\n        {\n            \"name\": \"Tires\",\n            \"description\": \"Zero to One\",\n            \"length\": 10,\n            \"width\": 10,\n            \"height\": 1,\n            \"weight\": 15000,\n            \"quantity\": 1,\n            \"value\": 149000\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/rates/couriers",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"rates",
+						"couriers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rates API By Instant courier request more than 10 km distance",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"origin_latitude\": \"-7.291974\",\n    \"origin_longitude\": \" 108.801207\",\n    \"destination_latitude\": \"-6.288941\",\n    \"destination_longitude\": \" 106.806473\",\n    \"couriers\": \"grab,gojek\",\n    \"items\": [\n           {\n         \"name\":\"Polaris Coffee Cream 330ml isi 3 pcs\",\n         \"description\":\"\",\n         \"length\":10,\n         \"width\":10,\n         \"height\":0,\n         \"weight\":1000,\n         \"value\":285600,\n         \"quantity\":1\n      }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/rates/couriers",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"rates",
+						"couriers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rates API By Coordinates",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"origin_latitude\": \"-6.291974\",\n    \"origin_longitude\": \" 106.801207\",\n    \"destination_latitude\": \"-6.288941\",\n    \"destination_longitude\": \" 106.806473\",\n    \"couriers\": \"grab,gojek\",\n    \"items\": [\n           {\n         \"name\":\"Polaris Coffee Cream 330ml isi 3 pcs\",\n         \"description\":\"\",\n         \"length\":10,\n         \"width\":10,\n         \"height\":0,\n         \"weight\":1000,\n         \"value\":285600,\n         \"quantity\":1\n      }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/rates/couriers",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"rates",
+						"couriers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Rates API By Instant courier exceeds weight limit",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"origin_latitude\": \"-6.291974\",\n    \"origin_longitude\": \" 106.801207\",\n    \"destination_latitude\": \"-6.288941\",\n    \"destination_longitude\": \" 106.806473\",\n    \"couriers\": \"grab,gojek\",\n    \"items\": [\n           {\n         \"name\":\"Polaris Coffee Cream 330ml isi 3 pcs\",\n         \"description\":\"\",\n         \"length\":10,\n         \"width\":10,\n         \"height\":0,\n         \"weight\":1000,\n         \"value\":285600,\n         \"quantity\":1\n      }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/rates/couriers",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"rates",
+						"couriers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Couriers API List",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"origin_latitude\": \"-6.291974\",\n    \"origin_longitude\": \" 106.801207\",\n    \"destination_latitude\": \"-6.288941\",\n    \"destination_longitude\": \" 106.806473\",\n    \"couriers\": \"grab,gojek\",\n    \"items\": [\n           {\n         \"name\":\"Polaris Coffee Cream 330ml isi 3 pcs\",\n         \"description\":\"\",\n         \"length\":10,\n         \"width\":10,\n         \"height\":0,\n         \"weight\":1000,\n         \"value\":285600,\n         \"quantity\":1\n      }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/couriers",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"couriers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Location API Create with Coordinates",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n   \"name\":\"Apotik Gambir\",\n   \"contact_name\":\"Ahmad\",\n   \"contact_phone\":\"08123456789\",\n   \"address\":\"Jl. Gambir Selatan no 5. Blok F 92. Jakarta Pusat.\",\n   \"note\":\"Dekat tulisan warung Bu Indah\",\n   \"postal_code\":10110,\n   \"latitude\":-6.232123121,\n   \"longitude\":102.22189911,\n   \"type\":\"origin\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/locations",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"locations"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Location API Create without Coordinates",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n   \"name\":\"Apotik Gambir\",\n   \"contact_name\":\"Ahmad\",\n   \"contact_phone\":\"08123456789\",\n   \"address\":\"Jl. Gambir Selatan no 5. Blok F 92. Jakarta Pusat.\",\n   \"note\":\"Dekat tulisan warung Bu Indah\",\n   \"postal_code\":10110,\n   \"type\":\"origin\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/locations",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"locations"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Location API Get",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/locations/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"locations",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "67cab70892d78200122712bb"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Location API Update",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Apotik Monas\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/locations/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"locations",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "67cab70892d78200122712bb"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Location API Delete",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/locations/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"locations",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "67cab70892d78200122712bb"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Maps API Get location",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/maps/areas?countries=ID&input=Jakarta+Selatan&type=single",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"maps",
+						"areas"
+					],
+					"query": [
+						{
+							"key": "countries",
+							"value": "ID"
+						},
+						{
+							"key": "input",
+							"value": "Jakarta+Selatan"
+						},
+						{
+							"key": "type",
+							"value": "single"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Maps API Get location failed",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/maps/areas?countries=ID&input=Jakarta+Tenggara&type=single",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"maps",
+						"areas"
+					],
+					"query": [
+						{
+							"key": "countries",
+							"value": "ID"
+						},
+						{
+							"key": "input",
+							"value": "Jakarta+Tenggara"
+						},
+						{
+							"key": "type",
+							"value": "single"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Create By postal code",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"origin_contact_name\": \"Amir\",\n  \"origin_contact_phone\": \"081234567890\",\n  \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n  \"origin_note\": \"Deket pintu masuk STC\",\n  \"origin_postal_code\": 12440,\n  \"destination_contact_name\": \"John Doe\",\n  \"destination_contact_phone\": \"088888888888\",\n  \"destination_contact_email\": \"johndoe@example.com\",\n  \"destination_address\": \"Lebak Bulus MRT...\",\n  \"destination_postal_code\": 12950,\n  \"destination_note\": \"Near the gas station\",\n  \"delivery_type\": \"now\",\n  \"order_note\": \"Please be careful\",\n  \"items\": [\n    {\n      \"name\": \"Black L\",\n      \"description\": \"White Shirt\",\n      \"category\": \"fashion\",\n      \"value\": 165000,\n      \"quantity\": 1,\n      \"height\": 10,\n      \"length\": 10,\n      \"weight\": 200,\n      \"width\": 10\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Create By coordinates",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"shipper_contact_name\": \"Amir\",\n  \"shipper_contact_phone\": \"088888888888\",\n  \"shipper_contact_email\": \"biteship@test.com\",\n  \"shipper_organization\": \"Biteship Org Test\",\n  \"origin_contact_name\": \"Amir\",\n  \"origin_contact_phone\": \"088888888888\",\n  \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n  \"origin_note\": \"Deket pintu masuk STC\",\n  \"origin_coordinate\": {\n    \"latitude\": -6.2253114,\n    \"longitude\": 106.7993735\n  },\n  \"destination_contact_name\": \"John Doe\",\n  \"destination_contact_phone\": \"088888888888\",\n  \"destination_contact_email\": \"jon@test.com\",\n  \"destination_address\": \"Lebak Bulus MRT...\",\n  \"destination_note\": \"Near the gas station\",\n  \"destination_coordinate\": {\n    \"latitude\": -6.28927,\n    \"longitude\": 106.77492000000007\n  },\n  \"courier_company\": \"grab\",\n  \"courier_type\": \"instant\",\n  \"courier_insurance\": 500000,\n  \"delivery_type\": \"now\",\n  \"order_note\": \"Please be careful\",\n  \"metadata\": {},\n  \"items\": [\n    {\n      \"name\": \"Black L\",\n      \"description\": \"White Shirt\",\n      \"category\": \"fashion\",\n      \"category\": \"fashion\",\n      \"value\": 165000,\n      \"quantity\": 1,\n      \"height\": 10,\n      \"length\": 10,\n      \"weight\": 200,\n      \"width\": 10\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Create By area id",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"shipper_contact_name\": \"Amir\",\n  \"shipper_contact_phone\": \"088888888888\",\n  \"shipper_contact_email\": \"biteship@test.com\",\n  \"shipper_organization\": \"Biteship Org Test\",\n  \"origin_contact_name\": \"Amir\",\n  \"origin_contact_phone\": \"088888888888\",\n  \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n  \"origin_note\": \"Deket pintu masuk STC\",\n  \"origin_area_id\": \"IDNP6IDNC148IDND843IDZ12250\",\n  \"destination_contact_name\": \"John Doe\",\n  \"destination_contact_phone\": \"088888888888\",\n  \"destination_contact_email\": \"jon@test.com\",\n  \"destination_address\": \"Lebak Bulus MRT...\",\n  \"destination_note\": \"Near the gas station\",\n  \"destination_area_id\": \"IDNP6IDNC148IDND843IDZ12250\",\n  \"courier_company\": \"jne\",\n  \"courier_type\": \"reg\",\n  \"delivery_type\": \"now\",\n  \"order_note\": \"Please be careful\",\n  \"metadata\": {},\n  \"items\": [\n    {\n      \"name\": \"Black L\",\n      \"description\": \"White Shirt\",\n      \"category\": \"fashion\",\n      \"category\": \"fashion\",\n      \"value\": 165000,\n      \"quantity\": 1,\n      \"height\": 10,\n      \"length\": 10,\n      \"weight\": 200,\n      \"width\": 10\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Get",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"shipper_contact_name\": \"Amir\",\n  \"shipper_contact_phone\": \"088888888888\",\n  \"shipper_contact_email\": \"biteship@test.com\",\n  \"shipper_organization\": \"Biteship Org Test\",\n  \"origin_contact_name\": \"Amir\",\n  \"origin_contact_phone\": \"088888888888\",\n  \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n  \"origin_note\": \"Deket pintu masuk STC\",\n  \"origin_coordinate\": {\n    \"latitude\": -6.2253114,\n    \"longitude\": 106.7993735\n  },\n  \"destination_contact_name\": \"John Doe\",\n  \"destination_contact_phone\": \"088888888888\",\n  \"destination_contact_email\": \"jon@test.com\",\n  \"destination_address\": \"Lebak Bulus MRT...\",\n  \"destination_note\": \"Near the gas station\",\n  \"destination_coordinate\": {\n    \"latitude\": -6.28927,\n    \"longitude\": 106.77492000000007\n  },\n  \"courier_company\": \"grab\",\n  \"courier_type\": \"instant\",\n  \"courier_insurance\": 500000,\n  \"delivery_type\": \"now\",\n  \"order_note\": \"Please be careful\",\n  \"metadata\": {},\n  \"items\": [\n    {\n      \"name\": \"Black L\",\n      \"description\": \"White Shirt\",\n      \"category\": \"fashion\",\n      \"category\": \"fashion\",\n      \"value\": 165000,\n      \"quantity\": 1,\n      \"height\": 10,\n      \"length\": 10,\n      \"weight\": 200,\n      \"width\": 10\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "d2bb3bf2-4ed6-4f2a-b783-41a0faf8bd8a"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Delete",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"shipper_contact_name\": \"Amir\",\n  \"shipper_contact_phone\": \"088888888888\",\n  \"shipper_contact_email\": \"biteship@test.com\",\n  \"shipper_organization\": \"Biteship Org Test\",\n  \"origin_contact_name\": \"Amir\",\n  \"origin_contact_phone\": \"088888888888\",\n  \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n  \"origin_note\": \"Deket pintu masuk STC\",\n  \"origin_coordinate\": {\n    \"latitude\": -6.2253114,\n    \"longitude\": 106.7993735\n  },\n  \"destination_contact_name\": \"John Doe\",\n  \"destination_contact_phone\": \"088888888888\",\n  \"destination_contact_email\": \"jon@test.com\",\n  \"destination_address\": \"Lebak Bulus MRT...\",\n  \"destination_note\": \"Near the gas station\",\n  \"destination_coordinate\": {\n    \"latitude\": -6.28927,\n    \"longitude\": 106.77492000000007\n  },\n  \"courier_company\": \"grab\",\n  \"courier_type\": \"instant\",\n  \"courier_insurance\": 500000,\n  \"delivery_type\": \"now\",\n  \"order_note\": \"Please be careful\",\n  \"metadata\": {},\n  \"items\": [\n    {\n      \"name\": \"Black L\",\n      \"description\": \"White Shirt\",\n      \"category\": \"fashion\",\n      \"category\": \"fashion\",\n      \"value\": 165000,\n      \"quantity\": 1,\n      \"height\": 10,\n      \"length\": 10,\n      \"weight\": 200,\n      \"width\": 10\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "d2bb3bf2-4ed6-4f2a-b783-41a0faf8bd8a"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Confirm",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders/:id/confirm",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders",
+						":id",
+						"confirm"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "d2bb3bf2-4ed6-4f2a-b783-41a0faf8bd8a"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Update Courier",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"courier_company\": \"sicepat\",\n  \"courier_type\": \"reg\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "d2bb3bf2-4ed6-4f2a-b783-41a0faf8bd8a"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Update Location",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"origin_coordinate\": {\n    \"latitude\": -6.1751,\n    \"longitude\": 106.8650\n  },\n  \"destination_coordinate\": {\n    \"latitude\": -6.2115,\n    \"longitude\": 106.8452\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "d2bb3bf2-4ed6-4f2a-b783-41a0faf8bd8a"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Update items",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"items\": [\n        {\n            \"name\": \"Black L\",\n            \"description\": \"White Shirt\",\n            \"category\": \"fashion\",\n            \"value\": 165000,\n            \"quantity\": 1,\n            \"height\": 10,\n            \"length\": 10,\n            \"weight\": 200,\n            \"width\": 10\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "d2bb3bf2-4ed6-4f2a-b783-41a0faf8bd8a"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Draft Order API Get Rates",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"shipper_contact_name\": \"Amir\",\n  \"shipper_contact_phone\": \"088888888888\",\n  \"shipper_contact_email\": \"biteship@test.com\",\n  \"shipper_organization\": \"Biteship Org Test\",\n  \"origin_contact_name\": \"Amir\",\n  \"origin_contact_phone\": \"088888888888\",\n  \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n  \"origin_note\": \"Deket pintu masuk STC\",\n  \"origin_coordinate\": {\n    \"latitude\": -6.2253114,\n    \"longitude\": 106.7993735\n  },\n  \"destination_contact_name\": \"John Doe\",\n  \"destination_contact_phone\": \"088888888888\",\n  \"destination_contact_email\": \"jon@test.com\",\n  \"destination_address\": \"Lebak Bulus MRT...\",\n  \"destination_note\": \"Near the gas station\",\n  \"destination_coordinate\": {\n    \"latitude\": -6.28927,\n    \"longitude\": 106.77492000000007\n  },\n  \"courier_company\": \"grab\",\n  \"courier_type\": \"instant\",\n  \"courier_insurance\": 500000,\n  \"delivery_type\": \"now\",\n  \"order_note\": \"Please be careful\",\n  \"metadata\": {},\n  \"items\": [\n    {\n      \"name\": \"Black L\",\n      \"description\": \"White Shirt\",\n      \"category\": \"fashion\",\n      \"category\": \"fashion\",\n      \"value\": 165000,\n      \"quantity\": 1,\n      \"height\": 10,\n      \"length\": 10,\n      \"weight\": 200,\n      \"width\": 10\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/draft_orders/:id/rates",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"draft_orders",
+						":id",
+						"rates"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "d2bb3bf2-4ed6-4f2a-b783-41a0faf8bd8a"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Order API Create By postal code",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"origin_contact_name\": \"Amir\",\n  \"origin_contact_phone\": \"081234567890\",\n  \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n  \"origin_note\": \"Deket pintu masuk STC\",\n  \"origin_postal_code\": 12440,\n  \"destination_contact_name\": \"John Doe\",\n  \"destination_contact_phone\": \"088888888888\",\n  \"destination_contact_email\": \"johndoe@example.com\",\n  \"destination_address\": \"Lebak Bulus MRT...\",\n  \"destination_postal_code\": 12950,\n  \"destination_note\": \"Near the gas station\",\n  \"delivery_type\": \"now\",\n  \"order_note\": \"Please be careful\",\n  \"items\": [\n    {\n      \"name\": \"Black L\",\n      \"description\": \"White Shirt\",\n      \"category\": \"fashion\",\n      \"value\": 165000,\n      \"quantity\": 1,\n      \"height\": 10,\n      \"length\": 10,\n      \"weight\": 200,\n      \"width\": 10\n    }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/orders",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Order API Create By coordinates",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"shipper_contact_name\": \"Amir\",\n    \"shipper_contact_phone\": \"088888888888\",\n    \"shipper_contact_email\": \"biteship@test.com\",\n    \"shipper_organization\": \"Biteship Org Test\",\n    \"origin_contact_name\": \"Amir\",\n    \"origin_contact_phone\": \"088888888888\",\n    \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n    \"origin_note\": \"Deket pintu masuk STC\",\n    \"origin_coordinate\": {\n        \"latitude\": -6.2253114,\n        \"longitude\": 106.7993735\n    },\n    \"destination_contact_name\": \"John Doe\",\n    \"destination_contact_phone\": \"088888888888\",\n    \"destination_contact_email\": \"jon@test.com\",\n    \"destination_address\": \"Lebak Bulus MRT...\",\n    \"destination_note\": \"Near the gas station\",\n    \"destination_coordinate\": {\n        \"latitude\": -6.28927,\n        \"longitude\": 106.77492000000007\n    },\n    \"courier_company\": \"grab\",\n    \"courier_type\": \"instant\",\n    \"courier_insurance\": 500000,\n    \"delivery_type\": \"now\",\n    \"order_note\": \"Please be careful\",\n    \"metadata\": {},\n    \"items\": [\n        {\n            \"name\": \"Black L\",\n            \"description\": \"White Shirt\",\n            \"category\": \"fashion\",\n            \"category\": \"fashion\",\n            \"value\": 165000,\n            \"quantity\": 1,\n            \"height\": 10,\n            \"length\": 10,\n            \"weight\": 200,\n            \"width\": 10\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/orders",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Order API Create By area id",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"shipper_contact_name\": \"Amir\",\n    \"shipper_contact_phone\": \"088888888888\",\n    \"shipper_contact_email\": \"biteship@test.com\",\n    \"shipper_organization\": \"Biteship Org Test\",\n    \"origin_contact_name\": \"Amir\",\n    \"origin_contact_phone\": \"088888888888\",\n    \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n    \"origin_note\": \"Deket pintu masuk STC\",\n    \"origin_area_id\": \"IDNP6IDNC148IDND843IDZ12250\",\n    \"destination_contact_name\": \"John Doe\",\n    \"destination_contact_phone\": \"088888888888\",\n    \"destination_contact_email\": \"jon@test.com\",\n    \"destination_address\": \"Lebak Bulus MRT...\",\n    \"destination_note\": \"Near the gas station\",\n    \"destination_area_id\": \"IDNP6IDNC148IDND843IDZ12250\",\n    \"courier_company\": \"jne\",\n    \"courier_type\": \"reg\",\n    \"delivery_type\": \"now\",\n    \"order_note\": \"Please be careful\",\n    \"metadata\": {},\n    \"items\": [\n        {\n            \"name\": \"Black L\",\n            \"description\": \"White Shirt\",\n            \"category\": \"fashion\",\n            \"category\": \"fashion\",\n            \"value\": 165000,\n            \"quantity\": 1,\n            \"height\": 10,\n            \"length\": 10,\n            \"weight\": 200,\n            \"width\": 10\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/orders",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Order API Create cash on delivery",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"shipper_contact_name\": \"Amir\",\n    \"shipper_contact_phone\": \"088888888888\",\n    \"shipper_contact_email\": \"biteship@test.com\",\n    \"shipper_organization\": \"Biteship Org Test\",\n    \"origin_contact_name\": \"Amir\",\n    \"origin_contact_phone\": \"088888888888\",\n    \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n    \"origin_note\": \"Deket pintu masuk STC\",\n    \"origin_postal_code\": 12440,\n    \"destination_contact_name\": \"John Doe\",\n    \"destination_contact_phone\": \"088888888888\",\n    \"destination_contact_email\": \"jon@test.com\",\n    \"destination_address\": \"Lebak Bulus MRT...\",\n    \"destination_note\": \"Near the gas station\",\n    \"destination_postal_code\": 12950,\n    \"destination_cash_on_delivery\": 500000,\n    \"destination_cash_on_delivery_type\": \"7_days\",\n    \"courier_company\": \"sicepat\",\n    \"courier_type\": \"reg\",\n    \"courier_insurance\": 500000,\n    \"delivery_type\": \"now\",\n    \"order_note\": \"Please be careful\",\n    \"metadata\": {},\n    \"items\": [\n        {\n            \"name\": \"Black L\",\n            \"description\": \"White Shirt\",\n            \"category\": \"fashion\",\n            \"value\": 165000,\n            \"quantity\": 1,\n            \"height\": 10,\n            \"length\": 10,\n            \"weight\": 200,\n            \"width\": 10\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/orders",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Order API Create With insurance",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"shipper_contact_name\": \"Amir\",\n    \"shipper_contact_phone\": \"088888888888\",\n    \"shipper_contact_email\": \"biteship@test.com\",\n    \"shipper_organization\": \"Biteship Org Test\",\n    \"origin_contact_name\": \"Amir\",\n    \"origin_contact_phone\": \"088888888888\",\n    \"origin_address\": \"Plaza Senayan, Jalan Asia Afrik...\",\n    \"origin_note\": \"Deket pintu masuk STC\",\n    \"origin_coordinate\": {\n        \"latitude\": -6.2253114,\n        \"longitude\": 106.7993735\n    },\n    \"destination_contact_name\": \"John Doe\",\n    \"destination_contact_phone\": \"088888888888\",\n    \"destination_contact_email\": \"jon@test.com\",\n    \"destination_address\": \"Lebak Bulus MRT...\",\n    \"destination_note\": \"Near the gas station\",\n    \"destination_coordinate\": {\n        \"latitude\": -6.28927,\n        \"longitude\": 106.77492000000007\n    },\n    \"courier_company\": \"grab\",\n    \"courier_type\": \"instant\",\n    \"courier_insurance\": 500000,\n    \"delivery_type\": \"now\",\n    \"order_note\": \"Please be careful\",\n    \"metadata\": {},\n    \"items\": [\n        {\n            \"name\": \"Black L\",\n            \"description\": \"White Shirt\",\n            \"category\": \"fashion\",\n            \"category\": \"fashion\",\n            \"value\": 165000,\n            \"quantity\": 1,\n            \"height\": 10,\n            \"length\": 10,\n            \"weight\": 200,\n            \"width\": 10\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/orders",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Order API Get",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/orders/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"orders",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "5dd599ebdefcd4158eb8470b"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Order API Cancel",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					},
+					{
+						"key": "",
+						"value": "",
+						"description": "live Alodokter",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/orders/:id/cancel",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"orders",
+						":id",
+						"cancel"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "5dd599ebdefcd4158eb8470b"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Tracking API Get by id",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/tracking/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"tracking",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "5dd599ebdefcd4158eb8470b"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Tracking API Get by waybill and courier",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{authorization}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/v1/trackings/:waybill_id/couriers/:courier_code",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"v1",
+						"trackings",
+						":waybill_id",
+						"couriers",
+						":courier_code"
+					],
+					"variable": [
+						{
+							"key": "waybill_id",
+							"value": "0123082100003094"
+						},
+						{
+							"key": "courier_code",
+							"value": "sicepat"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
