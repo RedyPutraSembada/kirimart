@@ -16,7 +16,7 @@ import {
 import {
 	Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { Loader2, Save, Settings, Plus, Trash2, CreditCard } from "lucide-react"
+import { Loader2, Save, Settings, Plus, Trash2, CreditCard, Activity } from "lucide-react"
 import { toast } from "sonner"
 import { calculateCommission, calculateServiceFee } from "@/lib/platform-fee"
 import { DEFAULT_PAYMENT_METHODS } from "@/lib/pg-fee"
@@ -36,6 +36,8 @@ export function PlatformSettingsView() {
 	const [sfValue, setSfValue] = useState("1000")
 	// Payment Methods State
 	const [paymentMethods, setPaymentMethods] = useState([])
+	// Master Meta Pixel State
+	const [masterPixelId, setMasterPixelId] = useState("")
 
 	// Sync state from server data
 	useEffect(() => {
@@ -51,7 +53,10 @@ export function PlatformSettingsView() {
 		} else {
 			setPaymentMethods(DEFAULT_PAYMENT_METHODS)
 		}
-	}, [settings.commission_tiers?.parsedValue, settings.service_fee?.parsedValue, settings.pg_fee_config?.parsedValue])
+		if (settings.master_meta_pixel_id) {
+			setMasterPixelId(settings.master_meta_pixel_id.value)
+		}
+	}, [settings.commission_tiers?.parsedValue, settings.service_fee?.parsedValue, settings.pg_fee_config?.parsedValue, settings.master_meta_pixel_id?.value])
 
 	const saveMutation = useMutation({
 		mutationFn: async ({ key, value, description }) => updatePlatformSetting(key, value, description),
@@ -92,6 +97,14 @@ export function PlatformSettingsView() {
 			key: "pg_fee_config",
 			value: paymentMethods,
 			description: "Konfigurasi metode pembayaran & biaya PG (MDR).",
+		})
+	}
+
+	const handleSaveMasterPixel = () => {
+		saveMutation.mutate({
+			key: "master_meta_pixel_id",
+			value: masterPixelId, // we just save string, not JSON, so it's string in db
+			description: "Master Meta Pixel ID untuk analitik platform KiriMart.",
 		})
 	}
 
@@ -361,6 +374,35 @@ export function PlatformSettingsView() {
 					<Button size="sm" onClick={handleSavePaymentMethods} disabled={saveMutation.isPending}>
 						{saveMutation.isPending && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
 						<Save className="h-3.5 w-3.5 mr-1" />Simpan Metode Pembayaran
+					</Button>
+				</CardContent>
+			</Card>
+
+			{/* Master Meta Pixel */}
+			<Card>
+				<CardHeader>
+					<div className="flex items-center gap-2">
+						<Activity className="h-5 w-5" />
+						<CardTitle className="text-base">Master Meta Pixel (KiriMart)</CardTitle>
+					</div>
+					<CardDescription>
+						Pixel utama milik platform untuk melacak semua transaksi, pengunjung, dan interaksi 
+						secara global (lintas toko).
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<div className="space-y-2">
+						<Label>Pixel ID</Label>
+						<Input 
+							placeholder="Contoh: 123456789012345" 
+							value={masterPixelId} 
+							onChange={(e) => setMasterPixelId(e.target.value)} 
+							className="max-w-md"
+						/>
+					</div>
+					<Button size="sm" onClick={handleSaveMasterPixel} disabled={saveMutation.isPending}>
+						{saveMutation.isPending && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
+						<Save className="h-3.5 w-3.5 mr-1" />Simpan Master Pixel
 					</Button>
 				</CardContent>
 			</Card>

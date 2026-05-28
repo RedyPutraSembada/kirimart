@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
-	Store, MapPin, Globe, Pencil, Save, Star, ShoppingCart, Package, Image as ImageIcon, Clock, Users,
+	Store, MapPin, Globe, Pencil, Save, Star, ShoppingCart, Package, Image as ImageIcon, Clock, Users, Activity
 } from "lucide-react"
 
 import { useGetMyStore } from "@/app/data/seller-dashboard/dashboard-data"
@@ -127,6 +127,9 @@ export function StoreProfile() {
 
 			{/* Pengaturan Kurir */}
 			<CourierConfigSection store={store} />
+
+			{/* Pengaturan Meta Pixel */}
+			<StorePixelConfigSection store={store} />
 		</div>
 	)
 }
@@ -429,6 +432,76 @@ function CourierConfigSection({ store }) {
 							<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</>
 						) : (
 							<><Save className="mr-2 h-4 w-4" />Simpan Kurir</>
+						)}
+					</Button>
+				</div>
+			</CardContent>
+		</Card>
+	)
+}
+
+// ============================================
+// STORE PIXEL CONFIG SECTION
+// ============================================
+
+function StorePixelConfigSection({ store }) {
+	const queryClient = useQueryClient()
+	const [pixelId, setPixelId] = useState(store.metaPixelId || "")
+
+	const saveMutation = useMutation({
+		mutationFn: (data) => updateStoreProfile(data),
+		onSuccess: (res) => {
+			if (res.success) {
+				toast.success("Meta Pixel ID berhasil disimpan!")
+				queryClient.invalidateQueries({ queryKey: ["my-store"] })
+			} else {
+				toast.error(res.error || "Gagal menyimpan Meta Pixel ID.")
+			}
+		},
+		onError: () => toast.error("Terjadi kesalahan sistem."),
+	})
+
+	const handleSave = () => {
+		saveMutation.mutate({
+			name: store.name,
+			domainSlug: store.domainSlug,
+			description: store.description,
+			openTime: store.openTime,
+			closeTime: store.closeTime,
+			metaPixelId: pixelId,
+		})
+	}
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="flex items-center gap-2">
+					<Activity className="h-5 w-5" />
+					Pengaturan Meta Pixel
+				</CardTitle>
+				<CardDescription>
+					Masukkan ID Meta Pixel (Facebook Pixel) Anda untuk melacak pengunjung, 
+					tambahan keranjang, dan konversi dari toko Anda sendiri.
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<div className="space-y-2">
+					<Label>Meta Pixel ID</Label>
+					<Input
+						placeholder="Contoh: 123456789012345"
+						value={pixelId}
+						onChange={(e) => setPixelId(e.target.value)}
+					/>
+					<p className="text-xs text-muted-foreground">
+						Kosongkan jika Anda tidak ingin menggunakan Meta Pixel.
+					</p>
+				</div>
+				<div className="flex justify-end">
+					<Button onClick={handleSave} disabled={saveMutation.isPending}>
+						{saveMutation.isPending ? (
+							<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</>
+						) : (
+							<><Save className="mr-2 h-4 w-4" />Simpan Pixel</>
 						)}
 					</Button>
 				</div>

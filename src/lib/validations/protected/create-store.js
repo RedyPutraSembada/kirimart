@@ -18,4 +18,3 @@ export const createStoreSchema = z.object({
 	bankAccountNumber: z.string().min(5, "Nomor rekening minimal 5 digit").max(30, "Nomor rekening terlalu panjang"),
 	bankAccountHolder: z.string().min(3, "Nama pemilik rekening wajib diisi"),
 })
-

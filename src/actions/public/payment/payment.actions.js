@@ -246,6 +246,14 @@ export async function createPaymentTransaction(checkoutData) {
 			expiresAt,
 		}).where(eq(payments.id, result.paymentId))
 
+		// 6. Schedule expire payment job (24 jam — cancel otomatis jika belum bayar)
+		try {
+			const { scheduleExpirePayment } = await import("@/lib/jobs")
+			await scheduleExpirePayment(result.paymentId, result.orderId)
+		} catch (jobErr) {
+			console.warn("[CREATE_PAYMENT] Failed to schedule expire job:", jobErr.message)
+		}
+
 		return {
 			success: true,
 			snapToken: snapResponse.token,
@@ -345,6 +353,9 @@ export async function getPaymentByOrderId(orderId) {
 				orders: {
 					with: {
 						items: true,
+						store: {
+							columns: { id: true, metaPixelId: true }
+						}
 					},
 				},
 			},
@@ -475,6 +486,95 @@ export async function updatePaymentFromWebhook(notification) {
 		}
 
 		console.log(`[WEBHOOK] Payment ${order_id} updated: ${existingPayment.status} → ${newStatus}`)
+
+		// === REAL-TIME NOTIFICATIONS ===
+		// Kirim notifikasi ke seller dan buyer saat pembayaran berhasil
+		if (newStatus === 'paid' && existingPayment.metadataLocal?.type !== 'seller_registration') {
+			try {
+				const { createNotification } = await import('@/actions/public/notification.actions')
+				const { wsEmit } = await import('@/lib/ws-emit')
+				const { sendEmail } = await import('@/lib/email')
+				const { getPaymentSuccessEmail, getNewOrderEmail } = await import('@/lib/email-templates')
+				
+				const buyerName = existingPayment.metadataLocal?.user?.name || "Pembeli"
+				const buyerEmail = existingPayment.metadataLocal?.user?.email
+				const totalAmount = existingPayment.totalAmount
+
+				// Ambil orders terkait untuk kirim notif per toko
+				const relatedOrders = await db.query.orders.findMany({
+					where: eq(orders.paymentId, existingPayment.id),
+					with: { store: true }
+				})
+
+				for (const order of relatedOrders) {
+					// 1. Notif ke SELLER: "Pesanan baru masuk!"
+					const sellerUserId = order.store?.userId
+					if (sellerUserId) {
+						const sellerNotif = await createNotification(
+							sellerUserId,
+							"new_order",
+							"🛒 Pesanan Baru!",
+							`Pesanan dari ${buyerName} — Rp ${(order.grandTotal || 0).toLocaleString("id-ID")}`,
+							{ orderId: order.id, storeId: order.storeId, buyerName, totalAmount: order.grandTotal }
+						)
+
+						// Broadcast real-time ke seller via WebSocket
+						if (sellerNotif) {
+							await wsEmit("notifications", `user:${sellerUserId}`, "notification", sellerNotif)
+						}
+						
+						// Kirim Email ke Seller
+						try {
+							const sellerUser = await db.query.users.findFirst({
+								where: eq(users.id, sellerUserId)
+							})
+							if (sellerUser && sellerUser.email) {
+								const itemCount = order.items?.reduce((acc, item) => acc + item.quantity, 0) || 1
+								const emailHtml = getNewOrderEmail(sellerUser.name || "Seller", order.id, buyerName, itemCount)
+								await sendEmail(sellerUser.email, `Pesanan Baru Masuk #${order.id} 🎉`, emailHtml)
+							}
+						} catch (e) {
+							console.error("[EMAIL_SELLER_ERROR]", e)
+						}
+					}
+				}
+
+				// 2. Notif ke BUYER: "Pembayaran berhasil!"
+				const buyerNotif = await createNotification(
+					existingPayment.userId,
+					"payment_success",
+					"✅ Pembayaran Berhasil!",
+					`Pembayaran Rp ${(totalAmount || 0).toLocaleString("id-ID")} telah dikonfirmasi. Pesanan sedang diproses.`,
+					{ paymentId: existingPayment.id, orderId: order_id }
+				)
+
+				if (buyerNotif) {
+					await wsEmit("notifications", `user:${existingPayment.userId}`, "notification", buyerNotif)
+				}
+				
+				// Kirim Email ke Buyer
+				if (buyerEmail) {
+					try {
+						const formattedAmount = `Rp ${(totalAmount || 0).toLocaleString("id-ID")}`
+						const emailHtml = getPaymentSuccessEmail(buyerName, order_id, formattedAmount)
+						await sendEmail(buyerEmail, `Pembayaran Berhasil untuk Pesanan #${order_id}`, emailHtml)
+					} catch (e) {
+						console.error("[EMAIL_BUYER_ERROR]", e)
+					}
+				}
+
+				console.log(`[WEBHOOK] Real-time notifications sent for payment ${order_id}`)
+			} catch (notifError) {
+				// Notifikasi gagal tidak boleh menggagalkan proses utama
+				console.warn("[WEBHOOK] Failed to send notifications:", notifError.message)
+			}
+
+			// Cancel scheduled expire job — payment sudah berhasil, jangan di-expire
+			try {
+				const { cancelExpirePayment } = await import("@/lib/jobs")
+				await cancelExpirePayment(existingPayment.id)
+			} catch { /* ignore */ }
+		}
 
 		return { success: true }
 	} catch (error) {

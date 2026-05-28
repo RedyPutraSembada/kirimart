@@ -13,6 +13,7 @@
 "use server"
 
 import { env } from "@/config/env"
+import { cached } from "@/lib/cache"
 
 const BITESHIP_API_URL = "https://api.biteship.com"
 
@@ -104,55 +105,58 @@ export async function getBiteshipRates(originAreaId, destAreaId, items, couriers
 			name: item.name || "Produk",
 			description: item.variant || "",
 			value: item.price || 0,
-			weight: (item.weight || 200) * (item.qty || item.quantity || 1), // total weight per item type
+			weight: (item.weight || 200) * (item.qty || item.quantity || 1),
 			quantity: item.qty || item.quantity || 1,
 			length: item.length || 10,
 			width: item.width || 10,
 			height: item.height || 10,
 		}))
 
-		const requestBody = {
-			origin_area_id: originAreaId,
-			destination_area_id: destAreaId,
-			couriers: couriers,
-			items: biteshipItems,
-		}
+		// Cache key berdasarkan rute + total weight (ongkir sama untuk rute yang sama)
+		const totalWeight = biteshipItems.reduce((sum, i) => sum + i.weight, 0)
+		const cacheKey = `ongkir:${originAreaId}:${destAreaId}:${totalWeight}:${couriers}`
 
-		console.log("[getBiteshipRates] Request:", JSON.stringify(requestBody, null, 2))
+		// Cache 30 menit — ongkir per rute jarang berubah dalam waktu singkat
+		return await cached(cacheKey, async () => {
+			const requestBody = {
+				origin_area_id: originAreaId,
+				destination_area_id: destAreaId,
+				couriers: couriers,
+				items: biteshipItems,
+			}
 
-		const result = await biteshipFetch("/v1/rates/couriers", {
-			method: "POST",
-			body: JSON.stringify(requestBody),
-		})
+			console.log("[getBiteshipRates] Request (cache MISS):", JSON.stringify(requestBody, null, 2))
 
-		console.log("[getBiteshipRates] Response:", JSON.stringify(result, null, 2))
+			const result = await biteshipFetch("/v1/rates/couriers", {
+				method: "POST",
+				body: JSON.stringify(requestBody),
+			})
 
-		if (result.error) {
-			console.error("[getBiteshipRates] Biteship error:", result.error)
-			return { success: false, error: typeof result.error === "string" ? result.error : "Gagal mengambil tarif ongkir." }
-		}
+			if (result.error) {
+				console.error("[getBiteshipRates] Biteship error:", result.error)
+				return { success: false, error: typeof result.error === "string" ? result.error : "Gagal mengambil tarif ongkir." }
+			}
 
-		// Map response ke format yang mudah dipakai di UI checkout
-		const pricing = (result.pricing || []).map((rate, idx) => ({
-			id: `${rate.courier_code}_${rate.courier_service_code}_${idx}`,
-			courier: rate.courier_name || rate.company,
-			courierCode: rate.courier_code,
-			name: rate.courier_service_name || rate.courier_service_code,
-			serviceCode: rate.courier_service_code,
-			price: rate.price || 0,
-			shippingFee: rate.shipment_fee || rate.price || 0,
-			insuranceFee: rate.insurance_fee || 0,
-			eta: rate.duration || "-",
-			etaDays: rate.shipment_duration_range ? {
-				min: rate.shipment_duration_range.min_day || 0,
-				max: rate.shipment_duration_range.max_day || 0,
-			} : null,
-			collectionMethod: rate.available_collection_method || [],
-		}))
+			const pricing = (result.pricing || []).map((rate, idx) => ({
+				id: `${rate.courier_code}_${rate.courier_service_code}_${idx}`,
+				courier: rate.courier_name || rate.company,
+				courierCode: rate.courier_code,
+				name: rate.courier_service_name || rate.courier_service_code,
+				serviceCode: rate.courier_service_code,
+				price: rate.price || 0,
+				shippingFee: rate.shipment_fee || rate.price || 0,
+				insuranceFee: rate.insurance_fee || 0,
+				eta: rate.duration || "-",
+				etaDays: rate.shipment_duration_range ? {
+					min: rate.shipment_duration_range.min_day || 0,
+					max: rate.shipment_duration_range.max_day || 0,
+				} : null,
+				collectionMethod: rate.available_collection_method || [],
+			}))
 
-		console.log(`[getBiteshipRates] Found ${pricing.length} rates`)
-
-		return { success: true, data: pricing }
+			console.log(`[getBiteshipRates] Found ${pricing.length} rates`)
+			return { success: true, data: pricing }
+		}, 1800) // 30 menit
 	} catch (error) {
 		console.error("[getBiteshipRates] Error:", error)
 		return { success: false, error: "Gagal mengambil tarif ongkir." }

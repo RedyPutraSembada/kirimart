@@ -19,9 +19,30 @@ import { cn } from '@/lib/utils'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { getUnreadChatCount } from '@/actions/public/chat.actions'
+import { getUnreadNotifCount } from '@/actions/public/notification.actions'
 
 export function SellerNavMain({ items }) {
 	const pathname = usePathname()
+
+	// Chat unread count for badge
+	const { data: chatUnread } = useQuery({
+		queryKey: ['chat-unread-count'],
+		queryFn: getUnreadChatCount,
+		refetchOnWindowFocus: true,
+		refetchInterval: 30000,
+	})
+	const chatCount = chatUnread?.data || 0
+
+	// Notification unread count for badge (pesanan baru, dll)
+	const { data: notifUnread } = useQuery({
+		queryKey: ['notif-unread-count'],
+		queryFn: getUnreadNotifCount,
+		refetchOnWindowFocus: true,
+		refetchInterval: 15000,
+	})
+	const notifCount = notifUnread?.data || 0
 
 	return (
 		<SidebarGroup>
@@ -30,19 +51,15 @@ export function SellerNavMain({ items }) {
 				{items.map((item) => {
 					const hasSubItems = !!item.items && item.items.length > 0
 
-					// logic for parent item active state
 					const isExactMatch = pathname === item.url
 					const isSubPathMatch =
 						item.url !== '/admin' &&
 						item.url !== '/' &&
 						pathname.startsWith(item.url + '/')
 
-					// Check if any sub-item is an exact match (highest priority)
 					const hasExactSubItemMatch =
 						hasSubItems && item.items.some((sub) => pathname === sub.url)
 
-					// If a sub-item is an exact match, the parent should be active but we don't
-					// want the "List" sub-item to also be active via startsWith if "New" is exact.
 					const isGroupActive =
 						isExactMatch ||
 						isSubPathMatch ||
@@ -84,16 +101,10 @@ export function SellerNavMain({ items }) {
 									<CollapsibleContent>
 										<SidebarMenuSub className='mr-0 pr-0 border-l border-primary/20 ml-5'>
 											{item.items?.map((subItem) => {
-												// Best match logic:
-												// 1. Exact match always wins
-												// 2. StartsWith only if no other sub-item is an exact match
 												const isExactSubActive = pathname === subItem.url
 												const isSubPathActive = pathname.startsWith(
 													subItem.url + '/',
 												)
-
-												// If I'm at /new, only /new should be active.
-												// /list (which is /admin/seg) should NOT be active even though /new starts with it.
 												const isActualSubActive =
 													isExactSubActive ||
 													(isSubPathActive && !hasExactSubItemMatch)
@@ -123,6 +134,8 @@ export function SellerNavMain({ items }) {
 						)
 					} else {
 						const isStandaloneActive = pathname === item.url
+						const isChatItem = item.title === 'Chat'
+						const isOrderItem = item.title === 'Pesanan' || item.title === 'Orders'
 						return (
 							<SidebarMenuItem key={item.title}>
 								<SidebarMenuButton
@@ -134,9 +147,21 @@ export function SellerNavMain({ items }) {
 										'bg-primary/5 text-primary font-semibold',
 									)}
 								>
-									<Link href={item.url}>
-										{item.icon && <item.icon />}
-										<span>{item.title}</span>
+									<Link href={item.url} className="flex items-center justify-between w-full">
+										<span className="flex items-center gap-2">
+											{item.icon && <item.icon className="h-4 w-4" />}
+											<span>{item.title}</span>
+										</span>
+										{isChatItem && chatCount > 0 && (
+											<span className="bg-primary text-white text-[9px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center shrink-0">
+												{chatCount > 99 ? "99+" : chatCount}
+											</span>
+										)}
+										{isOrderItem && notifCount > 0 && (
+											<span className="bg-destructive text-white text-[9px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center shrink-0 animate-pulse">
+												{notifCount > 99 ? "99+" : notifCount}
+											</span>
+										)}
 									</Link>
 								</SidebarMenuButton>
 							</SidebarMenuItem>

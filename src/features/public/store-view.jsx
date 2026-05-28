@@ -4,20 +4,23 @@ import { useState, useMemo, useEffect } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { toggleFollowStore, checkIsFollowingStore } from "@/actions/public/store-follow.actions"
 
-import { MapPin, Globe, Star, ShoppingBag, Clock, ShieldCheck, UserPlus, UserCheck } from "lucide-react"
+import { MapPin, Globe, Star, ShoppingBag, Clock, ShieldCheck, UserPlus, UserCheck, MessageCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 import { ProductCard } from "@/components/public/product-card"
+import { getOrCreateConversation } from "@/actions/public/chat.actions"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 
 
 export function StoreView({ store = {} }) {
   const [sortBy, setSortBy] = useState("newest")
   const [isFollowing, setIsFollowing] = useState(false)
+  const router = useRouter()
 
   // Cek status follow saat pertama kali load
   useEffect(() => {
@@ -122,8 +125,23 @@ export function StoreView({ store = {} }) {
                   <><UserPlus className="h-4 w-4 mr-2" /> Ikuti Toko</>
                 )}
               </Button>
-              <Button variant="outline" className="rounded-full px-8 h-12 font-bold border-2 hover:bg-muted transition-all">
-                Chat
+              <Button
+                variant="outline"
+                className="rounded-full px-8 h-12 font-bold border-2 hover:bg-muted transition-all"
+                onClick={async () => {
+                  try {
+                    const result = await getOrCreateConversation(store.id)
+                    if (result.success) {
+                      router.push(`/chat?conv=${result.data.conversationId}`)
+                    } else {
+                      toast.error(result.error || "Gagal membuka chat")
+                    }
+                  } catch {
+                    toast.error("Silakan login terlebih dahulu")
+                  }
+                }}
+              >
+                <MessageCircle className="h-4 w-4 mr-2" /> Chat
               </Button>
             </div>
           </div>

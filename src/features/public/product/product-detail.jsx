@@ -9,11 +9,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { addToCart } from "@/actions/public/cart.actions"
 import { setCheckoutItems } from "@/actions/public/checkout.actions"
+import { getOrCreateConversation } from "@/actions/public/chat.actions"
+import { toggleWishlist, checkIsWishlisted } from "@/actions/user-dashboard/wishlist.actions"
+import { authClient } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { ProductReviewList } from "@/features/public/product/product-review-list"
+import { pixelViewContent, pixelAddToCart } from "@/lib/pixel"
 
 const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 const fmtNum = (n) => {
@@ -31,10 +36,24 @@ export function ProductDetail({ product }) {
   const hasVariants = options.length > 0 && variants.length > 0
 
   const [activeImgUrl, setActiveImgUrl] = useState(images[0])
-  
+
   // Sync image when product changes (for Next.js soft navigation)
   useEffect(() => {
     setActiveImgUrl(images[0])
+    
+    // Trigger Pixel ViewContent
+    const timer = setTimeout(() => {
+      pixelViewContent(
+        {
+          id: product.id,
+          name: product.name,
+          price: product.basePrice,
+          category: product.category?.name || "Uncategorized"
+        },
+        product.store?.metaPixelId
+      )
+    }, 500)
+    return () => clearTimeout(timer)
   }, [product.id])
 
   const [selectedAttributes, setSelectedAttributes] = useState(() => {
@@ -47,6 +66,45 @@ export function ProductDetail({ product }) {
   const [showFullDesc, setShowFullDesc] = useState(false)
   const queryClient = useQueryClient()
   const router = useRouter()
+  const { data: session } = authClient.useSession()
+
+  // Cek status wishlist
+  const { data: wishlistData } = useQuery({
+    queryKey: ["wishlist-status", product.id],
+    queryFn: () => checkIsWishlisted(product.id),
+    enabled: !!session,
+    staleTime: 1000 * 60 * 5, // 5 menit
+  })
+  const isWishlisted = wishlistData?.isWishlisted ?? false
+
+  // Optimistic update toggle wishlist
+  const wishlistMutation = useMutation({
+    mutationFn: () => toggleWishlist(product.id),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["wishlist-status", product.id] })
+      const previous = queryClient.getQueryData(["wishlist-status", product.id])
+      queryClient.setQueryData(["wishlist-status", product.id], (old) => ({
+        ...old,
+        isWishlisted: !old?.isWishlisted,
+      }))
+      return { previous }
+    },
+    onSuccess: (result) => {
+      if (!result.success) {
+        if (result.requireLogin) toast.info("Silakan login untuk menambahkan ke wishlist.")
+        else toast.error(result.error)
+      } else {
+        toast.success(result.message)
+        queryClient.invalidateQueries({ queryKey: ["my-wishlists"] })
+      }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(["wishlist-status", product.id], context.previous)
+      }
+      toast.error("Gagal memperbarui wishlist.")
+    },
+  })
 
   // Mutation: Add to Cart
   const addToCartMutation = useMutation({
@@ -55,9 +113,23 @@ export function ProductDetail({ product }) {
       if (result.success) {
         toast.success(result.message)
         queryClient.invalidateQueries({ queryKey: ["cart-summary"] })
-        queryClient.invalidateQueries({ queryKey: ["cart-details"] })
+        // Trigger Pixel AddToCart
+        pixelAddToCart(
+          {
+            id: product.id,
+            name: product.name,
+            price: selectedVariant ? selectedVariant.price : product.basePrice,
+            qty: qty
+          },
+          product.store?.metaPixelId
+        )
       } else {
-        toast.error(result.error)
+        if (result.requireLogin) {
+          toast.info("Silakan login untuk menambahkan ke keranjang.")
+          router.push(`/login?callbackUrl=/product/${product.id}`)
+        } else {
+          toast.error(result.error)
+        }
       }
     },
     onError: () => {
@@ -79,16 +151,17 @@ export function ProductDetail({ product }) {
       // 1. Tambahkan ke keranjang
       const res = await addToCart(payload)
       if (!res.success) throw new Error(res.error)
-      
+
       // 2. Set checkout cookie dengan item ini saja
       const res2 = await setCheckoutItems([res.cartItemId])
       if (!res2.success) throw new Error(res2.error)
-      
+
       return res
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart-summary"] })
       queryClient.invalidateQueries({ queryKey: ["cart-details"] })
+      queryClient.invalidateQueries({ queryKey: ["checkout-data"] })
       // Redirect ke checkout
       router.push("/checkout")
     },
@@ -199,6 +272,9 @@ export function ProductDetail({ product }) {
                 <div className="flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                   <span className="font-semibold text-foreground">{product.rating || "5.0"}</span>
+                  {(product.totalReviews || 0) > 0 && (
+                    <span className="text-muted-foreground">({product.totalReviews} ulasan)</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -288,6 +364,10 @@ export function ProductDetail({ product }) {
                 <span>Proteksi Pesanan: Garansi 100% uang kembali</span>
               </div>
             </div>
+
+            {/* Review Section */}
+            <Separator />
+            <ProductReviewList productId={product.id} />
           </div>
 
           {/* ─── RIGHT: Sticky Purchase Card ─── */}
@@ -348,9 +428,9 @@ export function ProductDetail({ product }) {
                         "+ Keranjang"
                       )}
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full h-10 font-bold text-sm border-primary text-primary hover:bg-primary/5" 
+                    <Button
+                      variant="outline"
+                      className="w-full h-10 font-bold text-sm border-primary text-primary hover:bg-primary/5"
                       disabled={(hasVariants && !selectedVariant) || addToCartMutation.isPending || buyNowMutation.isPending}
                       onClick={handleBuyNow}
                     >
@@ -364,11 +444,24 @@ export function ProductDetail({ product }) {
 
                   {/* Actions */}
                   <div className="flex items-center justify-center gap-6 pt-1">
-                    <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                      <Heart className="h-4 w-4" /> Wishlist
+                    <button
+                      onClick={() => wishlistMutation.mutate()}
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs transition-colors",
+                        isWishlisted ? "text-rose-500 hover:text-rose-600" : "text-muted-foreground hover:text-primary"
+                      )}
+                    >
+                      <Heart className={cn("h-4 w-4", isWishlisted && "fill-rose-500")} />
+                      {isWishlisted ? "Tersimpan" : "Wishlist"}
                     </button>
                     <Separator orientation="vertical" className="h-4" />
-                    <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.href)
+                        toast.success("Link produk disalin!")
+                      }}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
                       <Share2 className="h-4 w-4" /> Share
                     </button>
                   </div>
@@ -397,7 +490,35 @@ export function ProductDetail({ product }) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 h-8 text-xs font-semibold rounded-lg">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 text-xs font-semibold rounded-lg"
+                      onClick={async () => {
+                        try {
+                          const productCtx = {
+                            id: product.id,
+                            name: product.name,
+                            image: images[0] || "",
+                            price: currentPrice || product.basePrice || 0,
+                          }
+                          const result = await getOrCreateConversation(store.id, productCtx)
+                          if (result.success) {
+                            const chatUrl = new URL("/chat", window.location.origin)
+                            chatUrl.searchParams.set("conv", result.data.conversationId)
+                            chatUrl.searchParams.set("productId", product.id)
+                            chatUrl.searchParams.set("productName", product.name)
+                            chatUrl.searchParams.set("productImage", images[0] || "")
+                            chatUrl.searchParams.set("productPrice", currentPrice || product.basePrice || 0)
+                            router.push(chatUrl.pathname + chatUrl.search)
+                          } else {
+                            toast.error(result.error || "Gagal membuka chat")
+                          }
+                        } catch {
+                          toast.error("Silakan login terlebih dahulu")
+                        }
+                      }}
+                    >
                       <MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Chat
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1 h-8 text-xs font-semibold rounded-lg" asChild>

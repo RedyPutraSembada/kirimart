@@ -1,13 +1,17 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { CheckCircle2, Clock, XCircle, ArrowLeft, ShoppingBag, Copy } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useQueryClient, useQuery } from "@tanstack/react-query"
+import { CheckCircle2, Clock, XCircle, ArrowLeft, ShoppingBag, Copy, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Suspense } from "react"
 import { toast } from "sonner"
+import { getPaymentByOrderId } from "@/actions/public/payment/payment.actions"
+import { pixelPurchase } from "@/lib/pixel"
 
 const STATUS_CONFIG = {
   finish: {
@@ -44,11 +48,68 @@ const STATUS_CONFIG = {
 
 function CheckoutStatusContent() {
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
   const status = searchParams.get("status") || "unfinish"
   const orderId = searchParams.get("order_id") || "-"
 
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.unfinish
   const Icon = config.icon
+
+  // Invalidate cart count ketika pembayaran berhasil supaya badge langsung hilang
+  useEffect(() => {
+    if (status === "finish") {
+      queryClient.invalidateQueries({ queryKey: ["cart-summary"] })
+    }
+  }, [status, queryClient])
+
+  // Fetch payment data to get total value and items for Purchase tracking
+  const { data: paymentQuery } = useQuery({
+    queryKey: ["payment-status-detail", orderId],
+    queryFn: () => getPaymentByOrderId(orderId),
+    enabled: status === "finish" && orderId !== "-",
+    staleTime: Infinity,
+  })
+  
+  const payment = paymentQuery?.data
+
+  const [hasTrackedPurchase, setHasTrackedPurchase] = useState(false)
+
+  useEffect(() => {
+    if (status === "finish" && payment && !hasTrackedPurchase) {
+      const orders = payment.orders || []
+      
+      let grandTotal = payment.totalAmount || 0
+      let totalItemsCount = 0
+      let allItems = []
+      
+      orders.forEach(order => {
+        const storeTotal = order.grandTotal || 0
+        const storeItemsCount = order.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0
+        totalItemsCount += storeItemsCount
+        
+        const currentItems = order.items?.map(i => ({ id: i.productId })) || []
+        allItems = [...allItems, ...currentItems]
+        
+        // Track for individual store pixels
+        if (order.store?.metaPixelId) {
+          pixelPurchase({
+            orderId: order.id,
+            totalValue: storeTotal,
+            items: currentItems
+          }, order.store.metaPixelId)
+        }
+      })
+      
+      // Track for master pixel
+      pixelPurchase({
+        orderId: orderId,
+        totalValue: grandTotal,
+        items: allItems
+      })
+      
+      setHasTrackedPurchase(true)
+    }
+  }, [status, payment, hasTrackedPurchase])
 
   const handleCopyOrderId = () => {
     navigator.clipboard.writeText(orderId)
@@ -106,7 +167,16 @@ function CheckoutStatusContent() {
               </Button>
             )}
 
-            <Button variant={status === "error" ? "outline" : "default"} asChild className="w-full">
+            {status === "finish" && (
+              <Button asChild className="w-full">
+                <Link href="/user-dashboard/orders">
+                  <Package className="mr-2 h-4 w-4" />
+                  Lihat Pesanan Saya
+                </Link>
+              </Button>
+            )}
+
+            <Button variant={status === "finish" ? "outline" : "default"} asChild className="w-full">
               <Link href="/">
                 <ShoppingBag className="mr-2 h-4 w-4" />
                 Lanjut Belanja

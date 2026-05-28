@@ -1,4 +1,4 @@
-import { Database, LayoutDashboard, Package, ShoppingCart, Store, Tag, BarChart3, ShieldAlert, Wallet, Banknote, Settings } from 'lucide-react'
+import { Database, LayoutDashboard, Package, ShoppingCart, Store, Tag, BarChart3, ShieldAlert, Wallet, Banknote, Settings, MessageCircle, Star } from 'lucide-react'
 
 export const menus = [
 	{
@@ -78,6 +78,16 @@ export const menusSeller = [
 		title: 'Pesanan',
 		url: '/seller-dashboard/orders',
 		icon: ShoppingCart,
+	},
+	{
+		title: 'Chat',
+		url: '/chat',
+		icon: MessageCircle,
+	},
+	{
+		title: 'Ulasan',
+		url: '/seller-dashboard/reviews',
+		icon: Star,
 	},
 	{
 		title: 'Voucher',

@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# docker
+redis-data/
+
+# ws-server dependencies (install ulang via docker build)
+ws-server/node_modules

@@ -9,6 +9,7 @@ export const env = createEnv({
         BETTER_AUTH_URL: z.string().min(1),
         GOOGLE_CLIENT_SECRET: z.string().min(1),
         RESEND_API_KEY: z.string().min(1),
+        EMAIL_FROM: z.string().optional(),
 
         // Midtrans Payment Gateway
         MIDTRANS_SERVER_KEY: z.string().min(1),
@@ -47,6 +48,7 @@ export const env = createEnv({
         BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
         GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
         RESEND_API_KEY: process.env.RESEND_API_KEY,
+        EMAIL_FROM: process.env.EMAIL_FROM,
 
         // Midtrans (server)
         MIDTRANS_SERVER_KEY: process.env.MIDTRANS_SERVER_KEY,

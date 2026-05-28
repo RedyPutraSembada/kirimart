@@ -17,6 +17,8 @@ import { reviews } from "./review-schema"
 import { withdrawals } from "./withdrawal-schema"
 import { conversations } from "./conversation-schema"
 import { messages } from "./message-schema"
+import { notifications } from "./notification-schema"
+import { wishlists } from "./wishlist-schema"
 
 // Auth Relations
 export const userRelations = relations(user, ({ many, one }) => ({
@@ -28,6 +30,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
     payments: many(payments),
     conversations: many(conversations),
     messages: many(messages),
+    wishlists: many(wishlists),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -82,6 +85,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     variants: many(productVariants),
     cartItems: many(cartItems),
     orderItems: many(orderItems),
+    wishlists: many(wishlists),
 }))
 
 export const productImagesRelations = relations(productImages, ({ one }) => ({
@@ -164,4 +168,15 @@ export const withdrawalsRelations = relations(withdrawals, ({ one }) => ({
 export const storeFollowersRelations = relations(storeFollowers, ({ one }) => ({
     user: one(user, { fields: [storeFollowers.userId], references: [user.id] }),
     store: one(stores, { fields: [storeFollowers.storeId], references: [stores.id] }),
+}))
+
+// Notification Relations
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+    user: one(user, { fields: [notifications.userId], references: [user.id] }),
+}))
+
+// Wishlist Relations
+export const wishlistsRelations = relations(wishlists, ({ one }) => ({
+    user: one(user, { fields: [wishlists.userId], references: [user.id] }),
+    product: one(products, { fields: [wishlists.productId], references: [products.id] }),
 }))

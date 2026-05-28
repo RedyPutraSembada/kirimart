@@ -5,6 +5,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import { completeOrderAndReview } from "@/actions/user-dashboard/order.actions"
 import { trackOrderShipment } from "@/actions/public/tracking.actions"
 import { useGetOrderDetail } from "@/app/data/user-dashboard/order-data"
+import { uploadFile } from "@/lib/upload"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
 	Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, ArrowLeft, Truck, Package, CheckCircle2, ClipboardCopy, Receipt, MapPin, Star, PackageCheck, Navigation } from "lucide-react"
+import { Loader2, ArrowLeft, Truck, Package, CheckCircle2, ClipboardCopy, Receipt, MapPin, Star, PackageCheck, Navigation, Image as ImageIcon, X } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
 import Link from "next/link"
@@ -23,7 +24,8 @@ export function OrderDetail({ orderId }) {
 	const queryClient = useQueryClient()
 	const [showReviewDialog, setShowReviewDialog] = useState(false)
 	const [showTrackingDialog, setShowTrackingDialog] = useState(false)
-	const [reviewsState, setReviewsState] = useState([]) // { orderItemId, productId, rating, comment }
+	const [reviewsState, setReviewsState] = useState([]) // { orderItemId, productId, rating, comment, imageUrl }
+	const [uploadingImageIdx, setUploadingImageIdx] = useState(null)
 
 	const { data: queryData, isLoading, isError, refetch } = useGetOrderDetail(orderId)
 
@@ -83,9 +85,29 @@ export function OrderDetail({ orderId }) {
 			productId: item.productId,
 			rating: 0,
 			comment: "",
+			imageUrl: "",
 		})) || []
 		setReviewsState(initialReviews)
 		setShowReviewDialog(true)
+	}
+
+	const handleReviewImageUpload = async (e, idx) => {
+		const file = e.target.files?.[0]
+		if (!file) return
+		setUploadingImageIdx(idx)
+		try {
+			const url = await uploadFile(file)
+			if (url) {
+				updateReview(idx, "imageUrl", url)
+			} else {
+				toast.error("Gagal mengupload gambar. Coba lagi.")
+			}
+		} catch {
+			toast.error("Gagal mengupload gambar.")
+		} finally {
+			setUploadingImageIdx(null)
+			e.target.value = ""
+		}
 	}
 
 	const handleSubmitReview = () => {
@@ -116,6 +138,20 @@ export function OrderDetail({ orderId }) {
 	]
 
 	const currentStatusIndex = statuses.findIndex(s => s.id === order.status)
+
+	const shipmentStatusLabel = {
+		"confirmed": "Dikonfirmasi",
+		"allocated": "Kurir Dialokasikan",
+		"picking_up": "Menuju Penjual",
+		"picked": "Diambil Kurir",
+		"in_transit": "Dalam Perjalanan",
+		"dropping_off": "Menuju Alamat Anda",
+		"delivered": "Telah Sampai",
+		"return_in_transit": "Proses Retur",
+		"returned": "Telah Diretur",
+		"rejected": "Ditolak",
+		"cancelled": "Dibatalkan",
+	}
 
 	// Build unified timeline: static events + live tracking data
 	const buildTimeline = () => {
@@ -452,6 +488,43 @@ export function OrderDetail({ orderId }) {
 											rows={2}
 											className="resize-none"
 										/>
+									</div>
+
+									{/* Foto Ulasan (optional) */}
+									<div className="space-y-1">
+										<p className="text-xs font-medium">Foto Ulasan <span className="text-muted-foreground">(opsional)</span></p>
+										{review.imageUrl ? (
+											<div className="relative inline-block">
+												<div className="h-20 w-20 rounded-lg overflow-hidden border border-border relative">
+													<Image src={review.imageUrl} alt="Foto ulasan" fill unoptimized className="object-cover" />
+												</div>
+												<button
+													type="button"
+													onClick={() => updateReview(idx, "imageUrl", "")}
+													className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors"
+												>
+													<X className="h-3 w-3" />
+												</button>
+											</div>
+										) : (
+											<label className="flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-border cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors w-fit">
+												{uploadingImageIdx === idx ? (
+													<Loader2 className="h-4 w-4 animate-spin text-primary" />
+												) : (
+													<ImageIcon className="h-4 w-4 text-muted-foreground" />
+												)}
+												<span className="text-xs text-muted-foreground">
+													{uploadingImageIdx === idx ? "Mengupload..." : "Upload Foto"}
+												</span>
+												<input
+													type="file"
+													accept="image/*"
+													className="hidden"
+													onChange={(e) => handleReviewImageUpload(e, idx)}
+													disabled={uploadingImageIdx !== null}
+												/>
+											</label>
+										)}
 									</div>
 								</div>
 							)

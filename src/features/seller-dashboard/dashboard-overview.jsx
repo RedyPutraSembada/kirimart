@@ -2,84 +2,12 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-	Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table"
-import {
-	DollarSign, Package, ShoppingCart, TrendingUp, ArrowUpRight,
-	ArrowDownRight, Star, Eye, Globe, MapPin, Store,
+	Package, Star, Users, Clock, Globe, MapPin, Store, Wallet,
 } from "lucide-react"
 import Image from "next/image"
 import { useGetMyStore } from "@/app/data/seller-dashboard/dashboard-data"
-
-// --- Data Statis (Mock) ---
-const statsData = [
-	{
-		title: "Total Pendapatan",
-		value: "Rp 12.450.000",
-		change: "+12.5%",
-		trend: "up",
-		icon: DollarSign,
-		description: "vs bulan lalu",
-		color: "text-emerald-600",
-		bgColor: "bg-emerald-500/10",
-	},
-	{
-		title: "Total Pesanan",
-		value: "156",
-		change: "+8.2%",
-		trend: "up",
-		icon: ShoppingCart,
-		description: "vs bulan lalu",
-		color: "text-blue-600",
-		bgColor: "bg-blue-500/10",
-	},
-	{
-		title: "Produk Aktif",
-		value: "48",
-		change: "+3",
-		trend: "up",
-		icon: Package,
-		description: "produk baru",
-		color: "text-violet-600",
-		bgColor: "bg-violet-500/10",
-	},
-	{
-		title: "Rating Toko",
-		value: "4.8",
-		change: "+0.2",
-		trend: "up",
-		icon: Star,
-		description: "dari 120 ulasan",
-		color: "text-amber-600",
-		bgColor: "bg-amber-500/10",
-	},
-]
-
-const recentOrders = [
-	{ id: "ORD-001", customer: "Budi Santoso", product: "Sepatu Nike Air Max", total: "Rp 1.250.000", status: "paid", date: "7 Mei 2026" },
-	{ id: "ORD-002", customer: "Siti Rahayu", product: "Kaos Polos Premium", total: "Rp 150.000", status: "shipped", date: "6 Mei 2026" },
-	{ id: "ORD-003", customer: "Ahmad Fauzi", product: "Tas Ransel Outdoor", total: "Rp 450.000", status: "completed", date: "5 Mei 2026" },
-	{ id: "ORD-004", customer: "Dewi Lestari", product: "Jam Tangan Casio", total: "Rp 875.000", status: "pending", date: "5 Mei 2026" },
-	{ id: "ORD-005", customer: "Rudi Hartono", product: "Celana Jeans Slim Fit", total: "Rp 320.000", status: "paid", date: "4 Mei 2026" },
-]
-
-const topProducts = [
-	{ name: "Sepatu Nike Air Max", sold: 42, revenue: "Rp 52.500.000", views: 1280 },
-	{ name: "Kaos Polos Premium", sold: 38, revenue: "Rp 5.700.000", views: 956 },
-	{ name: "Tas Ransel Outdoor", sold: 25, revenue: "Rp 11.250.000", views: 734 },
-	{ name: "Jam Tangan Casio", sold: 18, revenue: "Rp 15.750.000", views: 612 },
-	{ name: "Celana Jeans Slim Fit", sold: 15, revenue: "Rp 4.800.000", views: 489 },
-]
-
-const statusConfig = {
-	pending: { label: "Menunggu", variant: "outline", className: "border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:bg-amber-950" },
-	paid: { label: "Dibayar", variant: "outline", className: "border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:bg-blue-950" },
-	shipped: { label: "Dikirim", variant: "outline", className: "border-violet-300 text-violet-700 bg-violet-50 dark:border-violet-700 dark:text-violet-400 dark:bg-violet-950" },
-	completed: { label: "Selesai", variant: "outline", className: "border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950" },
-}
 
 // --- Komponen ---
 function StatCard({ stat }) {
@@ -96,19 +24,11 @@ function StatCard({ stat }) {
 			</CardHeader>
 			<CardContent>
 				<div className="text-2xl font-bold">{stat.value}</div>
-				<div className="flex items-center gap-1 mt-1">
-					{stat.trend === "up" ? (
-						<ArrowUpRight className="h-3 w-3 text-emerald-600" />
-					) : (
-						<ArrowDownRight className="h-3 w-3 text-red-600" />
-					)}
-					<span className={`text-xs font-medium ${stat.trend === "up" ? "text-emerald-600" : "text-red-600"}`}>
-						{stat.change}
-					</span>
-					<span className="text-xs text-muted-foreground">{stat.description}</span>
-				</div>
+				{stat.description && (
+					<p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+				)}
 			</CardContent>
-			<div className={`absolute bottom-0 left-0 right-0 h-1 ${stat.color === 'text-emerald-600' ? 'bg-gradient-to-r from-emerald-500 to-emerald-300' : stat.color === 'text-blue-600' ? 'bg-gradient-to-r from-blue-500 to-blue-300' : stat.color === 'text-violet-600' ? 'bg-gradient-to-r from-violet-500 to-violet-300' : 'bg-gradient-to-r from-amber-500 to-amber-300'}`} />
+			<div className={`absolute bottom-0 left-0 right-0 h-1 ${stat.gradientClass}`} />
 		</Card>
 	)
 }
@@ -175,14 +95,28 @@ function StoreInfoCard({ store, isLoading }) {
 					<div className="flex-1 pt-2 sm:pt-4">
 						<div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
 							<h2 className="text-lg font-bold">{store.name}</h2>
-							<Badge variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 w-fit text-xs dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950">
-								Aktif
+							<Badge variant="outline" className={`w-fit text-xs ${
+								store.status === 'active'
+									? 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950'
+									: 'border-red-300 text-red-700 bg-red-50 dark:border-red-700 dark:text-red-400 dark:bg-red-950'
+							}`}>
+								{store.status === 'active' ? 'Aktif' : store.status === 'banned' ? 'Ditangguhkan' : 'Nonaktif'}
 							</Badge>
 						</div>
 						<div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
 							<div className="flex items-center gap-1">
 								<Globe className="h-3.5 w-3.5" />
 								kawanbelanja.com/{store.domainSlug}
+							</div>
+							{store.address?.cityName && (
+								<div className="flex items-center gap-1">
+									<MapPin className="h-3.5 w-3.5" />
+									{store.address.cityName}, {store.address.provinceName}
+								</div>
+							)}
+							<div className="flex items-center gap-1">
+								<Clock className="h-3.5 w-3.5" />
+								{store.openTime || "09:00"} - {store.closeTime || "21:00"}
 							</div>
 						</div>
 						{store.description && (
@@ -198,6 +132,51 @@ function StoreInfoCard({ store, isLoading }) {
 export function DashboardOverview() {
 	const { data: storeResponse, isLoading } = useGetMyStore()
 	const store = storeResponse?.data
+
+	const storeRating = store?.rating ? parseFloat(store.rating) : 5.0
+	const totalProducts = store?.products?.length || 0
+	const totalReviews = store?.totalReviews || 0
+	const followerCount = store?.followerCount || 0
+	const balance = store?.balance || 0
+
+	const statsData = [
+		{
+			title: "Saldo Toko",
+			value: `Rp ${balance.toLocaleString("id-ID")}`,
+			icon: Wallet,
+			description: "Pendapatan yang bisa ditarik",
+			color: "text-emerald-600",
+			bgColor: "bg-emerald-500/10",
+			gradientClass: "bg-gradient-to-r from-emerald-500 to-emerald-300",
+		},
+		{
+			title: "Produk Aktif",
+			value: totalProducts.toString(),
+			icon: Package,
+			description: "Produk yang dijual",
+			color: "text-blue-600",
+			bgColor: "bg-blue-500/10",
+			gradientClass: "bg-gradient-to-r from-blue-500 to-blue-300",
+		},
+		{
+			title: "Pengikut",
+			value: followerCount.toString(),
+			icon: Users,
+			description: "Pelanggan yang mengikuti toko",
+			color: "text-violet-600",
+			bgColor: "bg-violet-500/10",
+			gradientClass: "bg-gradient-to-r from-violet-500 to-violet-300",
+		},
+		{
+			title: "Rating Toko",
+			value: storeRating.toFixed(1),
+			icon: Star,
+			description: `dari ${totalReviews} ulasan`,
+			color: "text-amber-600",
+			bgColor: "bg-amber-500/10",
+			gradientClass: "bg-gradient-to-r from-amber-500 to-amber-300",
+		},
+	]
 
 	return (
 		<div className="space-y-6">
@@ -219,116 +198,97 @@ export function DashboardOverview() {
 
 			{/* Stats Cards */}
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-				{statsData.map((stat) => (
-					<StatCard key={stat.title} stat={stat} />
-				))}
+				{isLoading ? (
+					Array.from({ length: 4 }).map((_, i) => (
+						<Card key={i} className="relative overflow-hidden">
+							<CardHeader className="flex flex-row items-center justify-between pb-2">
+								<Skeleton className="h-4 w-24" />
+								<Skeleton className="h-8 w-8 rounded-lg" />
+							</CardHeader>
+							<CardContent>
+								<Skeleton className="h-7 w-20 mb-2" />
+								<Skeleton className="h-3 w-32" />
+							</CardContent>
+						</Card>
+					))
+				) : (
+					statsData.map((stat) => (
+						<StatCard key={stat.title} stat={stat} />
+					))
+				)}
 			</div>
 
-			{/* Charts Area */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<TrendingUp className="h-5 w-5 text-muted-foreground" />
-						Pendapatan 7 Hari Terakhir
-					</CardTitle>
-					<CardDescription>Grafik pendapatan harian toko Anda</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="flex items-end justify-between gap-2 h-48">
-						{[
-							{ day: "Sen", value: 65 },
-							{ day: "Sel", value: 45 },
-							{ day: "Rab", value: 80 },
-							{ day: "Kam", value: 55 },
-							{ day: "Jum", value: 90 },
-							{ day: "Sab", value: 100 },
-							{ day: "Min", value: 70 },
-						].map((item) => (
-							<div key={item.day} className="flex flex-1 flex-col items-center gap-2">
-								<div className="w-full relative group">
-									<div
-										className="w-full rounded-t-md bg-gradient-to-t from-primary/80 to-primary/40 transition-all duration-300 group-hover:from-primary group-hover:to-primary/60 group-hover:shadow-lg group-hover:shadow-primary/20"
-										style={{ height: `${(item.value / 100) * 160}px` }}
-									/>
-									<div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-xs px-2 py-1 rounded whitespace-nowrap">
-										Rp {(item.value * 18000).toLocaleString("id-ID")}
-									</div>
-								</div>
-								<span className="text-xs text-muted-foreground font-medium">{item.day}</span>
-							</div>
-						))}
-					</div>
-				</CardContent>
-			</Card>
-
+			{/* Content Grid */}
 			<div className="grid gap-6 lg:grid-cols-5">
-				{/* Recent Orders */}
+				{/* Produk Terlaris */}
 				<Card className="lg:col-span-3">
-					<CardHeader>
-						<CardTitle>Pesanan Terbaru</CardTitle>
-						<CardDescription>5 pesanan terakhir yang masuk ke toko Anda</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>ID Pesanan</TableHead>
-									<TableHead>Pelanggan</TableHead>
-									<TableHead className="hidden md:table-cell">Produk</TableHead>
-									<TableHead className="text-right">Total</TableHead>
-									<TableHead className="text-center">Status</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{recentOrders.map((order) => {
-									const status = statusConfig[order.status]
-									return (
-										<TableRow key={order.id} className="group cursor-pointer hover:bg-muted/50 transition-colors">
-											<TableCell className="font-mono text-xs font-medium">{order.id}</TableCell>
-											<TableCell className="font-medium">{order.customer}</TableCell>
-											<TableCell className="hidden md:table-cell text-muted-foreground max-w-[180px] truncate">{order.product}</TableCell>
-											<TableCell className="text-right font-medium">{order.total}</TableCell>
-											<TableCell className="text-center">
-												<Badge variant={status.variant} className={status.className}>{status.label}</Badge>
-											</TableCell>
-										</TableRow>
-									)
-								})}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				{/* Top Products */}
-				<Card className="lg:col-span-2">
 					<CardHeader>
 						<CardTitle>Produk Terlaris</CardTitle>
 						<CardDescription>Produk dengan penjualan tertinggi</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<div className="space-y-4">
-							{topProducts.map((product, index) => (
-								<div key={product.name} className="flex items-center gap-3">
-									<div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${index === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' : index === 1 ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' : index === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' : 'bg-muted text-muted-foreground'}`}>
-										{index + 1}
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium truncate">{product.name}</p>
-										<div className="flex items-center gap-2 text-xs text-muted-foreground">
-											<span>{product.sold} terjual</span>
-											<span>•</span>
-											<div className="flex items-center gap-0.5">
-												<Eye className="h-3 w-3" />
-												{product.views}
+						{!store?.products || store.products.length === 0 ? (
+							<div className="text-center py-8 text-muted-foreground">
+								<Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
+								<p className="text-sm">Belum ada data produk.</p>
+							</div>
+						) : (
+							<div className="space-y-4">
+								{[...store.products]
+									.sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
+									.slice(0, 5)
+									.map((product, index) => (
+										<div key={product.id} className="flex items-center gap-3">
+											<div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+												index === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+												: index === 1 ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+												: index === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+												: 'bg-muted text-muted-foreground'
+											}`}>
+												{index + 1}
+											</div>
+											<div className="flex-1 min-w-0">
+												<p className="text-sm font-medium truncate">{product.name || `Produk #${product.id}`}</p>
+												<p className="text-xs text-muted-foreground">{product.soldCount || 0} terjual</p>
 											</div>
 										</div>
-									</div>
-									<div className="text-right">
-										<p className="text-sm font-semibold">{product.revenue}</p>
-									</div>
-								</div>
-							))}
+									))
+								}
+							</div>
+						)}
+					</CardContent>
+				</Card>
+
+				{/* Ringkasan Toko */}
+				<Card className="lg:col-span-2">
+					<CardHeader>
+						<CardTitle>Ringkasan Toko</CardTitle>
+						<CardDescription>Informasi singkat tentang toko Anda</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="flex items-center justify-between">
+							<span className="text-sm text-muted-foreground">Status Toko</span>
+							<Badge variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950">
+								{store?.status === 'active' ? 'Aktif' : 'Nonaktif'}
+							</Badge>
 						</div>
+						<div className="flex items-center justify-between">
+							<span className="text-sm text-muted-foreground">Jam Operasional</span>
+							<span className="text-sm font-medium">{store?.openTime || "09:00"} - {store?.closeTime || "21:00"}</span>
+						</div>
+						<div className="flex items-center justify-between">
+							<span className="text-sm text-muted-foreground">Kurir Aktif</span>
+							<span className="text-sm font-medium">{store?.enabledCouriers ? store.enabledCouriers.split(",").length : 0} kurir</span>
+						</div>
+						<div className="flex items-center justify-between">
+							<span className="text-sm text-muted-foreground">Sudah Ditarik</span>
+							<span className="text-sm font-medium">Rp {(store?.withdrawnAmount || 0).toLocaleString("id-ID")}</span>
+						</div>
+						{store?.isVerified && (
+							<div className="flex items-center gap-2 text-xs text-emerald-600 font-bold bg-emerald-500/10 px-3 py-2 rounded-lg mt-2">
+								<Store className="h-4 w-4" /> Toko Terverifikasi
+							</div>
+						)}
 					</CardContent>
 				</Card>
 			</div>

@@ -444,6 +444,7 @@ export function CartView() {
                     try {
                       const result = await setCheckoutItems(Array.from(selected))
                       if (result.success) {
+                        queryClient.invalidateQueries({ queryKey: ["checkout-data"] })
                         router.push("/checkout")
                       } else {
                         toast.error(result.error || "Gagal memproses checkout.")

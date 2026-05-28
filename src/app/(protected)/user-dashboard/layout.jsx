@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { 
-	User, MapPin, Package, LogOut, ChevronRight, Menu 
+	User, MapPin, Package, LogOut, ChevronRight, Menu, MessageCircle, Heart
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -26,16 +26,38 @@ const sidebarNavItems = [
 		href: "/user-dashboard/orders",
 		icon: Package,
 	},
+	{
+		title: "Wishlist",
+		href: "/user-dashboard/wishlist",
+		icon: Heart,
+	},
+	{
+		title: "Chat",
+		href: "/chat",
+		icon: MessageCircle,
+	},
 ]
 
 import { useRouter } from "next/navigation"
 import { authClient } from "@/lib/auth-client"
 import { useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { getUnreadChatCount } from "@/actions/public/chat.actions"
 
 export default function UserDashboardLayout({ children }) {
 	const pathname = usePathname()
 	const router = useRouter()
 	const { data: session, isPending } = authClient.useSession()
+
+	// Chat unread count for badge — HARUS di atas early return agar hooks order konsisten
+	const { data: chatUnread } = useQuery({
+		queryKey: ['chat-unread-count'],
+		queryFn: getUnreadChatCount,
+		enabled: !!session,
+		refetchOnWindowFocus: true,
+		refetchInterval: 30000,
+	})
+	const chatCount = chatUnread?.data || 0
 
 	useEffect(() => {
 		if (!isPending && !session) {
@@ -50,10 +72,12 @@ export default function UserDashboardLayout({ children }) {
 	if (!session) {
 		return null // Will redirect in useEffect
 	}
+
 	const NavItems = () => (
 		<nav className="grid items-start gap-2">
 			{sidebarNavItems.map((item, index) => {
 				const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/user-dashboard")
+				const isChatItem = item.title === "Chat"
 				return (
 					<Link key={index} href={item.href}>
 						<span
@@ -65,6 +89,9 @@ export default function UserDashboardLayout({ children }) {
 							<span className="flex items-center">
 								<item.icon className="mr-2 h-4 w-4" />
 								<span>{item.title}</span>
+								{isChatItem && chatCount > 0 && (
+									<span className="ml-2 h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">{chatCount > 99 ? "99+" : chatCount}</span>
+								)}
 							</span>
 							<ChevronRight className={cn(
 								"h-4 w-4 transition-transform",

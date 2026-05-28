@@ -28,6 +28,7 @@ export const products = pgTable("products", {
 	// Marketing & Trust
 	soldCount: integer("sold_count").default(0),
 	rating: decimal("rating", { precision: 2, scale: 1 }).default("5.0"),
+	totalReviews: integer("total_reviews").notNull().default(0),
 	discountRules: jsonb("discount_rules"),
 
 	// Status

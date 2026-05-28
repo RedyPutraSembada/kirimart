@@ -114,6 +114,23 @@ export async function processWithdrawal(withdrawalId, action, reason = "") {
 		})
 
 		const label = action === "completed" ? "disetujui" : "ditolak"
+		
+		// Kirim email notifikasi penarikan dana
+		try {
+			const { sendEmail } = await import("@/lib/email")
+			const { getWithdrawalProcessedEmail } = await import("@/lib/email-templates")
+			const store = await db.query.stores.findFirst({
+				where: eq(stores.id, withdrawal.storeId),
+				with: { user: true }
+			})
+			if (store && store.user && store.user.email) {
+				const emailHtml = getWithdrawalProcessedEmail(store.name, withdrawal.amount, action, reason)
+				await sendEmail(store.user.email, `Penarikan Dana Rp ${withdrawal.amount.toLocaleString("id-ID")} ${label.toUpperCase()}`, emailHtml)
+			}
+		} catch (e) {
+			console.error("[EMAIL_WITHDRAWAL_ERROR]", e)
+		}
+
 		return { success: true, message: `Penarikan berhasil ${label}.` }
 	} catch (error) {
 		console.error("[processWithdrawal]", error)

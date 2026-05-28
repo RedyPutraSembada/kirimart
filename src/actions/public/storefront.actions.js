@@ -263,6 +263,7 @@ function transformProductForCard(product) {
 		img: primaryImage?.imageUrl || firstImage?.imageUrl || null,
 		isStar: product.store?.isStar || false,
 		rating: product.rating || "5.0",
+		totalReviews: product.totalReviews || 0,
 		sold: formatSoldCount(product.soldCount || 0),
 		soldCount: product.soldCount || 0,
 		location: product.store?.address?.cityId || "Indonesia",

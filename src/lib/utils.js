@@ -27,3 +27,20 @@ export function getInitials(name) {
 
   return Math.random().toString(36).substring(2, 4).toUpperCase()
 }
+
+/**
+ * Format angka menjadi format harga Rupiah.
+ * Contoh: 150000 → "Rp 150.000"
+ *
+ * @param {number} amount
+ * @returns {string}
+ */
+export function formatPrice(amount) {
+  if (amount == null || isNaN(amount)) return "Rp 0"
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)
+}

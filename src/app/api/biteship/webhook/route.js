@@ -82,6 +82,95 @@ export async function POST(request) {
 						.where(eq(orders.id, shipment.orderId))
 				}
 
+				// === REAL-TIME NOTIFICATION ke buyer ===
+				try {
+					const { createNotification } = await import("@/actions/public/notification.actions")
+					const { wsEmit } = await import("@/lib/ws-emit")
+
+					// Ambil order beserta user (buyer)
+					const order = await db.query.orders.findFirst({
+						where: eq(orders.id, shipment.orderId),
+						with: {
+							user: true
+						}
+					})
+					
+					if (order) {
+						const statusLabels = {
+							"confirmed": "📦 Pesanan Dikonfirmasi",
+							"allocated": "📦 Kurir Dialokasikan",
+							"picking_up": "🏃 Kurir Menuju Penjual",
+							"picked": "📦 Paket Diambil Kurir",
+							"in_transit": "🚚 Paket Dalam Perjalanan",
+							"dropping_off": "🚚 Kurir Menuju Alamat Anda",
+							"delivered": "✅ Paket Telah Sampai!",
+							"return_in_transit": "↩️ Paket Dikembalikan",
+							"returned": "↩️ Paket Telah Dikembalikan",
+						}
+
+						const statusText = {
+							"confirmed": "Dikonfirmasi",
+							"allocated": "Kurir Dialokasikan",
+							"picking_up": "Menuju Penjual",
+							"picked": "Diambil Kurir",
+							"in_transit": "Dalam Perjalanan",
+							"dropping_off": "Menuju Alamat Anda",
+							"delivered": "Telah Sampai",
+							"return_in_transit": "Proses Retur",
+							"returned": "Telah Diretur",
+							"rejected": "Ditolak",
+							"cancelled": "Dibatalkan",
+						}[status] || status;
+
+						const title = statusLabels[status] || `📦 Update Pengiriman`
+						const message = courier_waybill_id 
+							? `Resi: ${courier_waybill_id} — Status: ${statusText}`
+							: `Status pengiriman berubah menjadi: ${statusText}`
+
+						const notif = await createNotification(
+							order.userId,
+							status === "delivered" ? "order_delivered" : "order_status_changed",
+							title,
+							message,
+							{ orderId: order.id, status, awbNumber: courier_waybill_id || null }
+						)
+
+						if (notif) {
+							await wsEmit("notifications", `user:${order.userId}`, "notification", notif)
+						}
+
+						// === SCHEDULE AUTO-COMPLETE (7 hari setelah delivered) ===
+						if (status === "delivered") {
+							const { scheduleAutoComplete } = await import("@/lib/jobs")
+							await scheduleAutoComplete(order.id)
+						}
+						
+						// === EMAIL NOTIFICATIONS ===
+						if (order.user && order.user.email) {
+							const { sendEmail } = await import("@/lib/email")
+							const { getOrderShippedEmail, getOrderDeliveredEmail } = await import("@/lib/email-templates")
+							
+							try {
+								// Kirim email "Pesanan Dikirim" saat status allocated
+								if (status === "allocated") {
+									const awb = courier_waybill_id || shipment.awbNumber || "-"
+									const emailHtml = getOrderShippedEmail(order.user.name || "Pembeli", order.id, shipment.courier || "kurir", awb)
+									await sendEmail(order.user.email, `Pesanan #${order.id} Sedang Dikirim 🚚`, emailHtml)
+								} 
+								// Kirim email "Pesanan Diterima" saat status delivered
+								else if (status === "delivered") {
+									const emailHtml = getOrderDeliveredEmail(order.user.name || "Pembeli", order.id)
+									await sendEmail(order.user.email, `Paket Pesanan #${order.id} Telah Sampai! 📦`, emailHtml)
+								}
+							} catch (e) {
+								console.error("[EMAIL_SHIPPING_ERROR]", e)
+							}
+						}
+					}
+				} catch (notifError) {
+					console.warn("[BITESHIP WEBHOOK] Failed to send notification:", notifError.message)
+				}
+
 				break
 			}
 

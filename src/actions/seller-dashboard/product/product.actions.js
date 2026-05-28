@@ -8,23 +8,28 @@ import { and, count, eq, ilike } from "drizzle-orm"
 import { headers } from "next/headers"
 import { createProductSchema } from "@/lib/validations/seller-dashboard/product/product"
 
+import { cached, invalidateCache } from "@/lib/cache"
+
 export async function getCategories() {
 	try {
-		let allCategories = await db.select().from(categories)
+		// Cache 1 jam — kategori jarang berubah
+		return await cached("categories:all", async () => {
+			let allCategories = await db.select().from(categories)
 
-		if (allCategories.length === 0) {
-			const defaultCategories = [
-				{ name: "Sepatu" },
-				{ name: "Pakaian" },
-				{ name: "Tas" },
-				{ name: "Aksesoris" },
-				{ name: "Elektronik" },
-			]
-			await db.insert(categories).values(defaultCategories)
-			allCategories = await db.select().from(categories)
-		}
+			if (allCategories.length === 0) {
+				const defaultCategories = [
+					{ name: "Sepatu" },
+					{ name: "Pakaian" },
+					{ name: "Tas" },
+					{ name: "Aksesoris" },
+					{ name: "Elektronik" },
+				]
+				await db.insert(categories).values(defaultCategories)
+				allCategories = await db.select().from(categories)
+			}
 
-		return { success: true, data: allCategories }
+			return { success: true, data: allCategories }
+		}, 3600) // 1 jam
 	} catch (error) {
 		console.error("getCategories error", error)
 		return { success: false, error: "Gagal mengambil kategori" }

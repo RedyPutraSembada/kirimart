@@ -8,5 +8,7 @@ export const reviews = pgTable("reviews", {
 	rating: integer("rating").notNull(), // 1-5
 	comment: text("comment"),
 	imageUrl: text("image_url"),
+	sellerReply: text("seller_reply"),
+	sellerReplyAt: timestamp("seller_reply_at"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 })

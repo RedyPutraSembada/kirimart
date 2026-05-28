@@ -2,19 +2,22 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { MapPin, Truck, ShieldCheck, Tag, Clock, Package, Loader2, AlertCircle, ChevronRight, ArrowLeft, CreditCard } from "lucide-react"
+import { MapPin, Truck, ShieldCheck, Tag, Clock, Package, Loader2, AlertCircle, ChevronRight, ArrowLeft, CreditCard, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useQuery } from "@tanstack/react-query"
-import { getCheckoutData, getPlatformFeeConfig } from "@/actions/public/checkout.actions"
-import { validateVoucherCode } from "@/actions/public/voucher.actions"
+import { getCheckoutData, getPlatformFeeConfig, setCheckoutAddress } from "@/actions/public/checkout.actions"
 import { calculateCommission } from "@/lib/platform-fee"
+import { pixelInitiateCheckout } from "@/lib/pixel"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -49,11 +52,13 @@ export function CheckoutView() {
   const [selectedShipping, setSelectedShipping] = useState({})
   const [notes, setNotes] = useState({})
   const [voucherCode, setVoucherCode] = useState("")
-  const [appliedVouchers, setAppliedVouchers] = useState([]) // Max 2 (1 Global + 1 Store)
+  const [appliedVouchers, setAppliedVouchers] = useState([])
+  const [showAddressPicker, setShowAddressPicker] = useState(false)
 
   // Payment state
   const [isProcessing, setIsProcessing] = useState(false)
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false)
+  const [isChangingAddress, setIsChangingAddress] = useState(false)
 
   // Set initial selected address & shipping ketika data pertama kali dimuat
   useEffect(() => {
@@ -75,8 +80,70 @@ export function CheckoutView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkoutStores])
 
+  // Track InitiateCheckout once when data is loaded
+  const [hasTrackedCheckout, setHasTrackedCheckout] = useState(false)
+  
+  useEffect(() => {
+    if (checkoutStores.length > 0 && !hasTrackedCheckout) {
+      // Calculate totals for tracking
+      let grandTotal = 0
+      let totalItems = 0
+      
+      checkoutStores.forEach(store => {
+        const storeTotal = store.items.reduce((s, i) => s + i.price * i.qty, 0)
+        const storeItemsCount = store.items.reduce((s, i) => s + i.qty, 0)
+        grandTotal += storeTotal
+        totalItems += storeItemsCount
+        
+        // Track for individual store pixels
+        if (store.metaPixelId) {
+          pixelInitiateCheckout({
+            totalValue: storeTotal,
+            numItems: storeItemsCount
+          }, store.metaPixelId)
+        }
+      })
+      
+      // Track for master pixel (no storePixelId)
+      pixelInitiateCheckout({
+        totalValue: grandTotal,
+        numItems: totalItems
+      })
+      
+      setHasTrackedCheckout(true)
+    }
+  }, [checkoutStores, hasTrackedCheckout])
+
   // Ambil alamat terpilih
   const address = userAddresses.find(a => a.id === selectedAddressId) || userAddresses[0] || null
+
+  // Handle ganti alamat
+  const handleChangeAddress = async (addressId) => {
+    if (addressId === selectedAddressId) {
+      setShowAddressPicker(false)
+      return
+    }
+
+    setIsChangingAddress(true)
+    try {
+      const res = await setCheckoutAddress(addressId)
+      if (res?.success === false) {
+        toast.error(res.error || "Gagal mengganti alamat.")
+        return
+      }
+
+      setSelectedAddressId(addressId)
+      setSelectedShipping({})
+      setShowAddressPicker(false)
+
+      await refetch()
+      toast.success("Alamat pengiriman berhasil diganti!")
+    } catch (error) {
+      toast.error("Gagal mengganti alamat.")
+    } finally {
+      setIsChangingAddress(false)
+    }
+  }
 
   // Calculate totals
   const subtotal = checkoutStores.reduce((sum, s) => sum + s.items.reduce((is, i) => is + i.price * i.qty, 0), 0)
@@ -84,19 +151,14 @@ export function CheckoutView() {
     const ship = s.shipping?.find(sh => sh.id === selectedShipping[s.id])
     return sum + (ship?.price || 0)
   }, 0)
-  // Hitung biaya layanan (komisi platform saja — biaya PG dihitung di halaman payment method)
   const serviceFee = checkoutStores.reduce((sum, store) => {
     const storeSubtotal = store.items.reduce((s, i) => s + i.price * i.qty, 0)
     return sum + calculateCommission(storeSubtotal, commissionTiers)
   }, 0)
 
-  // Total Diskon dari Vouchers
   const totalDiscount = appliedVouchers.reduce((sum, v) => sum + v.discountAmount, 0)
-  
-  // Grand total di halaman ini belum termasuk biaya PG (dihitung di halaman berikutnya)
   const grandTotal = Math.max(0, subtotal + totalShipping + serviceFee - totalDiscount)
 
-  // Checkout Data State (untuk mempermudah passing ke server)
   const currentCheckoutState = {
     stores: checkoutStores.map(store => ({
       ...store,
@@ -114,7 +176,7 @@ export function CheckoutView() {
     setIsApplyingVoucher(true)
     try {
       const res = await validateVoucherCode(voucherCode.trim(), currentCheckoutState)
-      
+
       if (!res.success) {
         toast.error(res.error)
         setIsApplyingVoucher(false)
@@ -122,17 +184,14 @@ export function CheckoutView() {
       }
 
       const newVoucher = res.data
-      
-      // Slotting Logic: Max 1 Global + 1 Store. (Tidak bisa 2 Store / 2 Global)
+
       let newApplied = [...appliedVouchers]
 
       if (newVoucher.voucher.isGlobal) {
-        // Replace existing global voucher if any
         newApplied = newApplied.filter(v => !v.voucher.isGlobal)
         newApplied.push(newVoucher)
         toast.success("Voucher platform berhasil dipasang!")
       } else {
-        // Replace existing store voucher if any
         newApplied = newApplied.filter(v => v.voucher.isGlobal)
         newApplied.push(newVoucher)
         toast.success("Voucher toko berhasil dipasang!")
@@ -152,7 +211,6 @@ export function CheckoutView() {
     toast.success("Voucher dilepas.")
   }
 
-  // Open payment method selection page
   const handleCheckout = () => {
     if (!address) {
       toast.error("Tambahkan alamat pengiriman terlebih dahulu.")
@@ -183,9 +241,6 @@ export function CheckoutView() {
     )
   }
 
-  // ============================================
-  // EMPTY STATE (tidak ada barang untuk di-checkout)
-  // ============================================
   if (checkoutStores.length === 0) {
     return (
       <div className="container mx-auto px-4 md:px-6 py-16 max-w-4xl text-center space-y-4">
@@ -223,7 +278,14 @@ export function CheckoutView() {
                   <CardTitle className="text-base">Alamat Pengiriman</CardTitle>
                 </div>
                 {userAddresses.length > 1 && (
-                  <Button variant="ghost" size="sm" className="text-xs text-primary font-semibold h-7">Ganti Alamat</Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-primary font-semibold h-7"
+                    onClick={() => setShowAddressPicker(true)}
+                  >
+                    Ganti Alamat
+                  </Button>
                 )}
               </div>
             </CardHeader>
@@ -364,7 +426,7 @@ export function CheckoutView() {
             </Card>
           ))}
 
-          {/* Payment Info — Powered by Midtrans */}
+          {/* Payment Info */}
           <Card className="border-border/60">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
@@ -400,16 +462,16 @@ export function CheckoutView() {
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-primary shrink-0" />
-                  <Input 
-                    placeholder="Kode Voucher" 
-                    value={voucherCode} 
-                    onChange={e => setVoucherCode(e.target.value.toUpperCase())} 
-                    className="h-9 text-xs uppercase" 
+                  <Input
+                    placeholder="Kode Voucher"
+                    value={voucherCode}
+                    onChange={e => setVoucherCode(e.target.value.toUpperCase())}
+                    className="h-9 text-xs uppercase"
                     onKeyDown={e => e.key === 'Enter' && handleApplyVoucher()}
                   />
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="h-9 text-xs font-semibold shrink-0 px-4"
                     onClick={handleApplyVoucher}
                     disabled={isApplyingVoucher || !voucherCode.trim()}
@@ -431,7 +493,7 @@ export function CheckoutView() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-green-600">-{fmt(v.discountAmount)}</span>
-                          <button 
+                          <button
                             onClick={() => handleRemoveVoucher(v.voucher.code)}
                             className="text-muted-foreground hover:text-red-500 transition-colors p-1"
                             title="Hapus Voucher"
@@ -502,6 +564,64 @@ export function CheckoutView() {
           </div>
         </div>
       </div>
+
+      {/* Address Picker Dialog */}
+      <Dialog open={showAddressPicker} onOpenChange={setShowAddressPicker}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Pilih Alamat Pengiriman</DialogTitle>
+            <DialogDescription>
+              Pilih alamat tujuan pengiriman. Ongkir akan dihitung ulang.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            {userAddresses.map((addr) => {
+              const isSelected = addr.id === selectedAddressId
+              return (
+                <button
+                  key={addr.id}
+                  onClick={() => handleChangeAddress(addr.id)}
+                  disabled={isChangingAddress}
+                  className={cn(
+                    "w-full text-left p-4 rounded-xl border transition-all",
+                    isSelected
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border hover:border-primary/30"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">{addr.recipientName || "Penerima"}</span>
+                        <span className="text-xs text-muted-foreground">{addr.recipientPhone || ""}</span>
+                        {addr.label && (
+                          <span className="text-[10px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded">{addr.label}</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{addr.detailAddress}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {addr.kecamatanName || ""}{addr.cityName ? `, ${addr.cityName}` : ""}{addr.provinceName ? `, ${addr.provinceName}` : ""} {addr.zipcode && `(${addr.zipcode})`}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <div className="shrink-0 h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-3.5 w-3.5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {isChangingAddress && (
+            <div className="flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Menghitung ulang ongkir...
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
     </div>
   )

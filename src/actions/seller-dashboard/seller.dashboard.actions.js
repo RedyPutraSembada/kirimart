@@ -22,7 +22,7 @@ export async function getMyStore() {
             with: {
                 address: true,
                 products: {
-                    columns: { id: true },
+                    columns: { id: true, name: true, soldCount: true },
                 },
             }
         });
@@ -200,6 +200,7 @@ export async function updateStoreProfile(data) {
                 description: data.description?.trim() || null,
                 openTime: data.openTime || "09:00",
                 closeTime: data.closeTime || "21:00",
+                metaPixelId: data.metaPixelId?.trim() || null,
             })
             .where(eq(stores.id, myStore.id))
 

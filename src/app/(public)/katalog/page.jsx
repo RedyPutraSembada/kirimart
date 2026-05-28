@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { CatalogList } from "@/features/public/catalog/catalog-list"
 import { getPublicCategories, getCatalogProducts } from "@/actions/public/storefront.actions"
 
@@ -11,16 +12,16 @@ export default async function KatalogPage({ searchParams }) {
   const categoriesResponse = await getPublicCategories()
   const categories = categoriesResponse.success ? categoriesResponse.data : []
 
-  // Resolve category: bisa via ?categoryId=5 (id) atau ?category=aksesoris (slug)
+  // Resolve category: bisa via ?categoryId=5 (id) atau ?category=aksesoris (slug dari mega menu navbar)
   let resolvedCategoryId = params?.categoryId || ""
   if (!resolvedCategoryId && params?.category) {
     const matched = categories.find(
-      c => c.slug === params.category || String(c.id) === params.category
+      (c) => c.slug === params.category || String(c.id) === params.category
     )
     if (matched) resolvedCategoryId = String(matched.id)
   }
 
-  // SSR initial products based on URL search params
+  // SSR: fetch data awal berdasarkan URL params
   const initialFilters = {
     search: params?.search || "",
     categoryId: resolvedCategoryId,
@@ -34,11 +35,12 @@ export default async function KatalogPage({ searchParams }) {
   const initialTotal = productsResponse.success ? productsResponse.total : 0
 
   return (
-    <CatalogList
-      initialCategories={categories}
-      initialProducts={initialProducts}
-      initialTotal={initialTotal}
-      initialFilters={initialFilters}
-    />
+    <Suspense>
+      <CatalogList
+        initialCategories={categories}
+        initialProducts={initialProducts}
+        initialTotal={initialTotal}
+      />
+    </Suspense>
   )
 }

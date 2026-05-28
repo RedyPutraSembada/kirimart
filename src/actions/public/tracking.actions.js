@@ -89,11 +89,31 @@ export async function trackOrderShipment(orderId) {
 			`/v1/trackings/${shipment.awbNumber}/couriers/${shipment.courier}`
 		)
 
+		// Helper untuk translate note dari Biteship
+		const translateNote = (note) => {
+			if (!note) return "";
+			let n = note;
+			n = n.replace(/Order has been delivered/gi, "Pesanan telah sampai di tujuan");
+			n = n.replace(/Courier is dropping off item to destination/gi, "Kurir sedang mengantar paket ke alamat tujuan");
+			n = n.replace(/Item has been picked by courier/gi, "Paket telah diambil oleh kurir");
+			n = n.replace(/Courier is on the way to pick up location/gi, "Kurir sedang menuju ke lokasi penjemputan");
+			n = n.replace(/Courier is allocated and ready to pick up/gi, "Kurir telah dialokasikan dan siap menjemput");
+			n = n.replace(/Courier order is confirmed/gi, "Pesanan kurir telah dikonfirmasi");
+			n = n.replace(/has been notified to pick up/gi, "telah diberitahu untuk melakukan penjemputan");
+			n = n.replace(/Pickup Number/gi, "Nomor Penjemputan");
+			n = n.replace(/Item is in transit/gi, "Paket dalam perjalanan");
+			n = n.replace(/Order is confirmed/gi, "Pesanan dikonfirmasi");
+			n = n.replace(/Item is being returned/gi, "Paket sedang dikembalikan");
+			n = n.replace(/Item has been returned/gi, "Paket telah dikembalikan");
+			n = n.replace(/Courier is allocated/gi, "Kurir dialokasikan");
+			return n;
+		};
+
 		// Format timeline dari response Biteship
 		const history = trackingData?.history || []
 		const timeline = history.map((h) => ({
 			status: h.status || "",
-			note: h.note || h.description || "",
+			note: translateNote(h.note || h.description || ""),
 			date: h.updated_at || h.date || null,
 			location: h.service_type || "",
 		}))
@@ -127,26 +147,41 @@ export async function trackOrderShipment(orderId) {
 			})
 
 			if (order?.shipment) {
-				return {
-					success: true,
-					data: {
-						orderId: order.id,
-						awbNumber: order.shipment.awbNumber || "-",
-						courier: order.shipment.courier || "-",
-						courierType: order.shipment.courierType || "-",
-						service: order.shipment.service || "-",
-						status: order.shipment.status || "confirmed",
-						timeline: [
-							{
-								status: order.shipment.status || "confirmed",
-								note: `Pesanan telah diproses melalui ${order.shipment.courier?.toUpperCase() || "kurir"}. Status: ${order.shipment.status || "confirmed"}.`,
-								date: order.createdAt,
-								location: "",
+						const statusTextMap = {
+							"pending": "Menunggu Proses",
+							"confirmed": "Menunggu Penjemputan",
+							"allocated": "Kurir Dialokasikan",
+							"picking_up": "Kurir Sedang Menjemput",
+							"picked": "Paket Dijemput",
+							"in_transit": "Dalam Perjalanan",
+							"dropping_off": "Kurir Mengantar",
+							"delivered": "Tiba di Tujuan",
+							"returned": "Dikembalikan",
+							"cancelled": "Dibatalkan",
+						};
+						const st = order.shipment.status || "confirmed";
+						const stText = statusTextMap[st] || st;
+
+						return {
+							success: true,
+							data: {
+								orderId: order.id,
+								awbNumber: order.shipment.awbNumber || "-",
+								courier: order.shipment.courier || "-",
+								courierType: order.shipment.courierType || "-",
+								service: order.shipment.service || "-",
+								status: st,
+								timeline: [
+									{
+										status: st,
+										note: `Pesanan telah diproses melalui ${order.shipment.courier?.toUpperCase() || "kurir"}. Status: ${stText}.`,
+										date: order.createdAt,
+										location: "",
+									},
+								],
+								_fallback: true, // Flag bahwa ini data lokal, bukan dari Biteship
 							},
-						],
-						_fallback: true, // Flag bahwa ini data lokal, bukan dari Biteship
-					},
-				}
+						}
 			}
 		} catch { }
 

@@ -15,8 +15,10 @@ import { carts, cartItems, addresses } from "@/config/db/schema"
 import { auth } from "@/lib/auth"
 import { eq, and, inArray } from "drizzle-orm"
 import { headers, cookies } from "next/headers"
+import { cached } from "@/lib/cache"
 
 const CHECKOUT_COOKIE = "km_checkout_items"
+const CHECKOUT_ADDRESS_COOKIE = "km_checkout_address"
 
 // ============================================
 // HELPER: Get session (reusable)
@@ -66,6 +68,39 @@ export async function setCheckoutItems(cartItemIds) {
 }
 
 // ============================================
+// SET CHECKOUT ADDRESS (dipanggil saat user ganti alamat)
+// ============================================
+
+/**
+ * Menyimpan ID alamat pengiriman yang dipilih ke cookie.
+ * Dipanggil saat user menekan tombol "Ganti Alamat" di halaman /checkout.
+ *
+ * @param {number} addressId - ID alamat yang dipilih
+ */
+export async function setCheckoutAddress(addressId) {
+	try {
+		const session = await getAuthSession()
+		if (!session) {
+			return { success: false, error: "Silakan login terlebih dahulu." }
+		}
+
+		const cookieStore = await cookies()
+		cookieStore.set(CHECKOUT_ADDRESS_COOKIE, String(addressId), {
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "lax",
+			maxAge: 60 * 60, // 1 jam
+			path: "/",
+		})
+
+		return { success: true }
+	} catch (error) {
+		console.error("[setCheckoutAddress]", error)
+		return { success: false, error: "Gagal menyimpan alamat checkout." }
+	}
+}
+
+// ============================================
 // GET CHECKOUT DATA (dipanggil dari halaman Checkout)
 // ============================================
 
@@ -108,7 +143,7 @@ export async function getCheckoutData() {
 							with: {
 								images: true,
 								store: {
-									columns: { id: true, name: true, domainSlug: true, isStar: true, logoUrl: true, addressId: true, enabledCouriers: true },
+									columns: { id: true, name: true, domainSlug: true, isStar: true, logoUrl: true, addressId: true, enabledCouriers: true, metaPixelId: true },
 									with: {
 										address: true, // Alamat asal toko (untuk kalkulasi ongkir nanti)
 									},
@@ -157,6 +192,7 @@ export async function getCheckoutData() {
 					originAreaId: store.address?.biteshipAreaId || null,
 					originCityId: store.address?.cityId || null,
 					enabledCouriers: store.enabledCouriers || "jne,sicepat,jnt,anteraja",
+					metaPixelId: store.metaPixelId || null,
 					items: [],
 				})
 			}
@@ -201,7 +237,21 @@ export async function getCheckoutData() {
 
 		// Filter hanya alamat user (storeId null)
 		const personalAddresses = userAddresses.filter(a => !a.storeId)
-		const selectedAddress = personalAddresses[0] || null
+
+		// Cek cookie apakah user sudah pilih alamat tertentu
+		const addressCookie = cookieStore.get(CHECKOUT_ADDRESS_COOKIE)
+		let selectedAddress = null
+
+		if (addressCookie?.value) {
+			const savedAddrId = parseInt(addressCookie.value)
+			selectedAddress = personalAddresses.find(a => a.id === savedAddrId) || null
+		}
+
+		// Fallback ke alamat pertama jika cookie tidak valid
+		if (!selectedAddress) {
+			selectedAddress = personalAddresses[0] || null
+		}
+
 		const destAreaId = selectedAddress?.biteshipAreaId || null
 
 		// 6. Hitung opsi ongkir LIVE per toko dari Biteship
@@ -308,23 +358,26 @@ export async function getShippingRatesForAddress(addressId, storeShippingRequest
  */
 export async function getPlatformFeeConfig() {
 	try {
-		const { platformSettings } = await import("@/config/db/schema")
+		// Cache 1 jam — platform settings jarang berubah
+		return await cached("platform:fee-config", async () => {
+			const { platformSettings } = await import("@/config/db/schema")
 
-		const commissionRow = await db.query.platformSettings.findFirst({
-			where: eq(platformSettings.key, "commission_tiers"),
-		})
+			const commissionRow = await db.query.platformSettings.findFirst({
+				where: eq(platformSettings.key, "commission_tiers"),
+			})
 
-		const serviceFeeRow = await db.query.platformSettings.findFirst({
-			where: eq(platformSettings.key, "service_fee"),
-		})
+			const serviceFeeRow = await db.query.platformSettings.findFirst({
+				where: eq(platformSettings.key, "service_fee"),
+			})
 
-		return {
-			success: true,
-			data: {
-				commissionTiers: commissionRow ? JSON.parse(commissionRow.value) : [],
-				serviceFeeConfig: serviceFeeRow ? JSON.parse(serviceFeeRow.value) : { type: "flat", value: 1000 },
+			return {
+				success: true,
+				data: {
+					commissionTiers: commissionRow ? JSON.parse(commissionRow.value) : [],
+					serviceFeeConfig: serviceFeeRow ? JSON.parse(serviceFeeRow.value) : { type: "flat", value: 1000 },
+				}
 			}
-		}
+		}, 3600) // 1 jam
 	} catch (error) {
 		console.error("[getPlatformFeeConfig]", error)
 		return {
@@ -353,28 +406,30 @@ export async function getPaymentMethodsConfig() {
 			return { success: false, error: "Silakan login terlebih dahulu." }
 		}
 
-		const { platformSettings } = await import("@/config/db/schema")
+		// Cache 1 jam — payment methods jarang berubah
+		return await cached("platform:payment-methods", async () => {
+			const { platformSettings } = await import("@/config/db/schema")
 
-		const pgRow = await db.query.platformSettings.findFirst({
-			where: eq(platformSettings.key, "pg_fee_config"),
-		})
+			const pgRow = await db.query.platformSettings.findFirst({
+				where: eq(platformSettings.key, "pg_fee_config"),
+			})
 
-		const { DEFAULT_PAYMENT_METHODS } = await import("@/lib/pg-fee")
-		const methods = pgRow ? JSON.parse(pgRow.value) : DEFAULT_PAYMENT_METHODS
+			const { DEFAULT_PAYMENT_METHODS } = await import("@/lib/pg-fee")
+			const methods = pgRow ? JSON.parse(pgRow.value) : DEFAULT_PAYMENT_METHODS
 
-		// Juga ambil commission tiers untuk kalkulasi total service fee
-		const commissionRow = await db.query.platformSettings.findFirst({
-			where: eq(platformSettings.key, "commission_tiers"),
-		})
-		const commissionTiers = commissionRow ? JSON.parse(commissionRow.value) : []
+			const commissionRow = await db.query.platformSettings.findFirst({
+				where: eq(platformSettings.key, "commission_tiers"),
+			})
+			const commissionTiers = commissionRow ? JSON.parse(commissionRow.value) : []
 
-		return {
-			success: true,
-			data: {
-				methods: methods.filter(m => m.enabled),
-				commissionTiers,
+			return {
+				success: true,
+				data: {
+					methods: methods.filter(m => m.enabled),
+					commissionTiers,
+				}
 			}
-		}
+		}, 3600) // 1 jam
 	} catch (error) {
 		console.error("[getPaymentMethodsConfig]", error)
 		return { success: false, error: "Gagal mengambil data metode pembayaran." }

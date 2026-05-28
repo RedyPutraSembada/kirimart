@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/config/db"
-import { payments, orders, stores, reviews, products } from "@/config/db/schema"
+import { payments, orders, stores, reviews, products, orderItems } from "@/config/db/schema"
 import { auth } from "@/lib/auth"
 import { eq, desc, and, avg, sql } from "drizzle-orm"
 import { headers } from "next/headers"
@@ -138,7 +138,19 @@ export async function completeOrderAndReview(orderId, reviewsData) {
 				.set({ status: "completed" })
 				.where(eq(orders.id, parseInt(orderId)))
 
-			// 2. Simpan semua review
+			// 2. Update soldCount untuk setiap produk dalam pesanan
+			const items = await tx.select({
+				productId: orderItems.productId,
+				quantity: orderItems.quantity,
+			}).from(orderItems).where(eq(orderItems.orderId, parseInt(orderId)))
+
+			for (const item of items) {
+				await tx.update(products)
+					.set({ soldCount: sql`COALESCE(sold_count, 0) + ${item.quantity}` })
+					.where(eq(products.id, item.productId))
+			}
+
+			// 3. Simpan semua review
 			if (reviewsData.length > 0) {
 				await tx.insert(reviews).values(
 					reviewsData.map(r => ({
@@ -147,24 +159,29 @@ export async function completeOrderAndReview(orderId, reviewsData) {
 						userId: session.user.id,
 						rating: r.rating,
 						comment: r.comment || null,
+						imageUrl: r.imageUrl || null,
 					}))
 				)
 			}
 
-			// 4. Hitung ulang rating untuk setiap produk yang di-review
+			// 4. Hitung ulang rating + totalReviews untuk setiap produk yang di-review
 			const productIds = [...new Set(reviewsData.map(r => r.productId))]
 			for (const productId of productIds) {
 				const [result] = await tx
-					.select({ avgRating: avg(reviews.rating) })
+					.select({
+						avgRating: avg(reviews.rating),
+						totalReviews: sql`COUNT(*)::int`,
+					})
 					.from(reviews)
 					.where(eq(reviews.productId, productId))
 
 				const newRating = result?.avgRating
 					? parseFloat(parseFloat(result.avgRating).toFixed(1))
 					: 5.0
+				const newTotalReviews = result?.totalReviews || 0
 
 				await tx.update(products)
-					.set({ rating: String(newRating) })
+					.set({ rating: String(newRating), totalReviews: newTotalReviews })
 					.where(eq(products.id, productId))
 			}
 

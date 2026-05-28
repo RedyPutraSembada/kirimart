@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { 
 	Form, FormControl, FormField, FormItem, FormLabel, FormMessage 
 } from "@/components/ui/form"
-import { Save, Loader2, Camera, User as UserIcon } from "lucide-react"
+import { Save, Loader2, Camera, User as UserIcon, Lock, Eye, EyeOff } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { updateProfileSchema } from "@/lib/validations/user-dashboard/profile"
 import { env } from "@/config/env"
@@ -28,6 +28,11 @@ export function UserProfile() {
 	const { data: session, isPending: isSessionLoading } = authClient.useSession()
 	const user = session?.user
 	const [isLoadingImage, setIsLoadingImage] = useState(false)
+
+	// State form ganti password
+	const [pwForm, setPwForm] = useState({ current: "", newPw: "", confirm: "" })
+	const [showPw, setShowPw] = useState({ current: false, newPw: false, confirm: false })
+	const [isChangingPw, setIsChangingPw] = useState(false)
 	
 	const updateMutation = useMutation({
 		mutationFn: updateProfileAction,
@@ -253,6 +258,110 @@ export function UserProfile() {
 					</Card>
 				</form>
 			</Form>
+
+			{/* Section: Keamanan Akun — Ganti Password */}
+			<Card>
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2">
+						<Lock className="h-4 w-4" />
+						Keamanan Akun
+					</CardTitle>
+					<CardDescription>Perbarui kata sandi akun Anda secara berkala untuk menjaga keamanan.</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					{/* Password Lama */}
+					<div className="space-y-1.5">
+						<Label htmlFor="current-pw">Password Saat Ini</Label>
+						<div className="relative">
+							<Input
+								id="current-pw"
+								type={showPw.current ? "text" : "password"}
+								placeholder="Masukkan password saat ini"
+								value={pwForm.current}
+								onChange={(e) => setPwForm(p => ({ ...p, current: e.target.value }))}
+								disabled={isChangingPw}
+							/>
+							<button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowPw(p => ({...p, current: !p.current}))}>
+								{showPw.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+							</button>
+						</div>
+					</div>
+					{/* Password Baru */}
+					<div className="space-y-1.5">
+						<Label htmlFor="new-pw">Password Baru</Label>
+						<div className="relative">
+							<Input
+								id="new-pw"
+								type={showPw.newPw ? "text" : "password"}
+								placeholder="Minimal 8 karakter"
+								value={pwForm.newPw}
+								onChange={(e) => setPwForm(p => ({ ...p, newPw: e.target.value }))}
+								disabled={isChangingPw}
+							/>
+							<button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowPw(p => ({...p, newPw: !p.newPw}))}>
+								{showPw.newPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+							</button>
+						</div>
+					</div>
+					{/* Konfirmasi Password Baru */}
+					<div className="space-y-1.5">
+						<Label htmlFor="confirm-pw">Konfirmasi Password Baru</Label>
+						<div className="relative">
+							<Input
+								id="confirm-pw"
+								type={showPw.confirm ? "text" : "password"}
+								placeholder="Ulangi password baru"
+								value={pwForm.confirm}
+								onChange={(e) => setPwForm(p => ({ ...p, confirm: e.target.value }))}
+								disabled={isChangingPw}
+							/>
+							<button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowPw(p => ({...p, confirm: !p.confirm}))}>
+								{showPw.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+							</button>
+						</div>
+					</div>
+
+					<div className="flex justify-end pt-2">
+						<Button
+							disabled={isChangingPw || !pwForm.current || !pwForm.newPw || !pwForm.confirm}
+							onClick={async () => {
+								if (pwForm.newPw.length < 8) {
+									toast.error("Password baru minimal 8 karakter.")
+									return
+								}
+								if (pwForm.newPw !== pwForm.confirm) {
+									toast.error("Konfirmasi password tidak cocok.")
+									return
+								}
+								setIsChangingPw(true)
+								try {
+									const res = await authClient.changePassword({
+										currentPassword: pwForm.current,
+										newPassword: pwForm.newPw,
+										revokeOtherSessions: false,
+									})
+									if (res.error) {
+										toast.error(res.error.message || "Password lama tidak benar.")
+									} else {
+										toast.success("Password berhasil diubah!")
+										setPwForm({ current: "", newPw: "", confirm: "" })
+									}
+								} catch {
+									toast.error("Terjadi kesalahan. Coba lagi.")
+								} finally {
+									setIsChangingPw(false)
+								}
+							}}
+						>
+							{isChangingPw ? (
+								<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</>
+							) : (
+								<><Lock className="mr-2 h-4 w-4" />Ubah Password</>
+							)}
+						</Button>
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	)
 }

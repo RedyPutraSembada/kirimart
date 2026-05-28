@@ -104,6 +104,7 @@ export async function updateOrderStatus(orderId, newStatus, shippingData = {}) {
 				eq(orders.id, parseInt(orderId)),
 				eq(orders.storeId, store.id)
 			),
+			with: { user: true }
 		})
 
 		if (!order) {
@@ -165,6 +166,55 @@ export async function updateOrderStatus(orderId, newStatus, shippingData = {}) {
 		})
 
 		const statusLabel = newStatus === "processing" ? "Dikemas" : "Dikirim"
+
+		// === REAL-TIME NOTIFICATION ke buyer ===
+		try {
+			const { createNotification } = await import("@/actions/public/notification.actions")
+			const { wsEmit } = await import("@/lib/ws-emit")
+			const { sendEmail } = await import("@/lib/email")
+			const { getOrderProcessingEmail, getOrderShippedEmail } = await import("@/lib/email-templates")
+
+			const title = newStatus === "processing"
+				? "📦 Pesanan Sedang Dikemas"
+				: "🚚 Pesanan Dikirim!"
+			
+			const message = newStatus === "processing"
+				? `Penjual sedang mengemas pesanan Anda.`
+				: `Pesanan Anda telah dikirim! Resi: ${shippingData.awbNumber}`
+
+			const notif = await createNotification(
+				order.userId,
+				newStatus === "processing" ? "order_processing" : "order_shipped",
+				title,
+				message,
+				{
+					orderId: order.id,
+					status: newStatus,
+					courier: shippingData.courier || null,
+					awbNumber: shippingData.awbNumber || null,
+				}
+			)
+
+			if (notif) {
+				await wsEmit("notifications", `user:${order.userId}`, "notification", notif)
+			}
+			
+			// === KIRIM EMAIL KE PEMBELI ===
+			if (order.user?.email) {
+				const emailSubject = newStatus === "processing" 
+					? `[KiriMart] Pesanan #${order.id} Sedang Dikemas` 
+					: `[KiriMart] Pesanan #${order.id} Telah Dikirim`;
+				
+				const emailHtml = newStatus === "processing"
+					? getOrderProcessingEmail(order.user.name || "Pembeli", order.id, store.name)
+					: getOrderShippedEmail(order.user.name || "Pembeli", order.id, shippingData.courier, shippingData.awbNumber);
+					
+				await sendEmail(order.user.email, emailSubject, emailHtml);
+			}
+		} catch (notifError) {
+			console.warn("[updateOrderStatus] Failed to send notification:", notifError.message)
+		}
+
 		return { success: true, message: `Pesanan berhasil diperbarui menjadi "${statusLabel}".` }
 	} catch (error) {
 		console.error("[updateOrderStatus]", error)
@@ -308,6 +358,7 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 				payment: true,
 				items: true,
 				shipment: true,
+				user: true,
 			},
 		})
 
@@ -453,6 +504,43 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 		})
 
 		console.log(`[shipOrderViaBiteship] Order #${orderId} shipped via Biteship! AWB: ${biteshipResult.data.courierWaybillId}`)
+
+		// === REAL-TIME NOTIFICATION & EMAIL ke buyer ===
+		try {
+			const { createNotification } = await import("@/actions/public/notification.actions")
+			const { wsEmit } = await import("@/lib/ws-emit")
+			const { sendEmail } = await import("@/lib/email")
+			const { getOrderShippedEmail } = await import("@/lib/email-templates")
+
+			const awb = biteshipResult.data.courierWaybillId || "(menunggu dari kurir)"
+			const courierName = selectedShipping.name || selectedShipping.courier
+
+			const notif = await createNotification(
+				order.userId,
+				"order_shipped",
+				"🚚 Pesanan Dikirim!",
+				`Pesanan Anda telah dikirim! Resi: ${awb}`,
+				{
+					orderId: order.id,
+					status: "shipped",
+					courier: courierName,
+					awbNumber: awb,
+				}
+			)
+
+			if (notif) {
+				await wsEmit("notifications", `user:${order.userId}`, "notification", notif)
+			}
+			
+			// === KIRIM EMAIL KE PEMBELI ===
+			if (order.user?.email) {
+				const emailSubject = `[KiriMart] Pesanan #${order.id} Telah Dikirim`
+				const emailHtml = getOrderShippedEmail(order.user.name || "Pembeli", order.id, courierName, awb)
+				await sendEmail(order.user.email, emailSubject, emailHtml)
+			}
+		} catch (notifError) {
+			console.warn("[shipOrderViaBiteship] Failed to send notification:", notifError.message)
+		}
 
 		return {
 			success: true,

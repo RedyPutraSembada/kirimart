@@ -2,10 +2,10 @@
 
 import { useState, useRef } from "react"
 import { Loader2, X, Image as ImageIcon } from "lucide-react"
-import { env } from "@/config/env"
+import { uploadFile } from "@/lib/upload"
 
-const uriUpload = env.NEXT_PUBLIC_UPLOAD_URI
-const uploadApiKey = env.NEXT_PUBLIC_UPLOAD_API_KEY
+// Re-export uploadFile agar import lama dari file ini tetap berfungsi
+export { uploadFile }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 export function generateCartesian(options) {
@@ -23,23 +23,6 @@ export function generateCartesian(options) {
 
 export function attrKey(attrs) {
 	return JSON.stringify(attrs, Object.keys(attrs).sort())
-}
-
-export async function uploadFile(file) {
-	const formData = new FormData()
-	formData.append("file", file)
-	try {
-		const response = await fetch(`${uriUpload}/upload`, {
-			method: "POST",
-			headers: { "x-api-key": uploadApiKey ?? "" },
-			body: formData,
-		})
-		if (!response.ok) throw new Error(response.statusText)
-		const data = await response.json()
-		return data?.file?.url ?? ""
-	} catch {
-		return ""
-	}
 }
 
 // ─── OptionValuesInput ────────────────────────────────────────────────────────
