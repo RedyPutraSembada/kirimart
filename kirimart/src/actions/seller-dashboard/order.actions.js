@@ -250,7 +250,13 @@ export async function getOrderShippingDetail(orderId) {
 			),
 			with: {
 				payment: true,
-				items: true,
+				items: {
+					with: {
+						product: {
+							columns: { weightGram: true },
+						},
+					},
+				},
 				shipment: true,
 			},
 		})
@@ -309,7 +315,7 @@ export async function getOrderShippingDetail(orderId) {
 					name: item.productNameSnapshot,
 					description: item.variantNameSnapshot || "",
 					value: item.priceSnapshot,
-					weight: 200, // Default weight per item (gram)
+					weight: item.product?.weightGram || 200,
 					quantity: item.quantity,
 				})),
 				// Data notes
@@ -356,7 +362,13 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 			),
 			with: {
 				payment: true,
-				items: true,
+				items: {
+					with: {
+						product: {
+							columns: { weightGram: true },
+						},
+					},
+				},
 				shipment: true,
 				user: true,
 			},
@@ -446,7 +458,7 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 				category: "others",
 				value: item.priceSnapshot,
 				quantity: item.quantity,
-				weight: 200, // gram per item (TODO: ambil dari product.weightGram)
+				weight: item.product?.weightGram || 200,
 				height: 10,
 				length: 10,
 				width: 10,

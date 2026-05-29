@@ -10,6 +10,8 @@ import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getMyConversations, getConversationMessages, sendMessage as sendMessageAction } from "@/actions/public/chat.actions"
 import { useSocket } from "@/hooks/use-socket"
+import { uploadFile } from "@/lib/upload"
+import { toast } from "sonner"
 
 const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 
@@ -26,7 +28,9 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
   const [searchQuery, setSearchQuery] = useState("")
   const [localMessages, setLocalMessages] = useState([])
   const [typingUsers, setTypingUsers] = useState({}) // { conversationId: { userName, timeout } }
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const chatScrollRef = useRef(null) // Ref ke container scroll chat, BUKAN ke halaman
+  const fileInputRef = useRef(null)
   const inputRef = useRef(null)
   const typingTimeoutRef = useRef(null)
   const queryClient = useQueryClient()
@@ -219,7 +223,7 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
 
   // ─── SEND MESSAGE ───
   const sendMutation = useMutation({
-    mutationFn: ({ convId, body }) => sendMessageAction(convId, body),
+    mutationFn: ({ convId, body, imageUrl }) => sendMessageAction(convId, body, imageUrl),
     onSuccess: (result) => {
       if (result.success) {
         // Messages: refetch langsung agar temp messages diganti real messages
@@ -273,6 +277,44 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
 
     sendMutation.mutate({ convId: activeConvId, body })
   }, [inputMsg, activeConvId, currentUserId, sendMutation, socket, queryClient])
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !activeConvId) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Ukuran gambar maksimal 2MB")
+      return
+    }
+
+    try {
+      setIsUploadingImage(true)
+      const url = await uploadFile(file)
+      if (!url) {
+        toast.error("Gagal mengupload gambar")
+        return
+      }
+
+      // Optimistic update
+      const optimisticMsg = {
+        id: `temp-${Date.now()}`,
+        senderId: currentUserId,
+        body: "",
+        imageUrl: url,
+        createdAt: new Date().toISOString(),
+        _optimistic: true,
+      }
+      setLocalMessages(prev => [...prev, optimisticMsg])
+
+      sendMutation.mutate({ convId: activeConvId, body: "", imageUrl: url })
+    } catch (error) {
+      console.error(error)
+      toast.error("Terjadi kesalahan saat upload")
+    } finally {
+      setIsUploadingImage(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
 
   // ─── TYPING INDICATOR — emit saat mengetik ───
   const handleInputChange = useCallback((e) => {
@@ -533,8 +575,21 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
             {/* Input */}
             <div className="p-3 border-t border-border/50 bg-background">
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary">
-                  <ImageIcon className="h-5 w-5" />
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingImage}
+                >
+                  {isUploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-5 w-5" />}
                 </Button>
                 <Input
                   ref={inputRef}
