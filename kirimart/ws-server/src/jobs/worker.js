@@ -95,6 +95,10 @@ async function processAutoComplete(job) {
 
 		if (order.status !== "shipped") {
 			console.log(`[JOB] Order #${orderId} status is "${order.status}", not "shipped". Skipping.`)
+			// Jika status "complained", pesanan sedang dikomplain → jangan auto-complete
+			if (order.status === "complained") {
+				console.log(`[JOB] Order #${orderId} is under complaint. Will not auto-complete.`)
+			}
 			await client.query("ROLLBACK")
 			return { skipped: true, reason: `status_${order.status}` }
 		}

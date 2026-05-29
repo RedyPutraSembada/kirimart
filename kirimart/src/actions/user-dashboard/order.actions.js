@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/config/db"
-import { payments, orders, stores, reviews, products, orderItems } from "@/config/db/schema"
+import { payments, orders, stores, reviews, products, orderItems, complaints } from "@/config/db/schema"
 import { auth } from "@/lib/auth"
 import { eq, desc, and, avg, sql } from "drizzle-orm"
 import { headers } from "next/headers"
@@ -222,5 +222,96 @@ export async function completeOrderAndReview(orderId, reviewsData) {
 	} catch (error) {
 		console.error("[completeOrderAndReview]", error)
 		return { success: false, error: "Gagal menyelesaikan pesanan." }
+	}
+}
+
+/**
+ * Pembeli mengirimkan resi pengembalian barang untuk pesanan yang retur-nya disetujui penjual.
+ * Mengubah status pesanan menjadi return_shipped.
+ */
+export async function submitReturnAwb(orderId, awbNumber, courier, bankName, bankAccount, bankHolder) {
+	try {
+		const session = await auth.api.getSession({ headers: await headers() })
+		if (!session) {
+			return { success: false, error: "Unauthorized" }
+		}
+
+		if (!awbNumber || !courier) {
+			return { success: false, error: "Nomor resi dan kurir wajib diisi." }
+		}
+
+		if (!bankName || !bankAccount || !bankHolder) {
+			return { success: false, error: "Data rekening bank wajib diisi untuk proses refund." }
+		}
+
+		const order = await db.query.orders.findFirst({
+			where: and(
+				eq(orders.id, parseInt(orderId)),
+				eq(orders.userId, session.user.id)
+			),
+		})
+
+		if (!order) {
+			return { success: false, error: "Pesanan tidak ditemukan." }
+		}
+
+		if (order.status !== "return_requested") {
+			return { success: false, error: "Status pesanan tidak valid untuk pengiriman retur." }
+		}
+
+		const complaint = await db.query.complaints.findFirst({
+			where: and(
+				eq(complaints.orderId, parseInt(orderId)),
+				eq(complaints.userId, session.user.id),
+				eq(complaints.status, "accepted")
+			)
+		})
+
+		if (!complaint) {
+			return { success: false, error: "Data komplain tidak ditemukan atau belum disetujui." }
+		}
+
+		await db.transaction(async (tx) => {
+			// Update data komplain dengan resi retur dan data rekening bank
+			await tx.update(complaints)
+				.set({
+					returnAwbNumber: awbNumber,
+					returnCourier: courier,
+					bankName,
+					bankAccountNumber: bankAccount,
+					bankAccountHolder: bankHolder,
+					updatedAt: new Date()
+				})
+				.where(eq(complaints.id, complaint.id))
+
+			// Ubah status order menjadi return_shipped
+			await tx.update(orders)
+				.set({ status: "return_shipped" })
+				.where(eq(orders.id, parseInt(orderId)))
+		})
+
+		// Kirim notifikasi ke penjual (opsional, via web socket jika perlu)
+		try {
+			const { createNotification } = await import("@/actions/public/notification.actions")
+			const { wsEmit } = await import("@/lib/ws-emit")
+
+			const notif = await createNotification(
+				`store_${order.storeId}`, // seller
+				"return_shipped",
+				"📦 Resi Retur Diinput",
+				`Pembeli telah mengirimkan barang retur untuk pesanan #${orderId} menggunakan ${courier} dengan resi ${awbNumber}.`,
+				{ orderId: order.id }
+			)
+			if (notif) {
+				await wsEmit("notifications", `store:${order.storeId}`, "notification", notif)
+			}
+		} catch (notifError) {
+			console.warn("[submitReturnAwb] Failed to send notification:", notifError.message)
+		}
+
+		return { success: true, message: "Resi pengembalian berhasil dikirim. Menunggu penjual menerima barang." }
+	} catch (error) {
+		console.error("[submitReturnAwb]", error)
+		return { success: false, error: "Gagal mengirim resi pengembalian barang." }
 	}
 }

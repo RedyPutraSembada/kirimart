@@ -19,6 +19,8 @@ import { conversations } from "./conversation-schema"
 import { messages } from "./message-schema"
 import { notifications } from "./notification-schema"
 import { wishlists } from "./wishlist-schema"
+import { complaints } from "./complaint-schema"
+import { refundRequests } from "./refund-schema"
 
 // Auth Relations
 export const userRelations = relations(user, ({ many, one }) => ({
@@ -31,6 +33,8 @@ export const userRelations = relations(user, ({ many, one }) => ({
     conversations: many(conversations),
     messages: many(messages),
     wishlists: many(wishlists),
+    complaints: many(complaints),
+    refundRequests: many(refundRequests),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -130,6 +134,8 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     user: one(user, { fields: [orders.userId], references: [user.id] }),
     items: many(orderItems),
     shipment: one(shipments),
+    complaint: one(complaints),
+    refundRequest: one(refundRequests),
 }))
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -179,4 +185,18 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
 export const wishlistsRelations = relations(wishlists, ({ one }) => ({
     user: one(user, { fields: [wishlists.userId], references: [user.id] }),
     product: one(products, { fields: [wishlists.productId], references: [products.id] }),
+}))
+
+// Complaint Relations
+export const complaintsRelations = relations(complaints, ({ one }) => ({
+    order: one(orders, { fields: [complaints.orderId], references: [orders.id] }),
+    user: one(user, { fields: [complaints.userId], references: [user.id] }),
+    store: one(stores, { fields: [complaints.storeId], references: [stores.id] }),
+}))
+
+// Refund Request Relations
+export const refundRequestsRelations = relations(refundRequests, ({ one }) => ({
+    order: one(orders, { fields: [refundRequests.orderId], references: [orders.id] }),
+    user: one(user, { fields: [refundRequests.userId], references: [user.id] }),
+    complaint: one(complaints, { fields: [refundRequests.complaintId], references: [complaints.id] }),
 }))

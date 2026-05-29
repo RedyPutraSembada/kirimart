@@ -5,7 +5,7 @@ export const orders = pgTable("orders", {
 	paymentId: integer("payment_id").notNull(),
 	storeId: integer("store_id").notNull(),
 	userId: text("user_id").notNull(),
-	status: text("status").notNull().default("pending"), // pending, paid, shipped, completed, cancelled
+	status: text("status").notNull().default("pending"), // pending, paid, processing, shipped, completed, cancelled, cancelled_by_seller, complained, refunded
 	totalShipping: integer("total_shipping").notNull().default(0),
 	totalWeightGram: integer("total_weight_gram").notNull().default(0),
 	voucherId: integer("voucher_id"), // Voucher Toko

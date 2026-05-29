@@ -216,6 +216,14 @@ export function CheckoutView() {
       toast.error("Tambahkan alamat pengiriman terlebih dahulu.")
       return
     }
+    
+    // Simpan konfigurasi user ke localStorage untuk dipakai di payment page
+    localStorage.setItem("kirimart_checkout_state", JSON.stringify({
+      selectedShipping,
+      notes,
+      appliedVouchers
+    }))
+    
     setIsProcessing(true)
     router.push("/checkout/payment")
   }

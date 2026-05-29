@@ -55,11 +55,13 @@ function CheckoutStatusContent() {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.unfinish
   const Icon = config.icon
 
-  // Invalidate cart count ketika pembayaran berhasil supaya badge langsung hilang
+  // Invalidate cache yang berhubungan dengan pesanan dan cart saat halaman status dimuat
   useEffect(() => {
     if (status === "finish") {
       queryClient.invalidateQueries({ queryKey: ["cart-summary"] })
     }
+    // Selalu invalidate my-transactions karena ada pesanan baru (entah pending, finish, error)
+    queryClient.invalidateQueries({ queryKey: ["my-transactions"] })
   }, [status, queryClient])
 
   // Fetch payment data to get total value and items for Purchase tracking
