@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query"
 import { toggleFollowStore, checkIsFollowingStore } from "@/actions/public/store-follow.actions"
 
 import { MapPin, Globe, Star, ShoppingBag, Clock, ShieldCheck, UserPlus, UserCheck, MessageCircle } from "lucide-react"
+import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -44,7 +45,7 @@ export function StoreView({ store = {} }) {
 
   const sortedProducts = useMemo(() => {
     if (!store.products || store.products.length === 0) return []
-    
+
     return [...store.products].sort((a, b) => {
       switch (sortBy) {
         case "popular":
@@ -72,10 +73,13 @@ export function StoreView({ store = {} }) {
       {/* ... Store Header Code ... */}
       <div className="relative">
         <div className="relative h-48 md:h-64 lg:h-80 w-full overflow-hidden">
-          <img 
-            src={store.bannerUrl || "/images/bannerml.png"} 
-            alt={`${store.name} Banner`} 
-            className="w-full h-full object-cover"
+          <Image
+            src={store.bannerUrl || "/images/bannerml.png"}
+            alt={`${store.name} Banner`}
+            fill
+            sizes="100vw"
+            className="object-cover"
+            unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
@@ -83,11 +87,11 @@ export function StoreView({ store = {} }) {
         {/* Store Profile Info (Overlapping) */}
         <div className="container mx-auto px-6">
           <div className="relative flex flex-col md:flex-row items-start md:items-end gap-6 -mt-16 md:-mt-16 pb-4">
-            <Avatar className="h-32 w-32 md:h-40 md:w-40 shadow-2xl rounded-[2.5rem]">
+            <Avatar className="h-32 w-32 md:h-40 md:w-40 shadow-2xl">
               <AvatarImage src={store.logoUrl || "/images/ml.png"} alt="Store Logo" className="object-cover" />
               <AvatarFallback className="text-4xl font-bold bg-primary text-primary-foreground">{store.name ? store.name.charAt(0).toUpperCase() : "S"}</AvatarFallback>
             </Avatar>
-            
+
             <div className="flex-1 space-y-3 mb-2">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-3xl md:text-5xl font-black tracking-tighter">{store.name || "Nama Toko"}</h1>
@@ -111,11 +115,10 @@ export function StoreView({ store = {} }) {
 
             <div className="flex gap-3 mb-2">
               <Button
-                className={`rounded-full px-8 h-12 font-bold shadow-xl transition-transform hover:scale-105 ${
-                  isFollowing
-                    ? "bg-muted text-foreground hover:bg-muted/80 shadow-none border"
-                    : "shadow-primary/20"
-                }`}
+                className={`rounded-full px-8 h-12 font-bold shadow-xl transition-transform hover:scale-105 ${isFollowing
+                  ? "bg-muted text-foreground hover:bg-muted/80 shadow-none border"
+                  : "shadow-primary/20"
+                  }`}
                 onClick={() => followMutation.mutate()}
                 disabled={followMutation.isPending}
               >
@@ -159,7 +162,7 @@ export function StoreView({ store = {} }) {
                   {store.description || "Belum ada deskripsi untuk toko ini."}
                 </p>
               </div>
-              
+
               <div className="space-y-4 pt-6 border-t">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Total Produk</span>
@@ -201,25 +204,25 @@ export function StoreView({ store = {} }) {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b pb-6">
             <h2 className="text-2xl md:text-3xl font-black tracking-tighter">Semua Produk</h2>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setSortBy("newest")}
                 className={`rounded-full px-4 ${sortBy === "newest" ? "font-bold text-primary bg-primary/10" : ""}`}
               >
                 Terbaru
               </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setSortBy("popular")}
                 className={`rounded-full px-4 ${sortBy === "popular" ? "font-bold text-primary bg-primary/10" : ""}`}
               >
                 Terlaris
               </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handlePriceSort}
                 className={`rounded-full px-4 ${(sortBy === "price_asc" || sortBy === "price_desc") ? "font-bold text-primary bg-primary/10" : ""}`}
               >

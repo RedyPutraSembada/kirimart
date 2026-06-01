@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
 	Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
@@ -370,7 +371,7 @@ export function FormEditVoucher({ dataVoucher }) {
 														<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
 															{imagePreview && (
 																<div className="relative aspect-video rounded-lg border bg-muted/50 flex items-center justify-center group overflow-hidden col-span-2">
-																	<img src={imagePreview} alt="Preview banner" className="w-full h-full object-cover rounded-lg" />
+																	<Image src={imagePreview} alt="Preview banner" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover rounded-lg" unoptimized />
 																	<button
 																		type="button"
 																		onClick={() => {

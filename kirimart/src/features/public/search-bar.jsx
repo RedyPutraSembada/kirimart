@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
+import Image from "next/image"
 import { Search, Clock, TrendingUp, ArrowRight, Loader2, X } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useDebouncedCallback } from "use-debounce"
@@ -196,8 +197,8 @@ export function SearchBar() {
 												onClick={() => handleSuggestionClick(product)}
 												className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/60 transition-colors text-left group"
 											>
-												<div className="h-10 w-10 rounded-lg bg-muted overflow-hidden shrink-0">
-													{img && <img src={img} alt={product.name} className="h-full w-full object-cover" />}
+												<div className="h-10 w-10 rounded-lg bg-muted overflow-hidden shrink-0 relative">
+													{img && <Image src={img} alt={product.name} fill sizes="40px" className="object-cover" />}
 												</div>
 												<div className="flex-1 min-w-0">
 													<p className="text-xs font-medium truncate group-hover:text-primary transition-colors">{product.name}</p>

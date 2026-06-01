@@ -4,10 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-	Package, Star, Users, Clock, Globe, MapPin, Store, Wallet,
+	Package, Star, Users, Clock, Globe, MapPin, Store, Wallet, TrendingUp
 } from "lucide-react"
 import Image from "next/image"
-import { useGetMyStore } from "@/app/data/seller-dashboard/dashboard-data"
+import { useGetMyStore, useGetMyStoreMetrics } from "@/app/data/seller-dashboard/dashboard-data"
 
 // --- Komponen ---
 function StatCard({ stat }) {
@@ -131,7 +131,9 @@ function StoreInfoCard({ store, isLoading }) {
 
 export function DashboardOverview() {
 	const { data: storeResponse, isLoading } = useGetMyStore()
+	const { data: metricsResponse, isLoading: isLoadingMetrics } = useGetMyStoreMetrics()
 	const store = storeResponse?.data
+	const metrics = metricsResponse?.data
 
 	const storeRating = store?.rating ? parseFloat(store.rating) : 5.0
 	const totalProducts = store?.products?.length || 0
@@ -220,11 +222,11 @@ export function DashboardOverview() {
 
 			{/* Content Grid */}
 			<div className="grid gap-6 lg:grid-cols-5">
-				{/* Produk Terlaris */}
+				{/* Produk Peringkat Teratas */}
 				<Card className="lg:col-span-3">
 					<CardHeader>
-						<CardTitle>Produk Terlaris</CardTitle>
-						<CardDescription>Produk dengan penjualan tertinggi</CardDescription>
+						<CardTitle>Peringkat Produk (Fair Rank)</CardTitle>
+						<CardDescription>Produk dengan visibilitas tertinggi di pencarian</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{!store?.products || store.products.length === 0 ? (
@@ -235,7 +237,7 @@ export function DashboardOverview() {
 						) : (
 							<div className="space-y-4">
 								{[...store.products]
-									.sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
+									.sort((a, b) => (b.visibilityScore || 0) - (a.visibilityScore || 0))
 									.slice(0, 5)
 									.map((product, index) => (
 										<div key={product.id} className="flex items-center gap-3">
@@ -249,7 +251,11 @@ export function DashboardOverview() {
 											</div>
 											<div className="flex-1 min-w-0">
 												<p className="text-sm font-medium truncate">{product.name || `Produk #${product.id}`}</p>
-												<p className="text-xs text-muted-foreground">{product.soldCount || 0} terjual</p>
+												<div className="flex items-center gap-2 text-xs text-muted-foreground">
+													<span className="font-semibold text-emerald-600 dark:text-emerald-400">Skor: {product.visibilityScore || 0}</span>
+													<span>•</span>
+													<span>{product.soldCount || 0} terjual</span>
+												</div>
 											</div>
 										</div>
 									))
@@ -259,8 +265,10 @@ export function DashboardOverview() {
 					</CardContent>
 				</Card>
 
-				{/* Ringkasan Toko */}
-				<Card className="lg:col-span-2">
+				{/* Right Column (Ringkasan & Metrik) */}
+				<div className="space-y-6 lg:col-span-2">
+					{/* Ringkasan Toko */}
+					<Card>
 					<CardHeader>
 						<CardTitle>Ringkasan Toko</CardTitle>
 						<CardDescription>Informasi singkat tentang toko Anda</CardDescription>
@@ -291,6 +299,50 @@ export function DashboardOverview() {
 						)}
 					</CardContent>
 				</Card>
+				
+				{/* Metrik Fair Rank */}
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<TrendingUp className="h-5 w-5 text-emerald-500" />
+							Metrik Fair Rank
+						</CardTitle>
+						<CardDescription>Faktor penentu skor visibilitas Anda</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						{isLoadingMetrics ? (
+							<Skeleton className="h-20 w-full" />
+						) : (
+							<>
+								<div className="flex items-center justify-between">
+									<span className="text-sm text-muted-foreground">Tingkat Komplain</span>
+									<span className="text-sm font-medium text-amber-600">
+										{metrics ? (parseFloat(metrics.complaintRate) * 100).toFixed(1) : 0}%
+									</span>
+								</div>
+								<div className="flex items-center justify-between">
+									<span className="text-sm text-muted-foreground">Kelengkapan Profil</span>
+									<span className="text-sm font-medium text-blue-600">
+										{metrics?.profileCompleteness || 0}%
+									</span>
+								</div>
+								<div className="flex items-center justify-between">
+									<span className="text-sm text-muted-foreground">Voucher Aktif</span>
+									<span className="text-sm font-medium">
+										{metrics?.hasActiveVoucher ? (
+											<Badge variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950">
+												Ya (+5 Poin)
+											</Badge>
+										) : (
+											<span className="text-muted-foreground">Tidak Ada</span>
+										)}
+									</span>
+								</div>
+							</>
+						)}
+					</CardContent>
+				</Card>
+				</div>
 			</div>
 		</div>
 	)

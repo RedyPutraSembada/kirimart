@@ -147,3 +147,45 @@ export async function deleteStoreAction(storeId) {
 		return { success: false, error: "Gagal menghapus toko secara permanen" }
 	}
 }
+
+export async function verifyStoreAction(storeId) {
+	try {
+		const session = await auth.api.getSession({
+			headers: await headers()
+		})
+
+		if (!session || session.user.role !== "admin") {
+			return { success: false, error: "Anda tidak memiliki akses admin" }
+		}
+
+		await db.update(stores).set({
+			isVerified: true,
+		}).where(eq(stores.id, storeId))
+
+		return { success: true }
+	} catch (error) {
+		console.error("verifyStoreAction error", error)
+		return { success: false, error: "Gagal memverifikasi toko" }
+	}
+}
+
+export async function unverifyStoreAction(storeId) {
+	try {
+		const session = await auth.api.getSession({
+			headers: await headers()
+		})
+
+		if (!session || session.user.role !== "admin") {
+			return { success: false, error: "Anda tidak memiliki akses admin" }
+		}
+
+		await db.update(stores).set({
+			isVerified: false,
+		}).where(eq(stores.id, storeId))
+
+		return { success: true }
+	} catch (error) {
+		console.error("unverifyStoreAction error", error)
+		return { success: false, error: "Gagal mencabut verifikasi toko" }
+	}
+}

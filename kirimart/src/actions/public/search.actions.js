@@ -49,7 +49,7 @@ export async function searchProductsAutocomplete(keyword) {
 					columns: { name: true, domainSlug: true },
 				},
 			},
-			orderBy: [desc(products.soldCount)],
+			orderBy: [desc(products.visibilityScore)],
 			limit: 5,
 		})
 
@@ -101,7 +101,7 @@ export async function searchProducts({ keyword = "", page = 1, perPage = 20 } = 
 					columns: { id: true, name: true, slug: true },
 				},
 			},
-			orderBy: [desc(products.soldCount)],
+			orderBy: [desc(products.visibilityScore)],
 			limit: perPage,
 			offset,
 		})

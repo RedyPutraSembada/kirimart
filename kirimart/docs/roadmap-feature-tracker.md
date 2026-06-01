@@ -390,6 +390,42 @@
 
 ### Estimasi: ~4-5 jam
 
+## Phase 13: Complaint & Refund System ✅
+
+> **Prioritas: SEDANG** — Selesai! Sistem komplain pembeli, persetujuan retur oleh penjual, dan manajemen pengembalian dana (refund) oleh admin sudah terimplementasi penuh.
+
+### Fitur yang Telah Dibuat
+
+#### A. Pembeli (Buyer)
+| Task | Deskripsi |
+|---|---|
+| Mengajukan Komplain | Fitur untuk mengajukan komplain saat status pesanan dikirim/selesai (mengunggah bukti, alasan). |
+| Kirim Resi Retur | Pembeli dapat mengisi detail rekening bank tujuan refund dan nomor resi pengiriman retur ke penjual. |
+
+#### B. Penjual (Seller)
+| Task | Deskripsi |
+|---|---|
+| Merespon Komplain | Penjual dapat menerima komplain (setuju retur) atau menolaknya. |
+| Konfirmasi Terima Retur | Penjual mengkonfirmasi bahwa barang retur sudah diterima, otomatis meneruskan permintaan refund ke Admin. |
+
+#### C. Admin Dashboard
+| Task | Deskripsi |
+|---|---|
+| Manajemen Refund | Admin dapat melihat seluruh permintaan refund yang siap ditransfer. |
+| Proses Transfer Manual | Admin mengonfirmasi transfer manual dengan menginput nominal (hanya harga produk, tanpa ongkir) beserta bukti. |
+
+### File yang Dibuat/Dimodifikasi
+```
+[NEW] src/config/db/schema/complaint-schema.js
+[NEW] src/config/db/schema/refund-schema.js
+[NEW] src/actions/user-dashboard/complaint.actions.js
+[NEW] src/actions/admin-dashboard/refund.actions.js
+[NEW] src/app/admin-dashboard/refunds/
+[NEW] src/features/admin-dashboard/refund/refund-management.jsx
+[MODIFY] src/features/user-dashboard/orders/order-list.jsx
+[MODIFY] src/features/seller-dashboard/order/order-list.jsx
+```
+
 ---
 
 ## Prioritas Eksekusi
@@ -398,14 +434,15 @@
 
 | Urutan | Phase | Prioritas | Alasan |
 |---|---|---|---|
-| 1️⃣ | **Phase 5: Review & Rating** | 🔴 TINGGI | Tanpa review, buyer tidak percaya → tidak beli |
-| 2️⃣ | **Phase 6: Search & Discovery** | 🔴 TINGGI | Tanpa search bar, buyer tidak bisa cari produk → bounce |
-| 3️⃣ | **Phase 7: UX & Profile** | 🟡 SEDANG | Wishlist & tracking tingkatkan engagement |
-| 4️⃣ | **Phase 8: Meta Pixel Integration** | 🟡 SEDANG | Agar penjual bisa mulai beriklan via Meta Ads |
+| 1️⃣ | **Phase 5: Review & Rating** | 🔴 TINGGI | Selesai! Tanpa review, buyer tidak percaya → tidak beli |
+| 2️⃣ | **Phase 6: Search & Discovery** | 🔴 TINGGI | Selesai! Tanpa search bar, buyer tidak bisa cari produk → bounce |
+| 3️⃣ | **Phase 7: UX & Profile** | 🟡 SEDANG | Selesai! Wishlist & tracking tingkatkan engagement |
+| 4️⃣ | **Phase 8: Meta Pixel Integration** | 🟡 SEDANG | Selesai! Agar penjual bisa mulai beriklan via Meta Ads |
 | 5️⃣ | **Phase 9: Email Notification** | 🟡 SEDANG | Selesai! Email penting untuk user yang tidak selalu online |
-| 6️⃣ | **Phase 12: Activity Log** | 🟡 SEDANG | Penting untuk tracking dan troubleshooting masalah toko |
-| 7️⃣ | **Phase 10: Security & Performance** | 🟢 PRE-PROD | Wajib sebelum launch, tapi tidak perlu sekarang |
-| 8️⃣ | **Phase 11: Deployment** | 🟢 SAAT LAUNCH | Deployment terakhir saat semua fitur ready |
+| 6️⃣ | **Phase 13: Complaint & Refund**| 🟡 SEDANG | Selesai! Flow retur barang dan pengembalian dana manual |
+| 7️⃣ | **Phase 12: Activity Log** | 🟡 SEDANG | Penting untuk tracking dan troubleshooting masalah toko |
+| 8️⃣ | **Phase 10: Security & Performance** | 🟢 PRE-PROD | Wajib sebelum launch, tapi tidak perlu sekarang |
+| 9️⃣ | **Phase 11: Deployment** | 🟢 SAAT LAUNCH | Deployment terakhir saat semua fitur ready |
 
 ---
 
@@ -422,6 +459,7 @@
 | **Phase 7** | UX & Profile Polish | ✅ Selesai |
 | **Phase 8** | Marketing & Analytics (Meta Pixel) | ✅ Selesai |
 | **Phase 9** | Email Notification | ✅ Selesai |
-| **Phase 10** | Security & Performance | ⏳ |
-| **Phase 11** | Deployment & CI/CD | ⏳ |
-| **Phase 12** | Activity Log (Audit Trail) | ⏳ |
+| **Phase 13**| Complaint & Refund System | ✅ Selesai |
+| **Phase 10** | Security & Performance | ⏳ Belum Mulai |
+| **Phase 11** | Deployment & CI/CD | ⏳ Belum Mulai |
+| **Phase 12** | Activity Log (Audit Trail) | ⏳ Belum Mulai |

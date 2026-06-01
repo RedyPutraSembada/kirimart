@@ -282,8 +282,9 @@ function EwalletInstruction({ instruction }) {
 				{qrUrl && (
 					<div className="flex flex-col items-center space-y-3">
 						<div className="bg-white p-4 rounded-xl border">
-							{/* eslint-disable-next-line @next/next/no-img-element */}
-							<img src={qrUrl} alt="QR Code" className="h-48 w-48" />
+							<div className="relative h-48 w-48">
+								<Image src={qrUrl} alt="QR Code" fill className="object-contain" />
+							</div>
 						</div>
 						<p className="text-xs text-muted-foreground">Scan QR code di atas dengan aplikasi {instruction.methodLabel}</p>
 					</div>
@@ -313,8 +314,9 @@ function QrisInstruction({ instruction }) {
 			<CardContent className="space-y-4">
 				<div className="flex flex-col items-center space-y-3">
 					<div className="bg-white p-4 rounded-xl border">
-						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img src={instruction.qrUrl} alt="QRIS QR Code" className="h-56 w-56" />
+						<div className="relative h-56 w-56">
+							<Image src={instruction.qrUrl} alt="QRIS QR Code" fill className="object-contain" />
+						</div>
 					</div>
 					<p className="text-xs text-muted-foreground text-center">
 						Scan QR di atas menggunakan aplikasi e-wallet manapun<br />

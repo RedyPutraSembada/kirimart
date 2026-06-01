@@ -24,6 +24,7 @@ export const metadata = {
   description: "Marketplace modern untuk produk unggulan dan kebutuhan harian Anda.",
   icons: {
     icon: "/kawanbelanja.ico",
+    apple: "/images/kawanbelanja.png",
   }
 };
 

@@ -1,14 +1,23 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { 
-	User, MapPin, Package, LogOut, ChevronRight, Menu, MessageCircle, Heart
+	User, MapPin, Package, LogOut, ChevronRight, Menu, MessageCircle, Heart, Home, Store, ShieldCheck
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const sidebarNavItems = [
 	{
@@ -40,7 +49,7 @@ const sidebarNavItems = [
 
 import { useRouter } from "next/navigation"
 import { authClient } from "@/lib/auth-client"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getUnreadChatCount } from "@/actions/public/chat.actions"
 
@@ -48,6 +57,7 @@ export default function UserDashboardLayout({ children }) {
 	const pathname = usePathname()
 	const router = useRouter()
 	const { data: session, isPending } = authClient.useSession()
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
 	// Chat unread count for badge — HARUS di atas early return agar hooks order konsisten
 	const { data: chatUnread } = useQuery({
@@ -73,13 +83,13 @@ export default function UserDashboardLayout({ children }) {
 		return null // Will redirect in useEffect
 	}
 
-	const NavItems = () => (
+	const NavItems = ({ onLinkClick }) => (
 		<nav className="grid items-start gap-2">
 			{sidebarNavItems.map((item, index) => {
 				const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/user-dashboard")
 				const isChatItem = item.title === "Chat"
 				return (
-					<Link key={index} href={item.href}>
+					<Link key={index} href={item.href} onClick={onLinkClick}>
 						<span
 							className={cn(
 								"group flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
@@ -105,6 +115,7 @@ export default function UserDashboardLayout({ children }) {
 				variant="ghost" 
 				className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 mt-4"
 				onClick={async () => {
+					onLinkClick?.()
 					await authClient.signOut({
 						fetchOptions: {
 							onSuccess: () => {
@@ -124,7 +135,7 @@ export default function UserDashboardLayout({ children }) {
 		<div className="flex min-h-screen flex-col bg-muted/40">
 			{/* Top Header */}
 			<header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
-				<Sheet>
+				<Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
 					<SheetTrigger asChild>
 						<Button variant="outline" size="icon" className="shrink-0 md:hidden">
 							<Menu className="h-5 w-5" />
@@ -134,9 +145,9 @@ export default function UserDashboardLayout({ children }) {
 					<SheetContent side="left">
 						<div className="flex h-full flex-col gap-6 pt-10">
 							<div className="flex items-center px-2">
-								<Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight">
-									<div className="h-6 w-6 rounded-md overflow-hidden">
-										<img src="/images/kawanbelanja.png" alt="Logo" className="h-full w-full object-contain" />
+								<Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight" onClick={() => setIsMobileMenuOpen(false)}>
+									<div className="h-6 w-6 rounded-md overflow-hidden relative">
+										<Image src="/images/kawanbelanja.png" alt="Logo" fill sizes="24px" className="object-contain" />
 									</div>
 									<div className="flex items-center gap-0">
 										<span className="text-primary font-black tracking-tighter">kawan</span>
@@ -144,14 +155,14 @@ export default function UserDashboardLayout({ children }) {
 									</div>
 								</Link>
 							</div>
-							<NavItems />
+							<NavItems onLinkClick={() => setIsMobileMenuOpen(false)} />
 						</div>
 					</SheetContent>
 				</Sheet>
 				<div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
 					<Link href="/" className="hidden md:flex items-center gap-2 font-bold text-xl tracking-tight mr-auto">
-						<div className="h-6 w-6 rounded-md overflow-hidden">
-							<img src="/images/kawanbelanja.png" alt="Logo" className="h-full w-full object-contain" />
+						<div className="h-6 w-6 rounded-md overflow-hidden relative">
+							<Image src="/images/kawanbelanja.png" alt="Logo" fill sizes="24px" className="object-contain" />
 						</div>
 						<div className="flex items-center gap-0">
 							<span className="text-primary font-black tracking-tighter">kawan</span>
@@ -162,12 +173,46 @@ export default function UserDashboardLayout({ children }) {
 						<span className="text-sm font-medium hidden sm:inline-block">
 							{session.user.name}
 						</span>
-						<Avatar className="h-8 w-8 border">
-							{session.user.image && <AvatarImage src={session.user.image} alt={session.user.name} />}
-							<AvatarFallback className="text-xs bg-primary/10 text-primary">
-								{session.user.name?.charAt(0) || "U"}
-							</AvatarFallback>
-						</Avatar>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<button className="outline-none rounded-full focus:ring-2 focus:ring-primary transition-all">
+									<Avatar className="h-8 w-8 border">
+										{session.user.image && <AvatarImage src={session.user.image} alt={session.user.name} />}
+										<AvatarFallback className="text-xs bg-primary/10 text-primary">
+											{session.user.name?.charAt(0) || "U"}
+										</AvatarFallback>
+									</Avatar>
+								</button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end" className="w-56 rounded-xl">
+								<DropdownMenuLabel>
+									<p className="text-sm font-bold truncate">{session.user.name}</p>
+									<p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+								</DropdownMenuLabel>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem asChild className="cursor-pointer">
+									<Link href="/"><Home className="mr-2 h-4 w-4" /> Beranda</Link>
+								</DropdownMenuItem>
+								{session.user.role === 'seller' && (
+									<DropdownMenuItem asChild className="cursor-pointer">
+										<Link href="/seller-dashboard"><Store className="mr-2 h-4 w-4" /> Seller Dashboard</Link>
+									</DropdownMenuItem>
+								)}
+								{session.user.role === 'admin' && (
+									<DropdownMenuItem asChild className="cursor-pointer">
+										<Link href="/admin-dashboard"><ShieldCheck className="mr-2 h-4 w-4" /> Admin Dashboard</Link>
+									</DropdownMenuItem>
+								)}
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onClick={async () => {
+									await authClient.signOut({
+										fetchOptions: { onSuccess: () => router.push("/sign-in") }
+									})
+								}} className="cursor-pointer text-red-500 focus:text-red-500">
+									<LogOut className="mr-2 h-4 w-4" /> Keluar
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
 					</div>
 				</div>
 			</header>

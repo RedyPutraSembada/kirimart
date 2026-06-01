@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { authClient } from '@/lib/auth-client'
 import { toast } from 'sonner'
 import { Loader2, ArrowLeft, Mail, CheckCircle2 } from 'lucide-react'
@@ -47,8 +48,8 @@ export default function ForgotPasswordPage() {
 				{/* Header */}
 				<div className='flex flex-col items-center gap-3 text-center'>
 					<Link href="/" className="flex items-center gap-1.5">
-						<div className="h-8 w-8 rounded-lg overflow-hidden">
-							<img src="/images/kawanbelanja.png" alt="Logo" className="h-full w-full object-contain" />
+						<div className="h-8 w-8 rounded-lg overflow-hidden relative">
+							<Image src="/images/kawanbelanja.png" alt="Logo" fill sizes="32px" className="object-contain" />
 						</div>
 						<div className="flex items-center">
 							<span className="text-xl font-black tracking-tighter text-primary">kawan</span>

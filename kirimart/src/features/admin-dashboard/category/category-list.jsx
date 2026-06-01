@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -121,7 +122,9 @@ export function CategoryList() {
 											<TableRow key={cat.id} className="hover:bg-muted/50 transition-colors">
 												<TableCell className="text-center">
 													{cat.iconUrl ? (
-														<img src={cat.iconUrl} alt={cat.name} className="h-8 w-8 object-cover rounded-md border inline-block" />
+														<div className="relative inline-block h-8 w-8 rounded-md border overflow-hidden shrink-0 align-middle">
+															<Image src={cat.iconUrl} alt={cat.name} fill sizes="32px" className="object-cover" />
+														</div>
 													) : (
 														<div className="h-8 w-8 rounded-md bg-muted border flex items-center justify-center inline-block">
 															<ImageIcon className="h-4 w-4 text-muted-foreground" />

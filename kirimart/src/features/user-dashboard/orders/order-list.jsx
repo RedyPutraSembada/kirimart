@@ -93,8 +93,8 @@ export function OrderList() {
 					<Package className="h-4 w-4 text-primary" /> Riwayat Pesanan
 				</h3>
 				
-				<Tabs defaultValue="all">
-					<TabsList className="mb-4 flex-wrap h-auto w-full justify-start gap-1 p-1">
+				<Tabs defaultValue="all" className="w-full">
+					<TabsList className="mb-4 flex overflow-x-auto whitespace-nowrap h-auto w-full justify-start gap-1 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 						<TabsTrigger value="all">Semua</TabsTrigger>
 						<TabsTrigger value="pending">Menunggu Pembayaran</TabsTrigger>
 						<TabsTrigger value="processing">Diproses</TabsTrigger>

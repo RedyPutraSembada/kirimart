@@ -1,6 +1,7 @@
 'use client'
 
-import { ChevronsUpDown, LogOut } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Home, User, Store, ShieldCheck } from 'lucide-react'
+import Link from 'next/link'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -88,8 +89,33 @@ export function NavUser({
 							</div>
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={handleSignOut}>
-							<LogOut />
+						<DropdownMenuItem asChild className="cursor-pointer">
+							<Link href="/">
+								<Home className="mr-2 h-4 w-4" /> Beranda
+							</Link>
+						</DropdownMenuItem>
+						<DropdownMenuItem asChild className="cursor-pointer">
+							<Link href="/user-dashboard">
+								<User className="mr-2 h-4 w-4" /> Profil Saya
+							</Link>
+						</DropdownMenuItem>
+						{user?.role === 'seller' && (
+							<DropdownMenuItem asChild className="cursor-pointer">
+								<Link href="/seller-dashboard">
+									<Store className="mr-2 h-4 w-4" /> Seller Dashboard
+								</Link>
+							</DropdownMenuItem>
+						)}
+						{user?.role === 'admin' && (
+							<DropdownMenuItem asChild className="cursor-pointer">
+								<Link href="/admin-dashboard">
+									<ShieldCheck className="mr-2 h-4 w-4" /> Admin Dashboard
+								</Link>
+							</DropdownMenuItem>
+						)}
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-500 focus:text-red-500">
+							<LogOut className="mr-2 h-4 w-4" />
 							Log out
 						</DropdownMenuItem>
 					</DropdownMenuContent>

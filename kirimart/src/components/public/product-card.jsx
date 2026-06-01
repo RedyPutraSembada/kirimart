@@ -23,7 +23,7 @@ export function ProductCard({ product, className }) {
 
   // Cek status wishlist untuk produk ini
   const { data: wishlistData } = useQuery({
-    queryKey: ["wishlist-status", product.id],
+    queryKey: ["wishlist-status", product.id, session?.user?.id],
     queryFn: () => checkIsWishlisted(product.id),
     enabled: !!session,
     staleTime: 1000 * 60 * 5, // 5 menit
@@ -35,9 +35,9 @@ export function ProductCard({ product, className }) {
     mutationFn: () => toggleWishlist(product.id),
     onMutate: async () => {
       // Optimistic update — langsung ubah UI sebelum server merespons
-      await queryClient.cancelQueries({ queryKey: ["wishlist-status", product.id] })
-      const previous = queryClient.getQueryData(["wishlist-status", product.id])
-      queryClient.setQueryData(["wishlist-status", product.id], (old) => ({
+      await queryClient.cancelQueries({ queryKey: ["wishlist-status", product.id, session?.user?.id] })
+      const previous = queryClient.getQueryData(["wishlist-status", product.id, session?.user?.id])
+      queryClient.setQueryData(["wishlist-status", product.id, session?.user?.id], (old) => ({
         ...old,
         isWishlisted: !old?.isWishlisted,
       }))
@@ -58,7 +58,7 @@ export function ProductCard({ product, className }) {
     onError: (_err, _vars, context) => {
       // Rollback optimistic update jika gagal
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(["wishlist-status", product.id], context.previous)
+        queryClient.setQueryData(["wishlist-status", product.id, session?.user?.id], context.previous)
       }
       toast.error("Gagal memperbarui wishlist.")
     },

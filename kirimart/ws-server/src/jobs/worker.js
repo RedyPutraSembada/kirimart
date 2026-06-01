@@ -41,6 +41,7 @@ const redisConnection = parseRedisUrl(REDIS_URL)
 
 export const orderQueue = new Queue("kirimart-orders", { connection: redisConnection })
 export const paymentQueue = new Queue("kirimart-payments", { connection: redisConnection })
+export const scoringQueue = new Queue("kirimart-scoring", { connection: redisConnection })
 
 // ============================================
 // DATABASE POOL (terpisah dari auth pool)
@@ -276,9 +277,37 @@ export function initWorkers() {
 		console.error(`[WORKER] ❌ Payment job "${job.name}" failed:`, err.message)
 	})
 
-	console.log("[WORKER] ✅ BullMQ workers started (orders + payments)")
+	// Worker untuk scoring queue
+	const scoringWorker = new Worker("kirimart-scoring", async (job) => {
+		switch (job.name) {
+			case "recalculate-scores":
+				const { recalculateAllScores } = await import("./score-calculator.js")
+				return await recalculateAllScores(getJobPool())
+			default:
+				console.warn(`[WORKER] Unknown scoring job: ${job.name}`)
+		}
+	}, {
+		connection: redisConnection,
+		concurrency: 1,
+	})
 
-	return { orderWorker, paymentWorker }
+	scoringWorker.on("completed", (job, result) => {
+		console.log(`[WORKER] ✅ Scoring job "${job.name}" completed:`, result)
+	})
+
+	scoringWorker.on("failed", (job, err) => {
+		console.error(`[WORKER] ❌ Scoring job "${job.name}" failed:`, err.message)
+	})
+
+	// Jadwalkan recalculation tiap 6 jam otomatis jika belum ada
+	scoringQueue.add("recalculate-scores", {}, {
+		repeat: { pattern: "0 */6 * * *" },
+		jobId: "fair-rank-scheduler"
+	}).then(() => console.log("[QUEUE] Scheduled recurring Fair Rank calculation (every 6 hours)"));
+
+	console.log("[WORKER] ✅ BullMQ workers started (orders + payments + scoring)")
+
+	return { orderWorker, paymentWorker, scoringWorker }
 }
 
 // ============================================
@@ -334,7 +363,9 @@ export async function cancelExpirePayment(paymentId) {
 export async function closeWorkers(workers) {
 	if (workers?.orderWorker) await workers.orderWorker.close()
 	if (workers?.paymentWorker) await workers.paymentWorker.close()
+	if (workers?.scoringWorker) await workers.scoringWorker.close()
 	await orderQueue.close()
 	await paymentQueue.close()
+	await scoringQueue.close()
 	if (jobPool) await jobPool.end()
 }

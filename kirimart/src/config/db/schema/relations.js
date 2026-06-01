@@ -21,6 +21,8 @@ import { notifications } from "./notification-schema"
 import { wishlists } from "./wishlist-schema"
 import { complaints } from "./complaint-schema"
 import { refundRequests } from "./refund-schema"
+import { storeMetrics } from "./store-metric-schema"
+import { scoreLogs } from "./score-log-schema"
 
 // Auth Relations
 export const userRelations = relations(user, ({ many, one }) => ({
@@ -66,6 +68,8 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
     withdrawals: many(withdrawals),
     conversations: many(conversations),
     followers: many(storeFollowers),
+    metrics: one(storeMetrics),
+    scoreLogs: many(scoreLogs),
 }))
 
 // Catalog Relations
@@ -90,6 +94,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     cartItems: many(cartItems),
     orderItems: many(orderItems),
     wishlists: many(wishlists),
+    scoreLogs: many(scoreLogs),
 }))
 
 export const productImagesRelations = relations(productImages, ({ one }) => ({
@@ -199,4 +204,15 @@ export const refundRequestsRelations = relations(refundRequests, ({ one }) => ({
     order: one(orders, { fields: [refundRequests.orderId], references: [orders.id] }),
     user: one(user, { fields: [refundRequests.userId], references: [user.id] }),
     complaint: one(complaints, { fields: [refundRequests.complaintId], references: [complaints.id] }),
-}))
+}))
+
+// Fair Rank Relations
+export const storeMetricsRelations = relations(storeMetrics, ({ one }) => ({
+    store: one(stores, { fields: [storeMetrics.storeId], references: [stores.id] }),
+}))
+
+export const scoreLogsRelations = relations(scoreLogs, ({ one }) => ({
+    product: one(products, { fields: [scoreLogs.productId], references: [products.id] }),
+    store: one(stores, { fields: [scoreLogs.storeId], references: [stores.id] }),
+}))
+

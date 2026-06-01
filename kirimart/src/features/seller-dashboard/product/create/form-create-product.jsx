@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
 	Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -496,7 +497,7 @@ export function FormCreateProduct({ categories }) {
 																								: "border-dashed border-muted-foreground/30 hover:border-primary/50 bg-muted/20 hover:bg-muted/40"
 																							}`}>
 																							{imgUrl
-																								? <img src={imgUrl} className="w-full h-full object-cover" alt={val} />
+																								? <Image src={imgUrl} fill sizes="56px" className="object-cover" alt={val} unoptimized />
 																								: <ImageIcon className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
 																							}
 																						</div>
@@ -602,7 +603,7 @@ export function FormCreateProduct({ categories }) {
 																						const imgUrl = optionValueImages[optIdx]?.[valIdx]
 																						return (
 																							<span key={optName} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
-																								{imgUrl && <img src={imgUrl} className="w-3.5 h-3.5 rounded-full object-cover shrink-0" alt="" />}
+																								{imgUrl && <div className="relative w-3.5 h-3.5 shrink-0"><Image src={imgUrl} fill sizes="14px" className="rounded-full object-cover" alt="" unoptimized /></div>}
 																								{val}
 																							</span>
 																						)
@@ -687,7 +688,7 @@ export function FormCreateProduct({ categories }) {
 												<div className="grid grid-cols-4 gap-4">
 													{imagesPreviews.map((preview, idx) => (
 														<div key={idx} className="relative aspect-square rounded-lg border overflow-hidden group">
-															<img src={preview} className="w-full h-full object-cover" alt="" />
+															<Image src={preview} fill sizes="150px" className="object-cover" alt="" unoptimized />
 															<button
 																type="button"
 																className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
 	Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
@@ -225,7 +226,7 @@ export function FormCreateCategory() {
 											<div className="flex items-center gap-4">
 												{imagePreview ? (
 													<div className="relative h-16 w-16 rounded-md border overflow-hidden">
-														<img src={imagePreview} alt="Preview icon" className="w-full h-full object-cover" />
+														<Image src={imagePreview} alt="Preview icon" fill sizes="64px" className="object-cover" unoptimized />
 														<button
 															type="button"
 															onClick={() => {

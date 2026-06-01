@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import Image from "next/image"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getMyConversations, getConversationMessages, sendMessage as sendMessageAction } from "@/actions/public/chat.actions"
 import { useSocket } from "@/hooks/use-socket"
@@ -416,8 +417,8 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
                     )}
                   >
                     <div className="relative shrink-0">
-                      <div className="h-11 w-11 rounded-full overflow-hidden bg-white border">
-                        <img src={displayLogo} alt={displayName} className="h-full w-full object-contain" />
+                      <div className="h-11 w-11 rounded-full overflow-hidden bg-white border relative">
+                        <Image src={displayLogo} alt={displayName} fill sizes="44px" className="object-contain" />
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -457,11 +458,13 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div className="relative">
-                  <div className="h-9 w-9 rounded-full overflow-hidden bg-white border">
-                    <img
+                  <div className="h-9 w-9 rounded-full overflow-hidden bg-white border relative">
+                    <Image
                       src={activeConv.isSeller ? (activeConv.buyer.image || "/images/kawanbelanja.png") : activeConv.store.logo}
                       alt=""
-                      className="h-full w-full object-contain"
+                      fill
+                      sizes="36px"
+                      className="object-contain"
                     />
                   </div>
                   {isConnected && <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />}
@@ -504,8 +507,8 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
               return (
                 <div className="px-4 py-2.5 bg-muted/30 border-b border-border/30">
                   <Link href={`/product/${pc.id}`} className="flex items-center gap-3 group">
-                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted border shrink-0">
-                      <img src={pc.image} alt="" className="h-full w-full object-cover" />
+                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted border shrink-0 relative">
+                      <Image src={pc.image} alt="" fill sizes="40px" className="object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate group-hover:text-primary transition-colors">{pc.name}</p>
@@ -541,7 +544,9 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
                         msg._optimistic && "opacity-70"
                       )}>
                         {msg.imageUrl && (
-                          <img src={msg.imageUrl} alt="" className="rounded-lg max-h-48 object-cover" />
+                          <div className="relative h-48 w-48 max-w-full rounded-lg overflow-hidden">
+                            <Image src={msg.imageUrl} alt="" fill sizes="192px" className="object-cover" />
+                          </div>
                         )}
                         {msg.body && (
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>

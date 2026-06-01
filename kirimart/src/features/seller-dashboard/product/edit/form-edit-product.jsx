@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
 	Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
@@ -506,10 +507,13 @@ export function FormEditProduct({ categories, dataProduct }) {
 																	key={index}
 																	className="relative aspect-square rounded-lg border bg-muted/50 flex items-center justify-center group overflow-hidden"
 																>
-																	<img
+																	<Image
 																		src={img.previewUrl}
 																		alt={`Preview ${index + 1}`}
-																		className="w-full h-full object-cover rounded-lg"
+																		fill
+																		sizes="150px"
+																		className="object-cover rounded-lg"
+																		unoptimized
 																	/>
 																	<button
 																		type="button"

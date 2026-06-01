@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { createStoreSchema } from "@/lib/validations/protected/create-store"
 import { createStore } from "@/actions/protected/store.actions"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
 	Form,
@@ -204,10 +205,13 @@ export function CreateStoreForm() {
 										{!isLoadingLogo && field.value && logoPreview !== '' && (
 											<div className='w-full h-32 border p-2 border-dashed rounded-md shadow-md'>
 												<div className='relative w-full h-full'>
-													<img
+													<Image
 														alt='Preview logo'
-														className='w-full h-full object-contain rounded-md'
+														className='object-contain rounded-md'
 														src={logoPreview}
+														fill
+														sizes="128px"
+														unoptimized
 													/>
 												</div>
 											</div>
@@ -217,10 +221,13 @@ export function CreateStoreForm() {
 										{!isLoadingLogo && field.value && logoPreview === '' && (
 											<div className='w-full h-32 border p-2 border-dashed rounded-md shadow-md'>
 												<div className='relative w-full h-full'>
-													<img
+													<Image
 														alt='Preview logo'
-														className='w-full h-full object-contain rounded-md'
+														className='object-contain rounded-md'
 														src={field.value}
+														fill
+														sizes="128px"
+														unoptimized
 													/>
 												</div>
 											</div>
@@ -303,10 +310,13 @@ export function CreateStoreForm() {
 										{!isLoadingBanner && field.value && bannerPreview !== '' && (
 											<div className='w-full h-48 border p-2 border-dashed rounded-md shadow-md'>
 												<div className='relative w-full h-full'>
-													<img
+													<Image
 														alt='Preview banner'
-														className='w-full h-full object-cover rounded-md'
+														className='object-cover rounded-md'
 														src={bannerPreview}
+														fill
+														sizes="(max-width: 768px) 100vw, 33vw"
+														unoptimized
 													/>
 												</div>
 											</div>
@@ -316,10 +326,13 @@ export function CreateStoreForm() {
 										{!isLoadingBanner && field.value && bannerPreview === '' && (
 											<div className='w-full h-48 border p-2 border-dashed rounded-md shadow-md'>
 												<div className='relative w-full h-full'>
-													<img
+													<Image
 														alt='Preview banner'
-														className='w-full h-full object-cover rounded-md'
+														className='object-cover rounded-md'
 														src={field.value}
+														fill
+														sizes="(max-width: 768px) 100vw, 33vw"
+														unoptimized
 													/>
 												</div>
 											</div>

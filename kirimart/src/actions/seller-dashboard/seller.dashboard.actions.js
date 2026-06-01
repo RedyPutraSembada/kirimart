@@ -22,7 +22,7 @@ export async function getMyStore() {
             with: {
                 address: true,
                 products: {
-                    columns: { id: true, name: true, soldCount: true },
+                    columns: { id: true, name: true, soldCount: true, visibilityScore: true },
                 },
             }
         });
