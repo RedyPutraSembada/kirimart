@@ -1,10 +1,10 @@
 # 🔄 Standar Alur Fitur Bisnis (Feature Workflow)
 
-KiriMart memiliki beberapa alur sistem (workflows) yang cukup kompleks. Bagian ini menjelaskan secara rinci bagaimana fitur-fitur tersebut berjalan.
+Kawan Belanja memiliki beberapa alur sistem (workflows) yang cukup kompleks. Bagian ini menjelaskan secara rinci bagaimana fitur-fitur tersebut berjalan.
 
 ## 1. Alur Transaksi & Checkout Multi-Vendor
 
-Arsitektur keranjang (cart) dan checkout di KiriMart mendukung pembelian dari banyak toko sekaligus dalam satu kali bayar.
+Arsitektur keranjang (cart) dan checkout di Kawan Belanja mendukung pembelian dari banyak toko sekaligus dalam satu kali bayar.
 
 1. **Keranjang (`carts` & `cart_items`)**: Keranjang pembeli menampung produk-produk dari berbagai toko berbeda.
 2. **Checkout & Pembayaran (`payments`)**: Saat checkout, sistem menghitung total keseluruhan (termasuk total semua ongkir). Sistem membuat **satu baris** di tabel `payments` (satu invoice) agar pengguna hanya perlu transfer/bayar satu kali via Midtrans.
@@ -18,7 +18,7 @@ Arsitektur keranjang (cart) dan checkout di KiriMart mendukung pembelian dari ba
 
 ## 3. Sistem Chat Realtime (Websocket)
 
-KiriMart memiliki fitur obrolan antara Pembeli dan Penjual menggunakan Node.js Express, Socket.IO, dan Redis Adapter yang berjalan di Docker Container terpisah (`ws-server/`).
+Kawan Belanja memiliki fitur obrolan antara Pembeli dan Penjual menggunakan Node.js Express, Socket.IO, dan Redis Adapter yang berjalan di Docker Container terpisah (`ws-server/`).
 
 1. **Tabel `conversations`**: Setiap ruang obrolan (relasi unik antara satu `buyerId` dan satu `storeId`) hanya disimpan SATU KALI. Ini sangat ringan dan digunakan untuk melisting kotak masuk (Inbox).
 2. **Tabel `messages`**: Menampung isi percakapan (teks dan gambar). Menyambung ke ID dari `conversations`.

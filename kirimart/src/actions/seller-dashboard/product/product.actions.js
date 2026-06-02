@@ -6,6 +6,7 @@ import { stores, products, productImages, categories, productOptions, productVar
 import { auth } from "@/lib/auth"
 import { and, count, eq, ilike } from "drizzle-orm"
 import { headers } from "next/headers"
+import { sanitize } from "@/lib/sanitize"
 import { createProductSchema } from "@/lib/validations/seller-dashboard/product/product"
 
 import { cached, invalidateCache } from "@/lib/cache"
@@ -48,6 +49,9 @@ export async function createProduct(data) {
 		}
 
 		const validData = parsed.data
+		if (validData.description) {
+			validData.description = sanitize(validData.description)
+		}
 
 		const [store] = await db.select().from(stores).where(eq(stores.userId, session.user.id)).limit(1)
 		if (!store) return { success: false, error: "Toko tidak ditemukan. Silakan buka toko terlebih dahulu." }
@@ -106,6 +110,19 @@ export async function createProduct(data) {
 				)
 			}
 
+			// 5. Log Activity
+			try {
+				const { logActivity } = await import("@/lib/activity-logger")
+				await logActivity({
+					userId: session.user.id,
+					storeId: store.id,
+					action: "CREATE_PRODUCT",
+					entityType: "product",
+					entityId: newProduct.id,
+					details: { name: validData.name }
+				}, tx)
+			} catch (e) { console.error(e) }
+
 			return { success: true }
 		})
 	} catch (error) {
@@ -123,6 +140,9 @@ export async function updateProduct(productId, data) {
 		if (!parsed.success) return { success: false, error: "Data produk tidak valid" }
 
 		const validData = parsed.data
+		if (validData.description) {
+			validData.description = sanitize(validData.description)
+		}
 
 		const [store] = await db.select().from(stores).where(eq(stores.userId, session.user.id)).limit(1)
 		if (!store) return { success: false, error: "Toko tidak ditemukan." }
@@ -181,6 +201,19 @@ export async function updateProduct(productId, data) {
 					}))
 				)
 			}
+
+			// 5. Log Activity
+			try {
+				const { logActivity } = await import("@/lib/activity-logger")
+				await logActivity({
+					userId: session.user.id,
+					storeId: store.id,
+					action: "UPDATE_PRODUCT",
+					entityType: "product",
+					entityId: productId,
+					details: { name: validData.name }
+				}, tx)
+			} catch (e) { console.error(e) }
 
 			return { success: true }
 		})
@@ -262,6 +295,19 @@ export async function deleteProduct(productId) {
 		if (!store) return { success: false, error: "Toko tidak ditemukan." }
 
 		await db.delete(products).where(eq(products.id, productId))
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id,
+				storeId: store.id,
+				action: "DELETE_PRODUCT",
+				entityType: "product",
+				entityId: productId,
+				details: {}
+			})
+		} catch (e) { console.error(e) }
 
 		return { success: true }
 	} catch (error) {

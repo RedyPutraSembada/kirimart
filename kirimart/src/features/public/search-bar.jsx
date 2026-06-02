@@ -14,7 +14,7 @@ import { formatPrice } from "@/lib/utils"
 // ============================================
 
 const MAX_RECENT = 5
-const STORAGE_KEY = "kirimart-recent-searches"
+const STORAGE_KEY = "kawanbelanja-recent-searches"
 
 // ============================================
 // HELPER

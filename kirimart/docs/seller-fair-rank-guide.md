@@ -1,7 +1,7 @@
-# Panduan Peringkat Produk KiriMart (Fair Rank System)
+# Panduan Peringkat Produk Kawan Belanja (Fair Rank System)
 
-Selamat datang di KiriMart! 
-Sebagai platform yang mengedepankan asas keadilan, KiriMart tidak menggunakan sistem iklan berbayar (Pay-to-Win) untuk menempatkan produk di halaman pertama pencarian. Kami menggunakan algoritma **Fair Rank System**.
+Selamat datang di Kawan Belanja! 
+Sebagai platform yang mengedepankan asas keadilan, Kawan Belanja tidak menggunakan sistem iklan berbayar (Pay-to-Win) untuk menempatkan produk di halaman pertama pencarian. Kami menggunakan algoritma **Fair Rank System**.
 
 Dokumen ini akan menjelaskan bagaimana skor peringkat produk (Visibility Score) Anda dihitung, dan langkah-langkah konkret yang dapat Anda lakukan untuk meningkatkan posisi produk Anda di halaman pembeli.
 
@@ -38,13 +38,13 @@ Pembeli suka berbelanja di toko yang terpercaya. Reputasi keseluruhan toko Anda 
 *   **⚠️ HINDARI KOMPLAIN (Penalty):** Ini sangat penting! Jika tingkat komplain Anda tinggi (berdasarkan rasio komplain berbanding pesanan selesai), sistem akan **memotong skor Anda hingga -5 poin**. Pastikan pengiriman aman dan responsif terhadap keluhan.
 
 ### 3. Keaktifan Toko (Maks 20 Poin)
-Toko yang hidup dan aktif adalah toko yang diutamakan oleh KiriMart.
+Toko yang hidup dan aktif adalah toko yang diutamakan oleh Kawan Belanja.
 *   **Lengkapi Profil Anda (+5 poin):** Pasang Logo toko, Banner toko, isi Deskripsi, hubungkan Rekening Bank, dan aktifkan minimal 1 Kurir. Setiap komponen bernilai 1 poin (total 5 poin).
 *   **Tebar Voucher (+5 poin):** Toko yang memiliki setidaknya 1 voucher aktif yang bisa diklaim pembeli akan langsung mendapat +5 poin.
 *   **Rajin Upload (+5 poin):** Pastikan toko Anda tidak "mati suri". Jika Anda pernah mengupload minimal 1 produk baru dalam 30 hari terakhir, seluruh produk lama Anda akan mendapat bonus +5 poin.
 
 ### 4. Boost Produk Baru (Maks 30 Poin)
-Punya produk yang benar-benar baru di-upload? KiriMart memberikan **kesempatan setara untuk bersaing dengan produk lama yang sudah laris**!
+Punya produk yang benar-benar baru di-upload? Kawan Belanja memberikan **kesempatan setara untuk bersaing dengan produk lama yang sudah laris**!
 *   Hari Ke-1: +30 poin
 *   Hari Ke-2: +25 poin
 *   ... dan seterusnya akan terus menurun hingga hari ke-7 (+0 poin).
@@ -82,4 +82,4 @@ Di sana Anda dapat memantau secara real-time:
 
 ---
 
-*Mari tumbuh bersama KiriMart dengan persaingan yang sehat, jujur, dan selalu mengutamakan kepuasan pelanggan!*
+*Mari tumbuh bersama Kawan Belanja dengan persaingan yang sehat, jujur, dan selalu mengutamakan kepuasan pelanggan!*

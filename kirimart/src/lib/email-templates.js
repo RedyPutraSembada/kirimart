@@ -48,7 +48,7 @@ const FOOTER_STYLE = `
 export function getPaymentSuccessEmail(buyerName, orderId, amount) {
   return `
     <div style="${BASE_STYLE}">
-      <div style="${HEADER_STYLE}">KiriMart</div>
+      <div style="${HEADER_STYLE}">Kawan Belanja</div>
       <div style="${CONTENT_STYLE}">
         <h2>Pembayaran Berhasil!</h2>
         <p>Halo <strong>${buyerName}</strong>,</p>
@@ -59,7 +59,7 @@ export function getPaymentSuccessEmail(buyerName, orderId, amount) {
         </div>
       </div>
       <div style="${FOOTER_STYLE}">
-        &copy; ${new Date().getFullYear()} KiriMart. All rights reserved.
+        &copy; ${new Date().getFullYear()} Kawan Belanja. All rights reserved.
       </div>
     </div>
   `;
@@ -68,7 +68,7 @@ export function getPaymentSuccessEmail(buyerName, orderId, amount) {
 export function getNewOrderEmail(sellerName, orderId, buyerName, itemsCount) {
   return `
     <div style="${BASE_STYLE}">
-      <div style="${HEADER_STYLE}">KiriMart Seller</div>
+      <div style="${HEADER_STYLE}">Kawan Belanja Seller</div>
       <div style="${CONTENT_STYLE}">
         <h2>Pesanan Baru Masuk! 🎉</h2>
         <p>Halo <strong>${sellerName}</strong>,</p>
@@ -79,7 +79,7 @@ export function getNewOrderEmail(sellerName, orderId, buyerName, itemsCount) {
         </div>
       </div>
       <div style="${FOOTER_STYLE}">
-        &copy; ${new Date().getFullYear()} KiriMart. All rights reserved.
+        &copy; ${new Date().getFullYear()} Kawan Belanja. All rights reserved.
       </div>
     </div>
   `;
@@ -88,7 +88,7 @@ export function getNewOrderEmail(sellerName, orderId, buyerName, itemsCount) {
 export function getOrderProcessingEmail(buyerName, orderId, sellerName) {
   return `
     <div style="${BASE_STYLE}">
-      <div style="${HEADER_STYLE}">KiriMart</div>
+      <div style="${HEADER_STYLE}">Kawan Belanja</div>
       <div style="${CONTENT_STYLE}">
         <h2>Pesanan Anda Sedang Dikemas 📦</h2>
         <p>Halo <strong>${buyerName}</strong>,</p>
@@ -99,7 +99,7 @@ export function getOrderProcessingEmail(buyerName, orderId, sellerName) {
         </div>
       </div>
       <div style="${FOOTER_STYLE}">
-        &copy; ${new Date().getFullYear()} KiriMart. All rights reserved.
+        &copy; ${new Date().getFullYear()} Kawan Belanja. All rights reserved.
       </div>
     </div>
   `;
@@ -108,19 +108,19 @@ export function getOrderProcessingEmail(buyerName, orderId, sellerName) {
 export function getOrderShippedEmail(buyerName, orderId, courier, awbNumber) {
   return `
     <div style="${BASE_STYLE}">
-      <div style="${HEADER_STYLE}">KiriMart</div>
+      <div style="${HEADER_STYLE}">Kawan Belanja</div>
       <div style="${CONTENT_STYLE}">
         <h2>Pesanan Anda Sedang Dikirim 🚚</h2>
         <p>Halo <strong>${buyerName}</strong>,</p>
         <p>Penjual telah menyerahkan pesanan Anda (Order <strong>#${orderId}</strong>) ke kurir <strong>${courier.toUpperCase()}</strong>.</p>
         <p>Nomor Resi Pelacakan: <strong style="font-size: 18px; color: #3b82f6;">${awbNumber}</strong></p>
-        <p>Anda bisa melacak pergerakan paket secara langsung di dashboard KiriMart.</p>
+        <p>Anda bisa melacak pergerakan paket secara langsung di dashboard Kawan Belanja.</p>
         <div style="text-align: center;">
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/user-dashboard/orders" style="${BUTTON_STYLE}">Lacak Pesanan</a>
         </div>
       </div>
       <div style="${FOOTER_STYLE}">
-        &copy; ${new Date().getFullYear()} KiriMart. All rights reserved.
+        &copy; ${new Date().getFullYear()} Kawan Belanja. All rights reserved.
       </div>
     </div>
   `;
@@ -129,7 +129,7 @@ export function getOrderShippedEmail(buyerName, orderId, courier, awbNumber) {
 export function getOrderDeliveredEmail(buyerName, orderId) {
   return `
     <div style="${BASE_STYLE}">
-      <div style="${HEADER_STYLE}">KiriMart</div>
+      <div style="${HEADER_STYLE}">Kawan Belanja</div>
       <div style="${CONTENT_STYLE}">
         <h2>Paket Telah Sampai! 📦</h2>
         <p>Halo <strong>${buyerName}</strong>,</p>
@@ -140,7 +140,7 @@ export function getOrderDeliveredEmail(buyerName, orderId) {
         </div>
       </div>
       <div style="${FOOTER_STYLE}">
-        &copy; ${new Date().getFullYear()} KiriMart. All rights reserved.
+        &copy; ${new Date().getFullYear()} Kawan Belanja. All rights reserved.
       </div>
     </div>
   `;
@@ -156,11 +156,11 @@ export function getWithdrawalProcessedEmail(sellerName, amount, status, reason =
 
   return `
     <div style="${BASE_STYLE}">
-      <div style="${HEADER_STYLE}">KiriMart Finance</div>
+      <div style="${HEADER_STYLE}">Kawan Belanja Finance</div>
       <div style="${CONTENT_STYLE}">
         <h2>Penarikan Dana ${statusLabel} ${icon}</h2>
         <p>Halo <strong>${sellerName}</strong>,</p>
-        <p>Permintaan penarikan dana (Withdrawal) sebesar <strong style="font-size: 18px;">Rp ${amount.toLocaleString('id-ID')}</strong> telah diperiksa oleh tim Admin KiriMart.</p>
+        <p>Permintaan penarikan dana (Withdrawal) sebesar <strong style="font-size: 18px;">Rp ${amount.toLocaleString('id-ID')}</strong> telah diperiksa oleh tim Admin Kawan Belanja.</p>
         <p>Status: <strong style="color: ${isApproved ? '#10b981' : '#ef4444'};">${statusLabel}</strong></p>
         <div style="padding: 15px; background-color: #f3f4f6; border-radius: 6px; margin: 15px 0;">
           <p style="margin: 0;">${message}</p>
@@ -170,7 +170,7 @@ export function getWithdrawalProcessedEmail(sellerName, amount, status, reason =
         </div>
       </div>
       <div style="${FOOTER_STYLE}">
-        &copy; ${new Date().getFullYear()} KiriMart. All rights reserved.
+        &copy; ${new Date().getFullYear()} Kawan Belanja. All rights reserved.
       </div>
     </div>
   `;

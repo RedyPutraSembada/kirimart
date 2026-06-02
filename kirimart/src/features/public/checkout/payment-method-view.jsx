@@ -49,7 +49,7 @@ export function PaymentMethodView() {
 	// Ambil state checkout (shipping, voucher, notes) dari localStorage
 	useEffect(() => {
 		try {
-			const saved = localStorage.getItem("kirimart_checkout_state")
+			const saved = localStorage.getItem("kawanbelanja_checkout_state")
 			if (saved) {
 				setCheckoutState(JSON.parse(saved))
 			}
@@ -294,7 +294,7 @@ export function PaymentMethodView() {
 								</Button>
 
 								<p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-									Dengan menekan tombol di atas, kamu menyetujui <span className="text-primary font-medium">Syarat & Ketentuan</span> KiriMart
+									Dengan menekan tombol di atas, kamu menyetujui <span className="text-primary font-medium">Syarat & Ketentuan</span> Kawan Belanja
 								</p>
 							</CardContent>
 						</Card>

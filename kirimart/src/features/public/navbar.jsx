@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -99,15 +99,15 @@ export function Navbar() {
   // Listen BroadcastChannel untuk update badge real-time
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return
-    
-    const chatChannel = new BroadcastChannel('kirimart-chat')
+
+    const chatChannel = new BroadcastChannel('kawanbelanja-chat')
     chatChannel.onmessage = (event) => {
       if (event.data?.type === 'unread-update') {
         queryClient.invalidateQueries({ queryKey: ["chat-unread-count"] })
       }
     }
 
-    const notifChannel = new BroadcastChannel('kirimart-notif')
+    const notifChannel = new BroadcastChannel('kawanbelanja-notif')
     notifChannel.onmessage = (event) => {
       if (event.data?.type === 'new-notification') {
         queryClient.invalidateQueries({ queryKey: ["notif-unread-count"] })
@@ -252,7 +252,9 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           {/* Search Bar */}
           <div className="hidden lg:flex relative">
-            <SearchBar />
+            <Suspense fallback={<div className="h-10 w-64 bg-muted rounded-full animate-pulse" />}>
+              <SearchBar />
+            </Suspense>
           </div>
 
           <ThemeToggle />
@@ -302,9 +304,8 @@ export function Navbar() {
                       {notifList.slice(0, 15).map((notif) => (
                         <button
                           key={notif.id}
-                          className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors flex items-start gap-2.5 border-b border-border/20 last:border-0 ${
-                            !notif.isRead ? "bg-primary/5" : ""
-                          }`}
+                          className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors flex items-start gap-2.5 border-b border-border/20 last:border-0 ${!notif.isRead ? "bg-primary/5" : ""
+                            }`}
                           onClick={async () => {
                             if (!notif.isRead) {
                               // Optimistic: badge -1

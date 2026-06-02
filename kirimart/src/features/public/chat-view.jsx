@@ -188,7 +188,7 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
         })
         // Broadcast ke navbar agar badge update real-time
         try {
-          const channel = new BroadcastChannel('kirimart-chat')
+          const channel = new BroadcastChannel('kawanbelanja-chat')
           channel.postMessage({ type: 'unread-update' })
           channel.close()
         } catch (e) { /* BroadcastChannel not supported */ }

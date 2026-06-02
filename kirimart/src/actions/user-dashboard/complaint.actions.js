@@ -82,6 +82,19 @@ export async function submitComplaint(orderId, reason, evidenceUrl = null) {
 			.set({ status: "complained" })
 			.where(eq(orders.id, parseInt(orderId)))
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id,
+				storeId: order.storeId,
+				action: "SUBMIT_COMPLAINT",
+				entityType: "complaint",
+				entityId: newComplaint.id,
+				details: { orderId: order.id, reason: reason.trim() }
+			})
+		} catch (e) { console.error(e) }
+
 		// Kirim notifikasi real-time ke penjual
 		try {
 			const { createNotification } = await import("@/actions/public/notification.actions")

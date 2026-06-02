@@ -18,7 +18,7 @@
 
 ## 1. Ringkasan Eksekutif
 
-**kawanbelanja** (KiriMart) adalah platform multi-vendor e-commerce yang sudah memiliki pondasi arsitektur sangat matang. Dari sisi teknis, aplikasi ini sudah melampaui tahap MVP — terutama pada area:
+**kawanbelanja** (Kawan Belanja) adalah platform multi-vendor e-commerce yang sudah memiliki pondasi arsitektur sangat matang. Dari sisi teknis, aplikasi ini sudah melampaui tahap MVP — terutama pada area:
 
 | Aspek | Status | Keterangan |
 |:------|:-------|:-----------|

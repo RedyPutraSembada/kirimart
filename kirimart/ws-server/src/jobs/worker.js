@@ -1,5 +1,5 @@
 /**
- * BullMQ Background Job Worker — KiriMart
+ * BullMQ Background Job Worker — Kawan Belanja
  *
  * Menjalankan scheduled jobs yang dijadwalkan dari Next.js:
  *
@@ -39,9 +39,9 @@ const redisConnection = parseRedisUrl(REDIS_URL)
 // QUEUES
 // ============================================
 
-export const orderQueue = new Queue("kirimart-orders", { connection: redisConnection })
-export const paymentQueue = new Queue("kirimart-payments", { connection: redisConnection })
-export const scoringQueue = new Queue("kirimart-scoring", { connection: redisConnection })
+export const orderQueue = new Queue("kawanbelanja-orders", { connection: redisConnection })
+export const paymentQueue = new Queue("kawanbelanja-payments", { connection: redisConnection })
+export const scoringQueue = new Queue("kawanbelanja-scoring", { connection: redisConnection })
 
 // ============================================
 // DATABASE POOL (terpisah dari auth pool)
@@ -236,7 +236,7 @@ export function initWorkers() {
 	console.log("[WORKER] Starting BullMQ workers...")
 
 	// Worker untuk order queue
-	const orderWorker = new Worker("kirimart-orders", async (job) => {
+	const orderWorker = new Worker("kawanbelanja-orders", async (job) => {
 		switch (job.name) {
 			case "auto-complete":
 				return await processAutoComplete(job)
@@ -257,7 +257,7 @@ export function initWorkers() {
 	})
 
 	// Worker untuk payment queue
-	const paymentWorker = new Worker("kirimart-payments", async (job) => {
+	const paymentWorker = new Worker("kawanbelanja-payments", async (job) => {
 		switch (job.name) {
 			case "expire-payment":
 				return await processExpirePayment(job)
@@ -278,7 +278,7 @@ export function initWorkers() {
 	})
 
 	// Worker untuk scoring queue
-	const scoringWorker = new Worker("kirimart-scoring", async (job) => {
+	const scoringWorker = new Worker("kawanbelanja-scoring", async (job) => {
 		switch (job.name) {
 			case "recalculate-scores":
 				const { recalculateAllScores } = await import("./score-calculator.js")

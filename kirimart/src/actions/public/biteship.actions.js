@@ -1,7 +1,7 @@
 /**
  * Biteship API Server Actions
  *
- * File ini merupakan satu-satunya titik interaksi antara KiriMart dan Biteship API.
+ * File ini merupakan satu-satunya titik interaksi antara Kawan Belanja dan Biteship API.
  * Semua fungsi mengikuti kontrak standar: { success: boolean, data?: any, error?: string }
  *
  * Fungsi:

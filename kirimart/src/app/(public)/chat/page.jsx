@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 
 export const metadata = {
-  title: "Chat - KiriMart",
+  title: "Chat - Kawan Belanja",
   description: "Chat dengan penjual untuk tanya produk dan nego harga",
 }
 

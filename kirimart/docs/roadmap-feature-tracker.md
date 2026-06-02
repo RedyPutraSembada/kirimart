@@ -1,4 +1,4 @@
-# KiriMart — Roadmap & Feature Tracker
+# Kawan Belanja — Roadmap & Feature Tracker
 
 > Dokumen ini mencatat semua fitur yang sudah selesai, sedang dikerjakan,
 > dan yang direncanakan. Digunakan sebagai panduan untuk development selanjutnya.
@@ -222,17 +222,17 @@
 #### A. Meta Pixel Integration (Sistem Pelacak Iklan)
 
 > **Catatan untuk Orang Awam (Non-Programmer):** 
-> Meta Pixel adalah kode pelacak dari Facebook/Instagram. Karena KiriMart adalah aplikasi **Multi-Vendor** (seperti Tokopedia/Shopee), kita membutuhkan **Sistem Multi-Pixel**:
-> 1. **Master Pixel**: Milik pemilik platform (KiriMart) untuk melacak seluruh transaksi di website.
+> Meta Pixel adalah kode pelacak dari Facebook/Instagram. Karena Kawan Belanja adalah aplikasi **Multi-Vendor** (seperti Tokopedia/Shopee), kita membutuhkan **Sistem Multi-Pixel**:
+> 1. **Master Pixel**: Milik pemilik platform (Kawan Belanja) untuk melacak seluruh transaksi di website.
 > 2. **Seller Pixel**: Milik masing-masing penjual (Toko A, Toko B) agar mereka bisa mengiklankan toko mereka sendiri dengan uang/budget mereka sendiri.
 > 
-> **Cara Kerjanya:** Saat pembeli membeli produk dari Toko A, KiriMart akan mengirim 2 laporan sekaligus secara otomatis: satu laporan ke Facebook KiriMart, satu lagi ke Facebook Toko A.
+> **Cara Kerjanya:** Saat pembeli membeli produk dari Toko A, Kawan Belanja akan mengirim 2 laporan sekaligus secara otomatis: satu laporan ke Facebook Kawan Belanja, satu lagi ke Facebook Toko A.
 
 | Alur Kerja / Task | Penjelasan Awam |
 |---|---|
-| **1. Persiapan Database** | Menyiapkan kotak kosong di sistem agar Admin KiriMart dan Seller bisa menyimpan "ID Pixel" (deretan angka dari Facebook) milik mereka masing-masing. |
+| **1. Persiapan Database** | Menyiapkan kotak kosong di sistem agar Admin Kawan Belanja dan Seller bisa menyimpan "ID Pixel" (deretan angka dari Facebook) milik mereka masing-masing. |
 | **2. Form Input Pixel** | Membuat kolom isian di halaman **Pengaturan Toko** (untuk Seller) dan **Pengaturan Platform** (untuk Admin) agar mereka bisa mengetik dan menyimpan ID Pixel. |
-| **3. Base Script (Otak Pelacak)** | Memasang kode utama Facebook ke tulang punggung aplikasi KiriMart agar pelacak ini aktif siaga di seluruh halaman web. |
+| **3. Base Script (Otak Pelacak)** | Memasang kode utama Facebook ke tulang punggung aplikasi Kawan Belanja agar pelacak ini aktif siaga di seluruh halaman web. |
 | **4. Event: `ViewContent`** | Memicu sinyal *"Ada yang masuk dan lihat-lihat barang ini lho!"* ke Facebook saat pembeli masuk ke halaman detail produk. |
 | **5. Event: `AddToCart`** | Memicu sinyal *"Ada yang masukin barang ke keranjang!"* saat pembeli menekan tombol keranjang belanja. |
 | **6. Event: `InitiateCheckout`** | Memicu sinyal *"Ada yang udah di kasir tapi belum bayar!"* saat pembeli masuk ke halaman pengisian alamat. Berguna untuk mengiklan ulang (retargeting) orang yang batal bayar. |
@@ -460,6 +460,6 @@
 | **Phase 8** | Marketing & Analytics (Meta Pixel) | ✅ Selesai |
 | **Phase 9** | Email Notification | ✅ Selesai |
 | **Phase 13**| Complaint & Refund System | ✅ Selesai |
-| **Phase 10** | Security & Performance | ⏳ Belum Mulai |
+| **Phase 10** | Security & Performance | ✅ Selesai |
 | **Phase 11** | Deployment & CI/CD | ⏳ Belum Mulai |
 | **Phase 12** | Activity Log (Audit Trail) | ⏳ Belum Mulai |

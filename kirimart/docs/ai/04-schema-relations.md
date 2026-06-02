@@ -1,6 +1,6 @@
 # 🗄️ Aturan Skema Database dan Relasi
 
-Dokumen ini menjelaskan rancangan Entity-Relationship Diagram (ERD) dan bagaimana setiap tabel direlasikan dalam aplikasi KiriMart (Total 26 Tabel).
+Dokumen ini menjelaskan rancangan Entity-Relationship Diagram (ERD) dan bagaimana setiap tabel direlasikan dalam aplikasi Kawan Belanja (Total 26 Tabel).
 
 ## Prinsip Dasar Relasi
 Aplikasi ini menggunakan **PostgreSQL** dengan **Drizzle ORM**. Jangan sembarangan mengubah relasi One-to-Many atau Many-to-Many tanpa memahami dampaknya. User ID yang digunakan merujuk pada tabel `user` bawaan Better-Auth yang bertipe *string*.

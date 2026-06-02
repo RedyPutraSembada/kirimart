@@ -83,6 +83,21 @@ export async function createStore(formData) {
 		const { user } = await import("@/config/db/schema/auth-schema")
 		await db.update(user).set({ role: "seller" }).where(eq(user.id, session.user.id))
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			const createdStore = await db.query.stores.findFirst({ where: eq(stores.domainSlug, domainSlug) })
+			if (createdStore) {
+				await logActivity({
+					userId: session.user.id,
+					storeId: createdStore.id,
+					action: "CREATE_STORE",
+					entityType: "store",
+					entityId: createdStore.id,
+					details: { name, domainSlug }
+				})
+			}
+		} catch (e) { console.error(e) }
 
 		return { success: true }
 	} catch (error) {

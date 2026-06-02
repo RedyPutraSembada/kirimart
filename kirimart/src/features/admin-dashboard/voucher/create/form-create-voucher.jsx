@@ -28,10 +28,8 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { id as localeId } from "date-fns/locale"
 import { env } from "@/config/env"
+import { uploadFile } from "@/lib/upload"
 
-const uriUpload = env.NEXT_PUBLIC_UPLOAD_URI
-const uploadApiKey = env.NEXT_PUBLIC_UPLOAD_API_KEY
-const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB
 
 const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 
@@ -81,23 +79,6 @@ export function FormCreateVoucher() {
 			await createMutation.mutateAsync(data)
 		} catch {
 			setIsPending(false)
-		}
-	}
-
-	async function uploadImage(file) {
-		const formData = new FormData()
-		formData.append("file", file)
-		try {
-			const response = await fetch(`${uriUpload}/upload`, {
-				method: "POST",
-				headers: { "x-api-key": uploadApiKey ?? "" },
-				body: formData,
-			})
-			if (!response.ok) throw new Error(`Error: ${response.statusText}`)
-			const data = await response.json()
-			return data?.file?.url ?? ""
-		} catch {
-			return ""
 		}
 	}
 
@@ -407,19 +388,13 @@ export function FormCreateVoucher() {
 																			setIsLoadingImage(true)
 																			const file = e.target.files?.[0]
 																			if (file) {
-																				const fileSizeMB = file.size / (1024 * 1024)
-																				if (fileSizeMB > MAX_FILE_SIZE_MB) {
-																					setFormError("imageUrl", {
-																						type: "manual",
-																						message: `Ukuran file tidak boleh lebih dari ${MAX_FILE_SIZE_MB} MB.`,
-																					})
-																				} else {
+																				
 																					clearErrors("imageUrl")
-																					const uploadedUrl = await uploadImage(file)
+																					const uploadedUrl = await uploadFile(file)
 																					if (uploadedUrl) {
 																						field.onChange(uploadedUrl)
 																						setImagePreview(URL.createObjectURL(file))
-																					}
+																					
 																				}
 																			}
 																			setIsLoadingImage(false)

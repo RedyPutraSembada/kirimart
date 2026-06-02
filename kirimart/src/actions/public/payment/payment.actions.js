@@ -171,6 +171,19 @@ export async function createPaymentTransaction(checkoutData) {
 			return { paymentId: newPayment.id, orderId: finalOrderId }
 		})
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id,
+				storeId: null, // Buyer context, global
+				action: "CREATE_ORDER",
+				entityType: "payment",
+				entityId: result.paymentId,
+				details: { orderId: result.orderId, grandTotal }
+			})
+		} catch (e) { console.error(e) }
+
 		// 4. Panggil Midtrans Snap API
 		// Susun item_details: semua produk + ongkir per toko + biaya layanan
 		const midtransItems = []
@@ -589,7 +602,7 @@ export async function updatePaymentFromWebhook(notification) {
 
 /**
  * Membuat transaksi via Midtrans Core API.
- * User memilih metode pembayaran di UI KiriMart, bukan di popup Snap.
+ * User memilih metode pembayaran di UI Kawan Belanja, bukan di popup Snap.
  * Biaya PG (MDR + PPN) dihitung di server (Zero-Trust).
  * 
  * @param {Object} checkoutData - Data dari frontend
@@ -763,6 +776,19 @@ export async function createCoreApiTransaction(checkoutData, paymentMethodId) {
 			return { paymentId: newPayment.id, orderId: finalOrderId }
 		})
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id,
+				storeId: null,
+				action: "CREATE_ORDER",
+				entityType: "payment",
+				entityId: result.paymentId,
+				details: { orderId: result.orderId, grandTotal, paymentMethodId }
+			})
+		} catch (e) { console.error(e) }
+
 		// 6. Susun payload Midtrans Core API
 		const midtransItems = []
 
@@ -832,7 +858,7 @@ export async function createCoreApiTransaction(checkoutData, paymentMethodId) {
 		} else if (methodConfig.paymentType === 'echannel') {
 			// Mandiri Bill Payment
 			chargeParameter.echannel = {
-				bill_info1: 'Pembayaran KiriMart',
+				bill_info1: 'Pembayaran Kawan Belanja',
 				bill_info2: result.orderId,
 			}
 		}

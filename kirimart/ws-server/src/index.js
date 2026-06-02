@@ -1,5 +1,5 @@
 /**
- * KiriMart WebSocket Server — Entry Point
+ * Kawan Belanja WebSocket Server — Entry Point
  *
  * Server ini menjalankan:
  * 1. Socket.IO WebSocket server (untuk koneksi real-time dari browser)
@@ -36,7 +36,7 @@ import { initWorkers, closeWorkers } from "./jobs/worker.js"
 
 const PORT = process.env.PORT || 3001
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379"
-const WS_SECRET = process.env.WS_SECRET || "kirimart-ws-secret-2026"
+const WS_SECRET = process.env.WS_SECRET || "kawanbelanja-ws-secret-2026"
 const DATABASE_URL = process.env.DATABASE_URL
 const ALLOWED_ORIGINS = [
 	"http://localhost:3000",
@@ -181,7 +181,7 @@ function setupJobsApi() {
 
 async function start() {
 	console.log("─────────────────────────────────────────")
-	console.log("  KiriMart WebSocket Server")
+	console.log("  Kawan Belanja WebSocket Server")
 	console.log("─────────────────────────────────────────")
 
 	// 1. Init PostgreSQL connection pool (untuk auth)

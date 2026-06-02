@@ -5,6 +5,8 @@ import { payments, orders, stores, reviews, products, orderItems, complaints } f
 import { auth } from "@/lib/auth"
 import { eq, desc, and, avg, sql } from "drizzle-orm"
 import { headers } from "next/headers"
+import { checkRateLimit } from "@/lib/rate-limit"
+import { sanitize } from "@/lib/sanitize"
 
 /**
  * Mengambil semua riwayat transaksi/pembayaran milik user yang sedang login.
@@ -109,6 +111,12 @@ export async function completeOrderAndReview(orderId, reviewsData) {
 			return { success: false, error: "Unauthorized" }
 		}
 
+		// Rate limiting: max 3 reviews per minute
+		const rateLimit = await checkRateLimit(`review:${session.user.id}`, 3, 60)
+		if (!rateLimit.success) {
+			return { success: false, error: "Terlalu banyak percobaan. Harap tunggu beberapa saat." }
+		}
+
 		// Validasi: pesanan harus milik user ini dan statusnya shipped
 		const order = await db.query.orders.findFirst({
 			where: and(
@@ -158,7 +166,7 @@ export async function completeOrderAndReview(orderId, reviewsData) {
 						productId: r.productId,
 						userId: session.user.id,
 						rating: r.rating,
-						comment: r.comment || null,
+						comment: r.comment ? sanitize(r.comment) : null,
 						imageUrl: r.imageUrl || null,
 					}))
 				)

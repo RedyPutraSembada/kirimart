@@ -169,6 +169,19 @@ export async function updateOrderStatus(orderId, newStatus, shippingData = {}) {
 
 		const statusLabel = newStatus === "processing" ? "Dikemas" : "Dikirim"
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "UPDATE_ORDER_STATUS",
+				entityType: "order",
+				entityId: order.id,
+				details: { oldStatus: order.status, newStatus, awbNumber: shippingData.awbNumber || null }
+			})
+		} catch (e) { console.error(e) }
+
 		// === REAL-TIME NOTIFICATION ke buyer ===
 		try {
 			const { createNotification } = await import("@/actions/public/notification.actions")
@@ -204,8 +217,8 @@ export async function updateOrderStatus(orderId, newStatus, shippingData = {}) {
 			// === KIRIM EMAIL KE PEMBELI ===
 			if (order.user?.email) {
 				const emailSubject = newStatus === "processing" 
-					? `[KiriMart] Pesanan #${order.id} Sedang Dikemas` 
-					: `[KiriMart] Pesanan #${order.id} Telah Dikirim`;
+					? `[Kawan Belanja] Pesanan #${order.id} Sedang Dikemas` 
+					: `[Kawan Belanja] Pesanan #${order.id} Telah Dikirim`;
 				
 				const emailHtml = newStatus === "processing"
 					? getOrderProcessingEmail(order.user.name || "Pembeli", order.id, store.name)
@@ -453,7 +466,7 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 			courierCode: selectedShipping.courierCode,
 			courierType: selectedShipping.serviceCode,
 			deliveryType: deliveryType,
-			orderNote: `KiriMart Order #${order.id}`,
+			orderNote: `Kawan Belanja Order #${order.id}`,
 			items: order.items.map(item => ({
 				name: item.productNameSnapshot,
 				description: item.variantNameSnapshot || "",
@@ -519,6 +532,19 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 
 		console.log(`[shipOrderViaBiteship] Order #${orderId} shipped via Biteship! AWB: ${biteshipResult.data.courierWaybillId}`)
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "SUBMIT_SHIPPING_AWB",
+				entityType: "order",
+				entityId: order.id,
+				details: { biteshipOrderId: biteshipResult.data.id, awbNumber: biteshipResult.data.courierWaybillId }
+			})
+		} catch (e) { console.error(e) }
+
 		// === REAL-TIME NOTIFICATION & EMAIL ke buyer ===
 		try {
 			const { createNotification } = await import("@/actions/public/notification.actions")
@@ -548,7 +574,7 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 			
 			// === KIRIM EMAIL KE PEMBELI ===
 			if (order.user?.email) {
-				const emailSubject = `[KiriMart] Pesanan #${order.id} Telah Dikirim`
+				const emailSubject = `[Kawan Belanja] Pesanan #${order.id} Telah Dikirim`
 				const emailHtml = getOrderShippedEmail(order.user.name || "Pembeli", order.id, courierName, awb)
 				await sendEmail(order.user.email, emailSubject, emailHtml)
 			}
@@ -646,6 +672,19 @@ export async function cancelOrder(orderId, reason = "") {
 				amountRequested: order.grandTotal,
 			})
 		})
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "CANCEL_ORDER",
+				entityType: "order",
+				entityId: order.id,
+				details: { reason: reason.trim() }
+			})
+		} catch (e) { console.error(e) }
 
 		// Kirim notifikasi ke pembeli
 		try {
@@ -750,6 +789,19 @@ export async function handleComplaint(complaintId, action, response = "") {
 			}
 		})
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "RESPOND_COMPLAINT",
+				entityType: "complaint",
+				entityId: complaint.id,
+				details: { responseAction: action, sellerResponse: response.trim() }
+			})
+		} catch (e) { console.error(e) }
+
 		// Kirim notifikasi ke pembeli
 		try {
 			const { createNotification } = await import("@/actions/public/notification.actions")
@@ -845,6 +897,19 @@ export async function confirmReturnReceived(orderId) {
 				.set({ status: "refund_processing" })
 				.where(eq(orders.id, complaint.orderId))
 		})
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "UPDATE_ORDER_STATUS", // Same action logic as others or specific? The guide says "UPDATE_ORDER_STATUS" for order status changes. I will use "CONFIRM_RECEIVED" but this is seller confirming return...
+				entityType: "complaint",
+				entityId: complaint.id,
+				details: { orderStatus: "refund_processing", info: "Barang retur diterima penjual" }
+			})
+		} catch (e) { console.error(e) }
 
 		// Kirim notifikasi ke pembeli
 		try {

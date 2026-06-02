@@ -136,7 +136,7 @@ export function useNotificationSocket(sessionToken, { storeId = null, onNotifica
 
 		// 4. Broadcast ke komponen lain (misal navbar di halaman beda)
 		try {
-			const channel = new BroadcastChannel("kirimart-notif")
+			const channel = new BroadcastChannel("kawanbelanja-notif")
 			channel.postMessage({ type: "new-notification", notif })
 			channel.close()
 		} catch { /* BroadcastChannel not supported */ }

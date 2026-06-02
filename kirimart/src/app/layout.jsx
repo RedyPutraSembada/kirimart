@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/providers/provider";
@@ -22,10 +23,20 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "KawanBelanja - Solusi Belanja Cerdas & Aman",
   description: "Marketplace modern untuk produk unggulan dan kebutuhan harian Anda.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "KawanBelanja",
+  },
   icons: {
     icon: "/kawanbelanja.ico",
     apple: "/images/kawanbelanja.png",
   }
+};
+
+export const viewport = {
+  themeColor: "#ffffff",
 };
 
 export default async function RootLayout({ children }) {
@@ -55,7 +66,9 @@ export default async function RootLayout({ children }) {
     >
       <body className='flex min-h-full flex-col' suppressHydrationWarning>
         <Providers>{children}</Providers>
-        <MetaPixel masterPixelId={masterPixelId} />
+        <Suspense fallback={null}>
+          <MetaPixel masterPixelId={masterPixelId} />
+        </Suspense>
       </body>
     </html>
   );

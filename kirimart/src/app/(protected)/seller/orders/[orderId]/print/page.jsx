@@ -6,7 +6,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 export const metadata = {
-	title: "Cetak Label Pengiriman | KiriMart",
+	title: "Cetak Label Pengiriman | Kawan Belanja",
 }
 
 async function getOrderForPrint(orderId) {
@@ -90,7 +90,7 @@ export default async function PrintLabelPage({ params }) {
 				<div className="label">
 					{/* Header */}
 					<div className="header">
-						<h1>KiriMart</h1>
+						<h1>Kawan Belanja</h1>
 						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2mm" }}>
 							<span className="courier-badge">
 								{shipment.courier?.toUpperCase()} {shipment.courierType?.toUpperCase()}
@@ -145,7 +145,7 @@ export default async function PrintLabelPage({ params }) {
 					)}
 
 					<div className="footer">
-						Dicetak pada {new Date().toLocaleString("id-ID")} — KiriMart
+						Dicetak pada {new Date().toLocaleString("id-ID")} — Kawan Belanja
 					</div>
 				</div>
 

@@ -1,4 +1,4 @@
-# 🏆 Kirimart Fair Rank System — Implementation Plan
+# 🏆 Kawan Belanja Fair Rank System — Implementation Plan
 
 > **Sistem visibilitas produk anti-Pay-to-Win** yang menggantikan sorting by `soldCount` dengan skor komposit yang mempertimbangkan kualitas, kesegaran, dan keacakan terkontrol.
 
@@ -21,11 +21,11 @@
 
 ## 1. Ringkasan Strategi
 
-### Strategi: Hybrid "Kirimart Fair Rank"
+### Strategi: Hybrid "Kawan Belanja Fair Rank"
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│           KIRIMART FAIR RANK SCORE                  │
+│           KAWAN BELANJA FAIR RANK SCORE                  │
 │                                                     │
 │  score = merit + freshness + randomizer             │
 │          (70%)    (20%)       (10%)                 │
@@ -264,16 +264,16 @@ export const storeMetricsRelations = relations(storeMetrics, ({ one }) => ({
 ##### [MODIFY] `ws-server/src/jobs/worker.js`
 **Apa yang berubah:**
 1. Import `score-calculator.js`
-2. Tambah queue baru: `kirimart-scoring`
+2. Tambah queue baru: `kawanbelanja-scoring`
 3. Tambah worker baru yang menjalankan `recalculateAllScores()`
 4. Setup repeatable job saat init: interval 6 jam
 5. Update `initWorkers()` dan `closeWorkers()`
 
 ```javascript
 // Tambah di initWorkers():
-export const scoringQueue = new Queue("kirimart-scoring", { connection: redisConnection })
+export const scoringQueue = new Queue("kawanbelanja-scoring", { connection: redisConnection })
 
-const scoringWorker = new Worker("kirimart-scoring", async (job) => {
+const scoringWorker = new Worker("kawanbelanja-scoring", async (job) => {
     if (job.name === "recalculate-scores") {
         return await recalculateAllScores()
     }

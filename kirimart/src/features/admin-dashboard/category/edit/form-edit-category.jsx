@@ -22,11 +22,9 @@ import { categorySchema } from "@/lib/validations/admin-dashboard/category/categ
 import { updateCategory } from "@/actions/admin-dashboard/category/category.actions"
 import { useGetAllCategoriesForDropdown } from "@/app/data/admin-dashboard/category/category-data"
 import { env } from "@/config/env"
+import { uploadFile } from "@/lib/upload"
 import { Checkbox } from "@/components/ui/checkbox"
 
-const uriUpload = env.NEXT_PUBLIC_UPLOAD_URI
-const uploadApiKey = env.NEXT_PUBLIC_UPLOAD_API_KEY
-const MAX_FILE_SIZE_MB = 1
 
 export function FormEditCategory({ dataCategory }) {
 	const queryClient = useQueryClient()
@@ -70,23 +68,6 @@ export function FormEditCategory({ dataCategory }) {
 			await updateMutation.mutateAsync(data)
 		} catch {
 			setIsPending(false)
-		}
-	}
-
-	async function uploadImage(file) {
-		const formData = new FormData()
-		formData.append("file", file)
-		try {
-			const response = await fetch(`${uriUpload}/upload`, {
-				method: "POST",
-				headers: { "x-api-key": uploadApiKey ?? "" },
-				body: formData,
-			})
-			if (!response.ok) throw new Error(`Error: ${response.statusText}`)
-			const data = await response.json()
-			return data?.file?.url ?? ""
-		} catch {
-			return ""
 		}
 	}
 
@@ -250,15 +231,13 @@ export function FormEditCategory({ dataCategory }) {
 																setIsLoadingImage(true)
 																const file = e.target.files?.[0]
 																if (file) {
-																	if (file.size / (1024 * 1024) > MAX_FILE_SIZE_MB) {
-																		setFormError("iconUrl", { type: "manual", message: `Ukuran maksimal ${MAX_FILE_SIZE_MB}MB` })
-																	} else {
+																	
 																		clearErrors("iconUrl")
-																		const url = await uploadImage(file)
+																		const url = await uploadFile(file)
 																		if (url) {
 																			field.onChange(url)
 																			setImagePreview(URL.createObjectURL(file))
-																		}
+																		
 																	}
 																}
 																setIsLoadingImage(false)

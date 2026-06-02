@@ -114,6 +114,19 @@ export async function processWithdrawal(withdrawalId, action, reason = "") {
 		})
 
 		const label = action === "completed" ? "disetujui" : "ditolak"
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id, // Admin
+				storeId: null, // Global context
+				action: action === "completed" ? "APPROVE_WITHDRAWAL" : "REJECT_WITHDRAWAL",
+				entityType: "withdrawal",
+				entityId: withdrawal.id,
+				details: { storeId: withdrawal.storeId, amount: withdrawal.amount, reason }
+			})
+		} catch (e) { console.error(e) }
 		
 		// Kirim email notifikasi penarikan dana
 		try {

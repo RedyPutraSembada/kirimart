@@ -17,7 +17,7 @@
  */
 
 const WS_SERVER_URL = process.env.WS_SERVER_URL || "http://localhost:3001"
-const WS_SECRET = process.env.WS_SECRET || "kirimart-ws-secret-2026"
+const WS_SECRET = process.env.WS_SECRET || "kawanbelanja-ws-secret-2026"
 
 /**
  * Internal: kirim request ke WS Server Jobs API

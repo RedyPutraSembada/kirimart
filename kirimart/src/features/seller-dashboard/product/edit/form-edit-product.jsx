@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { env } from "@/config/env"
+import { uploadFile } from "@/lib/upload"
 import { toast } from "sonner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
@@ -29,9 +30,6 @@ import { updateProduct } from "@/actions/seller-dashboard/product/product.action
 import { statusProduct } from "@/lib/const-data"
 import { generateCartesian, attrKey, uploadFile, OptionValuesInput } from "../shared/variant-helpers"
 
-const uriUpload = env.NEXT_PUBLIC_UPLOAD_URI
-const uploadApiKey = env.NEXT_PUBLIC_UPLOAD_API_KEY
-const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB
 
 export function FormEditProduct({ categories, dataProduct }) {
 	const queryClient = useQueryClient()
@@ -196,17 +194,6 @@ export function FormEditProduct({ categories, dataProduct }) {
 			form.setValue("variants", [], { shouldValidate: false })
 		}
 		form.handleSubmit(onSubmit)()
-	}
-
-	async function uploadImage(file) {
-		const formData = new FormData()
-		formData.append("file", file)
-		try {
-			const r = await fetch(`${uriUpload}/upload`, { method: "POST", headers: { "x-api-key": uploadApiKey ?? "" }, body: formData })
-			if (!r.ok) throw new Error(r.statusText)
-			const d = await r.json()
-			return d?.file?.url ?? ""
-		} catch { return "" }
 	}
 
 	const watchedCategory = form.watch("categoryId")
@@ -556,20 +543,14 @@ export function FormEditProduct({ categories, dataProduct }) {
 																			setIsLoadingImage(true)
 																			const file = e.target.files?.[0]
 																			if (file) {
-																				const fileSizeMB = file.size / (1024 * 1024)
-																				if (fileSizeMB > MAX_FILE_SIZE_MB) {
-																					setFormError("images", {
-																						type: "manual",
-																						message: `Ukuran file tidak boleh lebih dari ${MAX_FILE_SIZE_MB} MB.`,
-																					})
-																				} else {
+																				
 																					clearErrors("images")
-																					const uploadedUrl = await uploadImage(file)
+																					const uploadedUrl = await uploadFile(file)
 																					if (uploadedUrl) {
 																						const newEntry = {
 																							previewUrl: URL.createObjectURL(file), // hanya untuk preview lokal
 																							serverUrl: uploadedUrl,               // URL asli untuk disimpan
-																						}
+																						
 																						const newImages = [...images, newEntry]
 																						setImages(newImages)
 																						field.onChange(newImages.map((img) => img.serverUrl))

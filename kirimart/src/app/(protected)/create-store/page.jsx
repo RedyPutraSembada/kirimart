@@ -1,8 +1,8 @@
 import { CreateStoreForm } from "@/features/create-store/create-store-form"
 
 export const metadata = {
-	title: "Buka Toko | KiriMart",
-	description: "Daftar untuk mulai berjualan di KiriMart.",
+	title: "Buka Toko | Kawan Belanja",
+	description: "Daftar untuk mulai berjualan di Kawan Belanja.",
 }
 
 export default function CreateStorePage() {

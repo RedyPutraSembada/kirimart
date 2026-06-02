@@ -218,7 +218,7 @@ export function CheckoutView() {
     }
     
     // Simpan konfigurasi user ke localStorage untuk dipakai di payment page
-    localStorage.setItem("kirimart_checkout_state", JSON.stringify({
+    localStorage.setItem("kawanbelanja_checkout_state", JSON.stringify({
       selectedShipping,
       notes,
       appliedVouchers
@@ -560,7 +560,7 @@ export function CheckoutView() {
                 </Button>
 
                 <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-                  Dengan menekan tombol di atas, kamu menyetujui <span className="text-primary font-medium">Syarat & Ketentuan</span> KiriMart
+                  Dengan menekan tombol di atas, kamu menyetujui <span className="text-primary font-medium">Syarat & Ketentuan</span> Kawan Belanja
                 </p>
               </CardContent>
             </Card>
