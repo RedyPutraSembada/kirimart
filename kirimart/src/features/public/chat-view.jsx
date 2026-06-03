@@ -544,8 +544,12 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
                         msg._optimistic && "opacity-70"
                       )}>
                         {msg.imageUrl && (
-                          <div className="relative h-48 w-48 max-w-full rounded-lg overflow-hidden">
-                            <Image src={msg.imageUrl} alt="" fill sizes="192px" className="object-cover" />
+                          <div className="relative h-48 w-48 max-w-full rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                            {msg.imageUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+                              <video src={msg.imageUrl} controls className="max-w-full max-h-full object-contain" />
+                            ) : (
+                              <Image src={msg.imageUrl} alt="" fill sizes="192px" className="object-cover" />
+                            )}
                           </div>
                         )}
                         {msg.body && (
@@ -582,7 +586,7 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
               <div className="flex items-center gap-2">
                 <input
                   type="file"
-                  accept="image/png, image/jpeg, image/webp"
+                  accept="image/png, image/jpeg, image/webp, video/mp4, video/webm, video/quicktime"
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleImageUpload}

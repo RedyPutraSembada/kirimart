@@ -76,15 +76,19 @@ export function ProductCard({ product, className }) {
       className
     )}>
       {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-muted/30">
+      <div className="relative aspect-square overflow-hidden bg-black flex items-center justify-center">
         {product.img ? (
-          <Image
-            src={product.img}
-            alt={product.name}
-            fill
-            unoptimized
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-          />
+          product.img.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+            <video src={product.img} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+          ) : (
+            <Image
+              src={product.img}
+              alt={product.name}
+              fill
+              unoptimized
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          )
         ) : (
           <div className="w-full h-full flex items-center justify-center text-4xl text-muted-foreground">
             📦

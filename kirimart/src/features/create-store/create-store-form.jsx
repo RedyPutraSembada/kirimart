@@ -25,6 +25,7 @@ import { uploadFile } from "@/lib/upload"
 import { toast } from "sonner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
+const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || 2
 
 export function CreateStoreForm() {
 	const queryClient = useQueryClient()
@@ -159,13 +160,13 @@ export function CreateStoreForm() {
 												setIsLoadingLogo(true)
 												const file = e.target.files?.[0]
 												if (file) {
-													
-														clearErrors('logo')
-														const uploadedUrl = await uploadFile(file)
-														if (uploadedUrl) {
-															field.onChange(uploadedUrl)
-															setLogoPreview(URL.createObjectURL(file))
-														
+
+													clearErrors('logo')
+													const uploadedUrl = await uploadFile(file)
+													if (uploadedUrl) {
+														field.onChange(uploadedUrl)
+														setLogoPreview(URL.createObjectURL(file))
+
 													}
 												}
 												setIsLoadingLogo(false)
@@ -258,13 +259,13 @@ export function CreateStoreForm() {
 												setIsLoadingBanner(true)
 												const file = e.target.files?.[0]
 												if (file) {
-													
-														clearErrors('banner')
-														const uploadedUrl = await uploadFile(file)
-														if (uploadedUrl) {
-															field.onChange(uploadedUrl)
-															setBannerPreview(URL.createObjectURL(file))
-														
+
+													clearErrors('banner')
+													const uploadedUrl = await uploadFile(file)
+													if (uploadedUrl) {
+														field.onChange(uploadedUrl)
+														setBannerPreview(URL.createObjectURL(file))
+
 													}
 												}
 												setIsLoadingBanner(false)
@@ -324,7 +325,7 @@ export function CreateStoreForm() {
 					<div className="border-t pt-6">
 						<h3 className="text-sm font-semibold mb-1">Informasi Rekening Bank</h3>
 						<p className="text-xs text-muted-foreground mb-4">Wajib diisi. Digunakan untuk pencairan dana penjualan Anda.</p>
-						
+
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							<FormField
 								control={form.control}

@@ -191,7 +191,7 @@ export async function getCheckoutData() {
 					// Alamat asal toko (untuk ongkir Biteship)
 					originAreaId: store.address?.biteshipAreaId || null,
 					originCityId: store.address?.cityId || null,
-					enabledCouriers: store.enabledCouriers || "jne,sicepat,jnt,anteraja",
+					enabledCouriers: store.enabledCouriers || "jne,sicepat,jnt,anteraja,ninja,lion,tiki,pos,grab,gojek",
 					metaPixelId: store.metaPixelId || null,
 					items: [],
 				})
@@ -336,7 +336,7 @@ export async function getShippingRatesForAddress(addressId, storeShippingRequest
 				req.originAreaId,
 				destAddress.biteshipAreaId,
 				req.items,
-				req.enabledCouriers || "jne,sicepat,jnt,anteraja"
+				req.enabledCouriers || "jne,sicepat,jnt,anteraja,ninja,lion,tiki,pos,grab,gojek"
 			)
 			ratesMap[req.storeId] = result.success ? result.data : []
 		}

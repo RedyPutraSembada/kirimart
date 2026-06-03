@@ -580,8 +580,12 @@ export function OrderDetail({ orderId }) {
 							<CardContent className="pt-4 space-y-2">
 								<p className="text-sm">{myComplaint.reason}</p>
 								{myComplaint.evidenceUrl && (
-									<div className="h-20 w-20 rounded-md overflow-hidden border relative">
-										<Image src={myComplaint.evidenceUrl} alt="Bukti" fill unoptimized className="object-cover" />
+									<div className="h-20 w-20 rounded-md overflow-hidden border relative bg-black flex items-center justify-center">
+										{myComplaint.evidenceUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+											<video src={myComplaint.evidenceUrl} controls className="max-w-full max-h-full object-contain" />
+										) : (
+											<Image src={myComplaint.evidenceUrl} alt="Bukti" fill unoptimized className="object-cover" />
+										)}
 									</div>
 								)}
 								{myComplaint.status === 'rejected' && myComplaint.sellerResponse && (
@@ -718,8 +722,12 @@ export function OrderDetail({ orderId }) {
 										<p className="text-xs font-medium">Foto Ulasan <span className="text-muted-foreground">(opsional)</span></p>
 										{review.imageUrl ? (
 											<div className="relative inline-block">
-												<div className="h-20 w-20 rounded-lg overflow-hidden border border-border relative">
-													<Image src={review.imageUrl} alt="Foto ulasan" fill unoptimized className="object-cover" />
+												<div className="h-20 w-20 rounded-lg overflow-hidden border border-border relative bg-black flex items-center justify-center">
+													{review.imageUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+														<video src={review.imageUrl} className="w-full h-full object-cover" />
+													) : (
+														<Image src={review.imageUrl} alt="Foto ulasan" fill unoptimized className="object-cover" />
+													)}
 												</div>
 												<button
 													type="button"
@@ -741,7 +749,7 @@ export function OrderDetail({ orderId }) {
 												</span>
 												<input
 													type="file"
-													accept="image/*"
+													accept="image/png, image/jpeg, image/webp, video/mp4, video/webm, video/quicktime"
 													className="hidden"
 													onChange={(e) => handleReviewImageUpload(e, idx)}
 													disabled={uploadingImageIdx !== null}
@@ -801,8 +809,12 @@ export function OrderDetail({ orderId }) {
 							<Label>Foto Bukti (opsional)</Label>
 							{complaintEvidence ? (
 								<div className="relative inline-block">
-									<div className="h-20 w-20 rounded-lg overflow-hidden border relative">
-										<Image src={complaintEvidence} alt="Bukti" fill unoptimized className="object-cover" />
+									<div className="h-20 w-20 rounded-lg overflow-hidden border relative bg-black flex items-center justify-center">
+										{complaintEvidence.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+											<video src={complaintEvidence} className="w-full h-full object-cover" />
+										) : (
+											<Image src={complaintEvidence} alt="Bukti" fill unoptimized className="object-cover" />
+										)}
 									</div>
 									<button type="button" onClick={() => setComplaintEvidence("")} className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-white flex items-center justify-center">
 										<X className="h-3 w-3" />
@@ -812,7 +824,7 @@ export function OrderDetail({ orderId }) {
 								<label className="flex items-center gap-2 px-3 py-2 rounded-md border border-dashed cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors w-fit">
 									{uploadingEvidence ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
 									<span className="text-xs text-muted-foreground">{uploadingEvidence ? "Mengupload..." : "Upload Foto"}</span>
-									<input type="file" accept="image/*" className="hidden" onChange={handleEvidenceUpload} disabled={uploadingEvidence} />
+									<input type="file" accept="image/png, image/jpeg, image/webp, video/mp4, video/webm, video/quicktime" className="hidden" onChange={handleEvidenceUpload} disabled={uploadingEvidence} />
 								</label>
 							)}
 						</div>

@@ -28,8 +28,9 @@ import Link from "next/link"
 import { createProductSchema } from "@/lib/validations/seller-dashboard/product/product"
 import { updateProduct } from "@/actions/seller-dashboard/product/product.actions"
 import { statusProduct } from "@/lib/const-data"
-import { generateCartesian, attrKey, uploadFile, OptionValuesInput } from "../shared/variant-helpers"
+import { generateCartesian, attrKey, OptionValuesInput } from "../shared/variant-helpers"
 
+const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || 2
 
 export function FormEditProduct({ categories, dataProduct }) {
 	const queryClient = useQueryClient()
@@ -47,12 +48,12 @@ export function FormEditProduct({ categories, dataProduct }) {
 	// ── Variant state ────────────────────────────────────────────────────────
 	const initVariantData = () => {
 		const map = {}
-		;(dataProduct.variants || []).forEach(v => {
-			map[attrKey(v.attributes)] = {
-				price: v.price, originalPrice: v.originalPrice ?? "",
-				stock: v.stock, sku: v.sku ?? "", imageUrl: v.imageUrl ?? "",
-			}
-		})
+			; (dataProduct.variants || []).forEach(v => {
+				map[attrKey(v.attributes)] = {
+					price: v.price, originalPrice: v.originalPrice ?? "",
+					stock: v.stock, sku: v.sku ?? "", imageUrl: v.imageUrl ?? "",
+				}
+			})
 		return map
 	}
 
@@ -110,7 +111,7 @@ export function FormEditProduct({ categories, dataProduct }) {
 			const filtered = new Set([...prev].filter(k => validSet.has(k)))
 			return filtered.size === 0 ? new Set(combos.map(attrKey)) : filtered
 		})
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [JSON.stringify(watchedOptions), hasVariants])
 
 	// ── Sync form.variants ───────────────────────────────────────────────────
@@ -129,7 +130,7 @@ export function FormEditProduct({ categories, dataProduct }) {
 			}
 		})
 		form.setValue("variants", nv, { shouldValidate: false })
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [enabledKeys, allCombinations, hasVariants])
 
 	const updateVariantField = useCallback((combo, fieldName, value) => {
@@ -180,12 +181,29 @@ export function FormEditProduct({ categories, dataProduct }) {
 			const vd = variantDataRef.current, ek = enabledKeysRef.current
 			const fv = allCombinations.filter(c => ek.has(attrKey(c))).map(c => {
 				const k = attrKey(c), s = vd[k] || {}
+
+				let comboImageUrl = s.imageUrl || null
+				if (!comboImageUrl) {
+					const options = form.getValues("options") || []
+					for (let i = 0; i < options.length; i++) {
+						if (options[i].displayType === "image") {
+							const optName = options[i].name
+							const valInCombo = c[optName]
+							const valIdx = options[i].values?.indexOf(valInCombo)
+							if (valIdx !== undefined && valIdx !== -1 && optionValueImages[i]?.[valIdx]) {
+								comboImageUrl = optionValueImages[i][valIdx]
+								break
+							}
+						}
+					}
+				}
+
 				return {
 					attributes: c,
 					price: s.price !== undefined && s.price !== "" ? Number(s.price) : (Number(bp) || 0),
 					originalPrice: s.originalPrice ? Number(s.originalPrice) : null,
 					stock: s.stock !== undefined && s.stock !== "" ? Number(s.stock) : (Number(bs) || 0),
-					sku: s.sku || null, imageUrl: s.imageUrl || null,
+					sku: s.sku || null, imageUrl: comboImageUrl,
 				}
 			})
 			form.setValue("variants", fv, { shouldValidate: false })
@@ -428,6 +446,56 @@ export function FormEditProduct({ categories, dataProduct }) {
 																	}} />
 																</FormControl><FormMessage /></FormItem>
 															)} />
+
+															{/* Preview gambar untuk displayType=image */}
+															{displayType === "image" && form.watch(`options.${index}.values`)?.length > 0 && (
+																<div>
+																	<p className="text-[11px] font-semibold text-muted-foreground mb-2">Preview gambar nilai:</p>
+																	<div className="flex flex-wrap gap-3">
+																		{form.watch(`options.${index}.values`).map((val, valIdx) => {
+																			const imgUrl = optionValueImages[index]?.[valIdx]
+																			return (
+																				<div key={valIdx} className="flex flex-col items-center gap-1">
+																					<label className="cursor-pointer group">
+																						<div className={`relative w-14 h-14 rounded-lg border-2 overflow-hidden flex items-center justify-center transition-all
+																							${imgUrl
+																								? "border-primary/50 shadow-sm"
+																								: "border-dashed border-muted-foreground/30 hover:border-primary/50 bg-muted/20 hover:bg-muted/40"
+																							}`}>
+																							{imgUrl
+																								? <Image src={imgUrl} fill sizes="56px" className="object-cover" alt={val} unoptimized />
+																								: <ImageIcon className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+																							}
+																						</div>
+																						<input
+																							type="file" accept="image/*" className="hidden"
+																							onChange={async (e) => {
+																								const file = e.target.files?.[0]
+																								if (!file) return
+																								const url = await uploadFile(file)
+																								if (url) {
+																									setOptionValueImages(prev => ({
+																										...prev,
+																										[index]: { ...prev[index], [valIdx]: url }
+																									}))
+																									const optName = form.getValues(`options.${index}.name`)
+																									if (optName && val) {
+																										allCombinationsRef.current.forEach(c => {
+																											if (c[optName] === val) updateVariantField(c, "imageUrl", url)
+																										})
+																									}
+																								}
+																								e.target.value = ""
+																							}}
+																						/>
+																					</label>
+																					<span className="text-[10px] text-muted-foreground truncate max-w-[56px] px-1">{val}</span>
+																				</div>
+																			)
+																		})}
+																	</div>
+																</div>
+															)}
 														</div>
 													)
 												})}
@@ -476,9 +544,9 @@ export function FormEditProduct({ categories, dataProduct }) {
 								</Card>
 							)}
 
-							{/* Foto Produk */}
+							{/* Foto/Video Produk */}
 							<Card>
-								<CardHeader><CardTitle>Foto Produk</CardTitle></CardHeader>
+								<CardHeader><CardTitle>Foto & Video Produk</CardTitle></CardHeader>
 								<CardContent>
 									<FormField
 										control={form.control}
@@ -488,39 +556,45 @@ export function FormEditProduct({ categories, dataProduct }) {
 												<FormControl>
 													<div className="space-y-3">
 														<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-															{/* Preview images */}
-															{images.map((img, index) => (
-																<div
-																	key={index}
-																	className="relative aspect-square rounded-lg border bg-muted/50 flex items-center justify-center group overflow-hidden"
-																>
-																	<Image
-																		src={img.previewUrl}
-																		alt={`Preview ${index + 1}`}
-																		fill
-																		sizes="150px"
-																		className="object-cover rounded-lg"
-																		unoptimized
-																	/>
-																	<button
-																		type="button"
-																		onClick={() => {
-																			// Hapus entry dari images state dan sync ke field.value
-																			const newImages = images.filter((_, i) => i !== index)
-																			setImages(newImages)
-																			field.onChange(newImages.map((img) => img.serverUrl))
-																		}}
-																		className="absolute top-1 right-1 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+															{images.map((img, index) => {
+																const isVid = img.previewUrl?.match(/\.(mp4|webm|mov)(\?.*)?$/i) || img.serverUrl?.match(/\.(mp4|webm|mov)(\?.*)?$/i) || img.isVideo;
+																return (
+																	<div
+																		key={index}
+																		className="relative aspect-square rounded-lg border bg-black flex items-center justify-center group overflow-hidden"
 																	>
-																		<X className="h-3 w-3" />
-																	</button>
-																	{index === 0 && (
-																		<span className="absolute bottom-1 left-1 text-[10px] font-medium bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
-																			Utama
-																		</span>
-																	)}
-																</div>
-															))}
+																		{isVid ? (
+																			<video src={img.previewUrl} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+																		) : (
+																			<Image
+																				src={img.previewUrl}
+																				alt={`Preview ${index + 1}`}
+																				fill
+																				sizes="150px"
+																				className="object-cover rounded-lg"
+																				unoptimized
+																			/>
+																		)}
+																		<button
+																			type="button"
+																			onClick={() => {
+																				// Hapus entry dari images state dan sync ke field.value
+																				const newImages = images.filter((_, i) => i !== index)
+																				setImages(newImages)
+																				field.onChange(newImages.map((img) => img.serverUrl))
+																			}}
+																			className="absolute top-1 right-1 z-10 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+																		>
+																			<X className="h-3 w-3" />
+																		</button>
+																		{index === 0 && (
+																			<span className="absolute bottom-1 left-1 z-10 text-[10px] font-medium bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
+																				Utama
+																			</span>
+																		)}
+																	</div>
+																)
+															})}
 
 															{/* Loading state */}
 															{isLoadingImage && (
@@ -536,28 +610,28 @@ export function FormEditProduct({ categories, dataProduct }) {
 																	<span className="text-xs">Tambah</span>
 																	<Input
 																		type="file"
-																		accept="image/png, image/jpeg, image/jpg"
+																		accept="image/png, image/jpeg, image/jpg, video/mp4, video/webm, video/quicktime"
 																		className="hidden"
 																		disabled={isPending}
 																		onChange={async (e) => {
 																			setIsLoadingImage(true)
 																			const file = e.target.files?.[0]
 																			if (file) {
-																				
-																					clearErrors("images")
-																					const uploadedUrl = await uploadFile(file)
-																					if (uploadedUrl) {
-																						const newEntry = {
-																							previewUrl: URL.createObjectURL(file), // hanya untuk preview lokal
-																							serverUrl: uploadedUrl,               // URL asli untuk disimpan
-																						
-																						const newImages = [...images, newEntry]
-																						setImages(newImages)
-																						field.onChange(newImages.map((img) => img.serverUrl))
+																				clearErrors("images")
+																				const uploadedUrl = await uploadFile(file)
+																				if (uploadedUrl) {
+																					const newEntry = {
+																						previewUrl: URL.createObjectURL(file), // hanya untuk preview lokal
+																						serverUrl: uploadedUrl,               // URL asli untuk disimpan
+																						isVideo: file.type.startsWith("video/")
 																					}
+																					const newImages = [...images, newEntry]
+																					setImages(newImages)
+																					field.onChange(newImages.map((img) => img.serverUrl))
 																				}
 																			}
 																			setIsLoadingImage(false)
+																			e.target.value = ""
 																		}}
 																	/>
 																</label>
@@ -573,7 +647,7 @@ export function FormEditProduct({ categories, dataProduct }) {
 										)}
 									/>
 								</CardContent>
-								</Card>
+							</Card>
 						</div>
 
 						{/* Sidebar */}

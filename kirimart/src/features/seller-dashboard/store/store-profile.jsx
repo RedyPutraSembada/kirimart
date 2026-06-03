@@ -40,7 +40,7 @@ export function StoreProfile() {
 			{/* Store Banner + Info Card */}
 			<Card className="overflow-hidden">
 				{/* Banner */}
-				<div 
+				<div
 					className="relative h-40 md:h-52 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center"
 					style={store.bannerUrl ? { backgroundImage: `url(${store.bannerUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
 				>
@@ -329,24 +329,25 @@ function AddressFormWrapper({ store }) {
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Truck } from "lucide-react"
-
-const AVAILABLE_COURIERS = [
-	{ code: "jne", name: "JNE", desc: "Express, Reguler, OKE" },
-	{ code: "sicepat", name: "SiCepat", desc: "Best, Reguler, Cargo" },
-	{ code: "jnt", name: "J&T Express", desc: "EZ, Express" },
-	{ code: "anteraja", name: "AnterAja", desc: "Reguler, Same Day" },
-	{ code: "ninja", name: "Ninja Express", desc: "Standard, Next Day" },
-	{ code: "lion", name: "Lion Parcel", desc: "Reguler, One Pack" },
-	{ code: "tiki", name: "TIKI", desc: "Reguler, ONS, SDS" },
-	{ code: "pos", name: "Pos Indonesia", desc: "Kilat, Express" },
-	{ code: "grab", name: "Grab Express", desc: "Instant, Same Day" },
-	{ code: "gojek", name: "GoSend", desc: "Instant, Same Day" },
-]
+import { useQuery } from "@tanstack/react-query"
+import { getBiteshipCouriers } from "@/actions/public/biteship.actions"
 
 function CourierConfigSection({ store }) {
 	const queryClient = useQueryClient()
 	const currentCouriers = store.enabledCouriers ? store.enabledCouriers.split(",").map(c => c.trim()) : []
 	const [selected, setSelected] = useState(currentCouriers.length > 0 ? currentCouriers : [])
+
+	// Fetch dynamic couriers dari Biteship
+	const { data: couriersResponse, isLoading: isLoadingCouriers } = useQuery({
+		queryKey: ["biteship-couriers"],
+		queryFn: async () => {
+			const res = await getBiteshipCouriers()
+			return res.success ? res.data : []
+		},
+		staleTime: 1000 * 60 * 60 * 24, // cache 24 jam
+	})
+
+	const AVAILABLE_COURIERS = couriersResponse || []
 
 	const saveMutation = useMutation({
 		mutationFn: (couriers) => updateStoreCouriersAction(couriers),
@@ -387,33 +388,39 @@ function CourierConfigSection({ store }) {
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-					{AVAILABLE_COURIERS.map(courier => {
-						const isChecked = selected.includes(courier.code)
-						return (
-							<button
-								key={courier.code}
-								type="button"
-								onClick={() => toggleCourier(courier.code)}
-								className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
-									isChecked
-										? "border-primary bg-primary/5 ring-1 ring-primary/20"
-										: "border-border hover:border-primary/30"
-								}`}
-							>
-								<Checkbox
-									checked={isChecked}
-									onCheckedChange={() => toggleCourier(courier.code)}
-									className="shrink-0"
-								/>
-								<div className="min-w-0">
-									<p className="text-sm font-semibold">{courier.name}</p>
-									<p className="text-[11px] text-muted-foreground">{courier.desc}</p>
-								</div>
-							</button>
-						)
-					})}
-				</div>
+				{isLoadingCouriers ? (
+					<div className="flex items-center justify-center p-8 text-muted-foreground">
+						<Loader2 className="mr-2 h-6 w-6 animate-spin" />
+						Memuat daftar kurir...
+					</div>
+				) : (
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						{AVAILABLE_COURIERS.map(courier => {
+							const isChecked = selected.includes(courier.code)
+							return (
+								<button
+									key={courier.code}
+									type="button"
+									onClick={() => toggleCourier(courier.code)}
+									className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${isChecked
+											? "border-primary bg-primary/5 ring-1 ring-primary/20"
+											: "border-border hover:border-primary/30"
+										}`}
+								>
+									<Checkbox
+										checked={isChecked}
+										onCheckedChange={() => toggleCourier(courier.code)}
+										className="shrink-0"
+									/>
+									<div className="min-w-0">
+										<p className="text-sm font-semibold">{courier.name}</p>
+										<p className="text-[11px] text-muted-foreground">{courier.desc}</p>
+									</div>
+								</button>
+							)
+						})}
+					</div>
+				)}
 
 				{selected.length === 0 && (
 					<div className="p-3 rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/30 dark:border-red-800">
@@ -480,7 +487,7 @@ function StorePixelConfigSection({ store }) {
 					Pengaturan Meta Pixel
 				</CardTitle>
 				<CardDescription>
-					Masukkan ID Meta Pixel (Facebook Pixel) Anda untuk melacak pengunjung, 
+					Masukkan ID Meta Pixel (Facebook Pixel) Anda untuk melacak pengunjung,
 					tambahan keranjang, dan konversi dari toko Anda sendiri.
 				</CardDescription>
 			</CardHeader>

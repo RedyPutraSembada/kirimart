@@ -176,13 +176,15 @@ export function ProductList() {
 													<TableCell className="text-muted-foreground text-center">{i + 1}</TableCell>
 													<TableCell>
 														<div className="flex items-center gap-3">
-															<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted/50">
-																<Image
-																	src={p.images[0].imageUrl}
-																	className="text-muted-foreground"
-																	unoptimized width={100} height={100} 
-																	alt={p.name}
-																	 />
+															<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted/50 overflow-hidden relative">
+																{(() => {
+																	const firstImg = p.images?.[0]?.imageUrl
+																	if (!firstImg) return <ImageIcon className="h-4 w-4 text-muted-foreground" />
+																	if (firstImg.match(/\.(mp4|webm|mov)(\?.*)?$/i)) {
+																		return <video src={firstImg} className="w-full h-full object-cover" muted loop playsInline />
+																	}
+																	return <Image src={firstImg} className="object-cover" unoptimized fill sizes="40px" alt={p.name} />
+																})()}
 															</div>
 															<div className="min-w-0">
 																<p className="font-medium truncate max-w-[200px] lg:max-w-[300px]">{p.name}</p>

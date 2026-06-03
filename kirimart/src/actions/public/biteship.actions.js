@@ -94,7 +94,7 @@ export async function searchBiteshipArea(query) {
  * @param {string} couriers - Kode kurir dipisah koma (misal: "jne,sicepat,jnt")
  * @returns {{ success: boolean, data?: Array<{ id, courier, name, service, price, eta, etaDays }> }}
  */
-export async function getBiteshipRates(originAreaId, destAreaId, items, couriers = "jne,sicepat,jnt,anteraja") {
+export async function getBiteshipRates(originAreaId, destAreaId, items, couriers = "jne,sicepat,jnt,anteraja,ninja,lion,tiki,pos,grab,gojek") {
 	try {
 		if (!originAreaId || !destAreaId) {
 			return { success: false, error: "Alamat asal atau tujuan belum lengkap." }
@@ -273,5 +273,59 @@ export async function cancelBiteshipOrder(biteshipOrderId, reason = "Dibatalkan 
 	} catch (error) {
 		console.error("[cancelBiteshipOrder] Error:", error)
 		return { success: false, error: "Gagal membatalkan pengiriman." }
+	}
+}
+
+// ============================================
+// 5. GET COURIERS (Daftar Kurir)
+// ============================================
+
+/**
+ * Mengambil daftar kurir yang tersedia dari Biteship.
+ * Dikelompokkan berdasarkan courier_code agar mudah ditampilkan di UI (misal: "jne" -> "JNE Reguler, JNE YES").
+ *
+ * @returns {{ success: boolean, data?: Array<{ code, name, desc }> }}
+ */
+export async function getBiteshipCouriers() {
+	try {
+		// Cache 24 jam (86400 detik) karena daftar kurir sangat jarang berubah
+		return await cached("biteship_couriers_grouped", async () => {
+			const result = await biteshipFetch("/v1/couriers", { method: "GET" })
+
+			if (!result || result.error) {
+				console.error("[getBiteshipCouriers] Biteship error:", result?.error)
+				return { success: false, error: "Gagal mengambil daftar kurir." }
+			}
+
+			// Biteship mengembalikan { success: true, object: "courier", couriers: [...] }
+			const couriersList = result.couriers || []
+
+			// Kelompokkan berdasarkan courier_code
+			const grouped = couriersList.reduce((acc, curr) => {
+				const code = curr.courier_code
+				if (!acc[code]) {
+					// Format nama kurir (capitalize first letter/uppercase jika pendek)
+					const name = code.length <= 3 ? code.toUpperCase() : code.charAt(0).toUpperCase() + code.slice(1)
+					acc[code] = {
+						code: code,
+						name: name === "Sicepat" ? "SiCepat" : name === "Jnt" ? "J&T" : name, // special mapping
+						services: [],
+					}
+				}
+				acc[code].services.push(curr.courier_service_name || curr.courier_service_code)
+				return acc
+			}, {})
+
+			const data = Object.values(grouped).map(c => ({
+				code: c.code,
+				name: c.name,
+				desc: c.services.join(", "),
+			}))
+
+			return { success: true, data }
+		}, 86400)
+	} catch (error) {
+		console.error("[getBiteshipCouriers] Error:", error)
+		return { success: false, error: "Gagal mengambil daftar kurir." }
 	}
 }

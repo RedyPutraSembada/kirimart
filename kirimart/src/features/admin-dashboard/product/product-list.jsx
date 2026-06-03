@@ -163,7 +163,11 @@ export function ProductList() {
 													<div className="flex items-center gap-3">
 														{primaryImage ? (
 															<div className="relative h-10 w-10 rounded border overflow-hidden bg-muted shrink-0">
-																<Image src={primaryImage} alt={p.name} fill sizes="40px" className="object-cover" />
+																{primaryImage.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+																	<video src={primaryImage} className="w-full h-full object-cover" muted loop playsInline />
+																) : (
+																	<Image src={primaryImage} alt={p.name} fill sizes="40px" className="object-cover" unoptimized />
+																)}
 															</div>
 														) : (
 															<div className="h-10 w-10 rounded border bg-muted flex items-center justify-center text-muted-foreground">

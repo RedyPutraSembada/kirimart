@@ -37,25 +37,18 @@ export function HeroSection() {
   const banners = [
     {
       id: 1,
-      image: "/images/bannerml.png",
+      image: "/images/sample1.png",
       badge: "GADGET ZONE",
       title: "GADGET IMPIAN,\nCASHBACK 1JT!",
       discount: "CASHBACK HINGGA\n1 JUTA",
     },
     {
       id: 2,
-      image: "/images/bannerml.png",
+      image: "/images/sample2.png",
       badge: "FASHION",
       title: "TAMPIL GAYA\nSETIAP HARI",
       discount: "FASHION HINGGA\n30% OFF",
     },
-    {
-      id: 3,
-      image: "/images/bannerml.png",
-      badge: "SPESIAL",
-      title: "DISKON HINGGA 50%\nPRODUK PILIHAN",
-      discount: "PENAWARAN SPESIAL",
-    }
   ]
 
   return (
@@ -130,21 +123,6 @@ export function HeroSection() {
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-gradient-to-tr from-black/60 via-black/10 to-transparent" />
-
-                      {/* <div className="absolute top-6 right-6 z-10 text-right">
-                        <p className="text-[10px] md:text-xs font-bold bg-white/90 backdrop-blur-sm text-black px-3 py-1.5 rounded-full uppercase tracking-wider shadow-sm">
-                          {banner.badge}
-                        </p>
-                      </div>
-
-                      <div className="absolute bottom-8 left-6 md:left-8 right-6 z-10">
-                        <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight leading-snug whitespace-pre-line drop-shadow-lg mb-4">
-                          {banner.title}
-                        </h3>
-                        <div className="inline-flex flex-col items-center justify-center bg-primary text-primary-foreground font-bold px-4 py-2.5 rounded-2xl shadow-xl shadow-primary/20 border-2 border-white/20 hover:scale-105 transition-transform cursor-pointer">
-                          <span className="text-[10px] uppercase tracking-wider opacity-90 text-center whitespace-pre-line">{banner.discount}</span>
-                        </div>
-                      </div> */}
                     </div>
                   </CarouselItem>
                 ))}
@@ -168,8 +146,8 @@ export function HeroSection() {
                       key={index}
                       onClick={() => api?.scrollTo(index)}
                       className={`transition-all duration-300 rounded-full h-1.5 ${current === index + 1
-                          ? "bg-primary w-6"
-                          : "bg-primary/20 w-1.5 hover:bg-primary/40"
+                        ? "bg-primary w-6"
+                        : "bg-primary/20 w-1.5 hover:bg-primary/40"
                         }`}
                       aria-label={`Go to slide ${index + 1}`}
                     />

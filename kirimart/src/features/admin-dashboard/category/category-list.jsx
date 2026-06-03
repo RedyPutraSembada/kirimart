@@ -95,7 +95,7 @@ export function CategoryList() {
 				</CardHeader>
 				{isLoading && <CardContent><div className="py-10 text-center">Loading...</div></CardContent>}
 				{error && <CardContent><div className="py-10 text-center text-red-500">Error: {error.message}</div></CardContent>}
-				
+
 				{categoriesData && (
 					<CardContent>
 						<div className="rounded-md border">
@@ -123,7 +123,7 @@ export function CategoryList() {
 												<TableCell className="text-center">
 													{cat.iconUrl ? (
 														<div className="relative inline-block h-8 w-8 rounded-md border overflow-hidden shrink-0 align-middle">
-															<Image src={cat.iconUrl} alt={cat.name} fill sizes="32px" className="object-cover" />
+															<Image src={cat.iconUrl} alt={cat.name} fill sizes="32px" className="object-cover" unoptimized />
 														</div>
 													) : (
 														<div className="h-8 w-8 rounded-md bg-muted border flex items-center justify-center inline-block">

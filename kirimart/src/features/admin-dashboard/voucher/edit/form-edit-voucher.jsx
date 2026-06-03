@@ -30,6 +30,7 @@ import { id as localeId } from "date-fns/locale"
 import { env } from "@/config/env"
 import { uploadFile } from "@/lib/upload"
 
+const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || 2
 
 const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 
@@ -385,13 +386,13 @@ export function FormEditVoucher({ dataVoucher }) {
 																			setIsLoadingImage(true)
 																			const file = e.target.files?.[0]
 																			if (file) {
-																				
-																					clearErrors("imageUrl")
-																					const uploadedUrl = await uploadFile(file)
-																					if (uploadedUrl) {
-																						field.onChange(uploadedUrl)
-																						setImagePreview(URL.createObjectURL(file))
-																					
+
+																				clearErrors("imageUrl")
+																				const uploadedUrl = await uploadFile(file)
+																				if (uploadedUrl) {
+																					field.onChange(uploadedUrl)
+																					setImagePreview(URL.createObjectURL(file))
+
 																				}
 																			}
 																			setIsLoadingImage(false)
