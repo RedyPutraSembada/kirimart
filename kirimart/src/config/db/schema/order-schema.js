@@ -13,6 +13,7 @@ export const orders = pgTable("orders", {
 	grandTotal: integer("grand_total").notNull(),
 	platformFee: integer("platform_fee").notNull().default(0), // Komisi platform yang dipotong dari pesanan ini
 	shippingAddressId: integer("shipping_address_id"),
+	paymentMethod: text("payment_method").notNull().default("online"), // "online" (Midtrans) | "cod" (Cash on Delivery)
 	notes: text("notes"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 })

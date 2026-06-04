@@ -94,7 +94,7 @@ export async function searchBiteshipArea(query) {
  * @param {string} couriers - Kode kurir dipisah koma (misal: "jne,sicepat,jnt")
  * @returns {{ success: boolean, data?: Array<{ id, courier, name, service, price, eta, etaDays }> }}
  */
-export async function getBiteshipRates(originAreaId, destAreaId, items, couriers = "jne,sicepat,jnt,anteraja,ninja,lion,tiki,pos,grab,gojek") {
+export async function getBiteshipRates(originAreaId, destAreaId, items, couriers = "jne,sicepat,jnt,anteraja,ninja,lion,tiki,pos,grab,gojek", originCoord = null, destCoord = null) {
 	try {
 		if (!originAreaId || !destAreaId) {
 			return { success: false, error: "Alamat asal atau tujuan belum lengkap." }
@@ -114,7 +114,8 @@ export async function getBiteshipRates(originAreaId, destAreaId, items, couriers
 
 		// Cache key berdasarkan rute + total weight (ongkir sama untuk rute yang sama)
 		const totalWeight = biteshipItems.reduce((sum, i) => sum + i.weight, 0)
-		const cacheKey = `ongkir:${originAreaId}:${destAreaId}:${totalWeight}:${couriers}`
+		const hasCoords = originCoord?.lat && destCoord?.lat ? "c" : "a" // 'c' = coords, 'a' = area only
+		const cacheKey = `ongkir:${originAreaId}:${destAreaId}:${totalWeight}:${couriers}:${hasCoords}`
 
 		// Cache 30 menit — ongkir per rute jarang berubah dalam waktu singkat
 		return await cached(cacheKey, async () => {
@@ -123,6 +124,16 @@ export async function getBiteshipRates(originAreaId, destAreaId, items, couriers
 				destination_area_id: destAreaId,
 				couriers: couriers,
 				items: biteshipItems,
+			}
+
+			// Tambahkan koordinat jika tersedia — WAJIB untuk kurir instan (Grab, Gojek, Lalamove)
+			if (originCoord?.lat && originCoord?.lng) {
+				requestBody.origin_latitude = originCoord.lat
+				requestBody.origin_longitude = originCoord.lng
+			}
+			if (destCoord?.lat && destCoord?.lng) {
+				requestBody.destination_latitude = destCoord.lat
+				requestBody.destination_longitude = destCoord.lng
 			}
 
 			console.log("[getBiteshipRates] Request (cache MISS):", JSON.stringify(requestBody, null, 2))
@@ -152,6 +163,7 @@ export async function getBiteshipRates(originAreaId, destAreaId, items, couriers
 					max: rate.shipment_duration_range.max_day || 0,
 				} : null,
 				collectionMethod: rate.available_collection_method || [],
+				availableForCod: rate.available_for_cash_on_delivery || false,
 			}))
 
 			console.log(`[getBiteshipRates] Found ${pricing.length} rates`)
@@ -213,6 +225,12 @@ export async function createBiteshipOrder(orderData) {
 				length: item.length || 10,
 				width: item.width || 10,
 			})),
+		}
+
+		// COD: Jika ada codAmount, tambahkan parameter COD ke payload
+		if (orderData.codAmount && orderData.codAmount > 0) {
+			payload.destination_cash_on_delivery = orderData.codAmount
+			payload.destination_cash_on_delivery_type = 1 // 1 = COD amount diterima kurir
 		}
 
 		const result = await biteshipFetch("/v1/orders", {
@@ -327,5 +345,50 @@ export async function getBiteshipCouriers() {
 	} catch (error) {
 		console.error("[getBiteshipCouriers] Error:", error)
 		return { success: false, error: "Gagal mengambil daftar kurir." }
+	}
+}
+
+// ============================================
+// 6. RETRIEVE ORDER (Ambil Detail Order Biteship)
+// ============================================
+
+/**
+ * Mengambil detail order dari Biteship secara manual.
+ * Berguna saat webhook gagal/delay, untuk sync status terbaru.
+ *
+ * @param {string} biteshipOrderId - ID order di Biteship
+ * @returns {{ success: boolean, data?: { id, status, courier, waybillId } }}
+ */
+export async function retrieveBiteshipOrder(biteshipOrderId) {
+	try {
+		if (!biteshipOrderId) {
+			return { success: false, error: "ID order Biteship tidak ditemukan." }
+		}
+
+		const result = await biteshipFetch(`/v1/orders/${biteshipOrderId}`, {
+			method: "GET",
+		})
+
+		if (!result || result.error) {
+			console.error("[retrieveBiteshipOrder] Biteship error:", result?.error)
+			return { success: false, error: result?.error || "Gagal mengambil detail order." }
+		}
+
+		return {
+			success: true,
+			data: {
+				id: result.id,
+				status: result.status || "unknown",
+				courierTrackingId: result.courier?.tracking_id || null,
+				courierWaybillId: result.courier?.waybill_id || null,
+				courierCompany: result.courier?.company || null,
+				courierDriverName: result.courier?.driver_name || null,
+				courierDriverPhone: result.courier?.driver_phone || null,
+				price: result.price || null,
+			},
+		}
+	} catch (error) {
+		console.error("[retrieveBiteshipOrder] Error:", error)
+		return { success: false, error: "Gagal mengambil detail order." }
 	}
 }

@@ -105,7 +105,12 @@ export default async function PrintLabelPage({ params }) {
 						<div className="section-title">Pengirim</div>
 						<div className="name">{storeAddress?.recipientName || storeName}</div>
 						<div className="phone">{storeAddress?.recipientPhone || "-"}</div>
-						<div className="address">{storeAddress?.detailAddress || "-"}</div>
+						<div className="address">
+							{storeAddress?.detailAddress || "-"}
+							<br />
+							{storeAddress?.cityName && `${storeAddress.cityName}, `}{storeAddress?.provinceName || ""}
+							{storeAddress?.zipcode && ` ${storeAddress.zipcode}`}
+						</div>
 					</div>
 
 					{/* Penerima */}

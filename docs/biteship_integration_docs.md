@@ -137,3 +137,24 @@ Dalam implementasi, KiriMart harus bersiap menangani kondisi (Edge Cases) beriku
 1. **Lengkapi `store-profile.jsx`:** Pastikan pengaturan kurir tersinkron dengan kurir yang diaktifkan pada Dashboard Biteship KiriMart.
 2. **Endpoint Webhook:** Buat Route Handler di Next.js (misal: `app/api/webhooks/biteship/route.js`) yang menangani POST request dari webhook Biteship untuk mengubah status pesanan otomatis di database (Drizzle).
 3. **Database Schema:** Pastikan tabel pesanan memiliki kolom `biteship_order_id`, `waybill_id`, `courier_driver_info`, dan `shipping_status` yang selaras dengan status Biteship di atas.
+
+---
+
+## 6. Status Implementasi Saat Ini (Hutang Fitur / Missing Implementation)
+
+Berdasarkan audit kode terbaru, *core flow* (Cari Wilayah -> Cek Ongkir -> Buat Order -> Lacak) **sudah lengkap dan bekerja**. Namun, terdapat beberapa fungsi API Biteship yang masih kurang atau belum terhubung dengan sempurna di aplikasi KiriMart:
+
+1. **Pembatalan Pesanan ke Kurir (Cancel Order API) Belum Tersambung**
+   - **Dokumentasi:** `POST /v1/orders/:id/cancel`
+   - **Kondisi Saat Ini:** Fungsi `cancelBiteshipOrder` sudah tersedia di `biteship.actions.js`. Namun di `order.actions.js` (Fungsi `cancelOrder`), saat penjual membatalkan pesanan, sistem KiriMart hanya mengubah status lokal dan memproses refund. Sistem **tidak mengirimkan sinyal pembatalan ke Biteship API**.
+   - **Dampak:** Kurir berisiko tetap datang ke toko untuk menjemput paket walaupun pesanan sudah dibatalkan penjual.
+
+2. **Locations API Belum Digunakan**
+   - **Dokumentasi:** `POST /v1/locations` dan `GET /v1/locations/:id`
+   - **Kondisi Saat Ini:** Sistem KiriMart mengirimkan string alamat pengirim (`origin_address`) secara penuh dan manual setiap kali fungsi `shipOrderViaBiteship` dipanggil.
+   - **Seharusnya:** Alamat toko penjual didaftarkan terlebih dahulu ke Locations API untuk mendapatkan `location_id`. Saat membuat pesanan, sistem cukup mengirimkan `origin_location_id` untuk meningkatkan efisiensi dan keakuratan alamat.
+
+3. **Retrieve Detail Order Biteship API Belum Dibuat**
+   - **Dokumentasi:** `GET /v1/orders/:id`
+   - **Kondisi Saat Ini:** Aplikasi tidak memiliki mekanisme untuk mengambil ulang (*retrieve*) detail pesanan dari API Biteship secara manual.
+   - **Kekurangan:** Jika Webhook dari Biteship mengalami kegagalan/delay jaringan, KiriMart tidak memiliki fungsi *sync* manual untuk menyelaraskan status pesanan dengan server Biteship.

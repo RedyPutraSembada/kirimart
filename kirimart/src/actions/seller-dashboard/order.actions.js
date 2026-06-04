@@ -632,6 +632,7 @@ export async function cancelOrder(orderId, reason = "") {
 			with: {
 				user: true,
 				items: true,
+				shipment: true,
 			}
 		})
 
@@ -639,9 +640,19 @@ export async function cancelOrder(orderId, reason = "") {
 			return { success: false, error: "Pesanan tidak ditemukan." }
 		}
 
-		// Hanya bisa cancel jika status paid (sudah bayar, belum diproses)
-		if (order.status !== "paid") {
-			return { success: false, error: `Pesanan dengan status "${order.status}" tidak bisa dibatalkan. Hanya pesanan yang berstatus "Dibayar" yang bisa dibatalkan.` }
+		// Hanya bisa cancel jika status paid atau processing (belum picked oleh kurir)
+		if (!["paid", "processing"].includes(order.status)) {
+			return { success: false, error: `Pesanan dengan status "${order.status}" tidak bisa dibatalkan. Hanya pesanan yang berstatus "Dibayar" atau "Dikemas" yang bisa dibatalkan.` }
+		}
+
+		// Jika sudah ada order di Biteship, batalkan juga di sana
+		if (order.shipment?.biteshipOrderId) {
+			const { cancelBiteshipOrder } = await import("@/actions/public/biteship.actions")
+			const cancelResult = await cancelBiteshipOrder(order.shipment.biteshipOrderId, reason.trim())
+			if (!cancelResult.success) {
+				console.warn("[cancelOrder] Gagal cancel di Biteship:", cancelResult.error)
+				// Tetap lanjut cancel lokal — mungkin paket sudah di-pick kurir
+			}
 		}
 
 		await db.transaction(async (tx) => {
@@ -934,5 +945,96 @@ export async function confirmReturnReceived(orderId) {
 	} catch (error) {
 		console.error("[confirmReturnReceived]", error)
 		return { success: false, error: "Gagal mengonfirmasi penerimaan barang retur." }
+	}
+}
+
+// ============================================
+// SYNC ORDER WITH BITESHIP (Manual Sync)
+// ============================================
+
+/**
+ * Sinkronisasi status pesanan dari Biteship secara manual.
+ * Berguna saat webhook gagal/delay — seller bisa klik "Sync Status".
+ *
+ * @param {number} orderId
+ * @returns {{ success: boolean, data?: { status, awbNumber }, error?: string }}
+ */
+export async function syncOrderWithBiteship(orderId) {
+	try {
+		const store = await getSellerStore()
+		if (!store) {
+			return { success: false, error: "Toko tidak ditemukan." }
+		}
+
+		const order = await db.query.orders.findFirst({
+			where: and(
+				eq(orders.id, parseInt(orderId)),
+				eq(orders.storeId, store.id)
+			),
+			with: { shipment: true },
+		})
+
+		if (!order) {
+			return { success: false, error: "Pesanan tidak ditemukan." }
+		}
+
+		if (!order.shipment?.biteshipOrderId) {
+			return { success: false, error: "Pesanan ini belum memiliki order di Biteship." }
+		}
+
+		const { retrieveBiteshipOrder } = await import("@/actions/public/biteship.actions")
+		const result = await retrieveBiteshipOrder(order.shipment.biteshipOrderId)
+
+		if (!result.success) {
+			return { success: false, error: result.error || "Gagal mengambil data dari Biteship." }
+		}
+
+		const bsData = result.data
+
+		// Update shipment di database
+		const updateData = {
+			status: bsData.status,
+		}
+		if (bsData.courierWaybillId) {
+			updateData.awbNumber = bsData.courierWaybillId
+		}
+
+		await db.update(shipments)
+			.set(updateData)
+			.where(eq(shipments.id, order.shipment.id))
+
+		// Update order status berdasarkan status Biteship
+		const orderStatusMap = {
+			"confirmed": "shipped",
+			"allocated": "shipped",
+			"picking_up": "shipped",
+			"picked": "shipped",
+			"in_transit": "shipped",
+			"dropping_off": "shipped",
+			"delivered": "shipped", // Tetap shipped — tunggu buyer konfirmasi
+			"rejected": "cancelled",
+			"cancelled": "cancelled",
+		}
+
+		const newOrderStatus = orderStatusMap[bsData.status]
+		if (newOrderStatus && order.status !== newOrderStatus) {
+			await db.update(orders)
+				.set({ status: newOrderStatus })
+				.where(eq(orders.id, order.id))
+		}
+
+		console.log(`[syncOrderWithBiteship] Order #${orderId} synced: ${bsData.status}, AWB: ${bsData.courierWaybillId}`)
+
+		return {
+			success: true,
+			data: {
+				status: bsData.status,
+				awbNumber: bsData.courierWaybillId || order.shipment.awbNumber,
+			},
+			message: `Status berhasil disinkronkan: ${bsData.status}`,
+		}
+	} catch (error) {
+		console.error("[syncOrderWithBiteship]", error)
+		return { success: false, error: "Gagal sinkronisasi status pesanan." }
 	}
 }

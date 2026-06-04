@@ -191,6 +191,10 @@ export async function getCheckoutData() {
 					// Alamat asal toko (untuk ongkir Biteship)
 					originAreaId: store.address?.biteshipAreaId || null,
 					originCityId: store.address?.cityId || null,
+					originLat: store.address?.latitude || null,
+					originLng: store.address?.longitude || null,
+					originCityName: store.address?.cityName || null,
+					originAddress: store.address?.detailAddress || null,
 					enabledCouriers: store.enabledCouriers || "jne,sicepat,jnt,anteraja,ninja,lion,tiki,pos,grab,gojek",
 					metaPixelId: store.metaPixelId || null,
 					items: [],
@@ -263,12 +267,22 @@ export async function getCheckoutData() {
 			let shippingError = null
 
 			if (destAreaId && store.originAreaId) {
+				// Siapkan koordinat untuk kurir instan (Grab, Gojek)
+				const originCoord = store.originLat && store.originLng
+					? { lat: store.originLat, lng: store.originLng }
+					: null
+				const destCoord = selectedAddress?.latitude && selectedAddress?.longitude
+					? { lat: selectedAddress.latitude, lng: selectedAddress.longitude }
+					: null
+
 				// Panggil Biteship Rates API (1 hit = Rp 5 per toko)
 				const ratesResult = await getBiteshipRates(
 					store.originAreaId,
 					destAreaId,
 					store.items,
-					store.enabledCouriers
+					store.enabledCouriers,
+					originCoord,
+					destCoord
 				)
 				if (ratesResult.success) {
 					shipping = ratesResult.data

@@ -335,9 +335,19 @@ export function CheckoutView() {
                       <div className="h-full w-full flex items-center justify-center text-[10px]">🏪</div>
                     )}
                   </div>
-                  <span className="text-sm font-bold">{store.name}</span>
-                  {store.isStar && <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[9px] font-bold px-1.5 py-0 h-4 border-none">Star</Badge>}
-                  <span className="text-[10px] text-muted-foreground">Pesanan {sIdx + 1}</span>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold">{store.name}</span>
+                      {store.isStar && <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[9px] font-bold px-1.5 py-0 h-4 border-none">Star</Badge>}
+                      <span className="text-[10px] text-muted-foreground hidden sm:inline-block">Pesanan {sIdx + 1}</span>
+                    </div>
+                    {store.originCityName && (
+                      <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+                        <MapPin className="w-3 h-3 text-primary/70" />
+                        <span>Dikirim dari <span className="font-medium text-foreground/80">{store.originCityName}</span></span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="px-4 pb-4 space-y-4">
