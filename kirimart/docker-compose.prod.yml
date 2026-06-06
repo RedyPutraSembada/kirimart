@@ -223,7 +223,7 @@ services:
   # ──────────────────────────────────────────
   file-uploader:
     build:
-      context: ../file-uploader
+      context: ../../file-uploader-kawanbelanja
       dockerfile: Dockerfile
     image: kawanbelanja-uploader:latest
     container_name: kawanbelanja-uploader
