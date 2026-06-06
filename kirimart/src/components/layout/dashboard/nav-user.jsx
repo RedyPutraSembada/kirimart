@@ -48,7 +48,7 @@ export function NavUser({
 
 	const name = user?.name ?? ''
 	const email = user?.email ?? ''
-	const image = user?.image ?? '/avatars/shadcn.jpg'
+	const image = user?.image || ''
 	const fallback = getInitials(name)
 	return (
 		<SidebarMenu>

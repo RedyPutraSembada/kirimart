@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -40,61 +41,81 @@ export function StoreProfile() {
 			{/* Store Banner + Info Card */}
 			<Card className="overflow-hidden">
 				{/* Banner */}
-				<div
-					className="relative h-40 md:h-52 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center"
-					style={store.bannerUrl ? { backgroundImage: `url(${store.bannerUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
-				>
+				<div className="relative w-full aspect-[21/9] sm:aspect-[7/2] bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center">
+					{store.bannerUrl && (
+						<Image
+							src={store.bannerUrl}
+							alt={`Banner ${store.name}`}
+							fill
+							className="object-cover"
+							priority
+							sizes="(max-width: 768px) 100vw, 1200px"
+							unoptimized
+						/>
+					)}
 					{!store.bannerUrl && (
-						<div className="text-center text-muted-foreground">
+						<div className="text-center text-muted-foreground z-10">
 							<ImageIcon className="h-10 w-10 mx-auto mb-2 opacity-50" />
 							<p className="text-sm">Banner Toko (1200×300)</p>
 						</div>
 					)}
-					<Button variant="secondary" size="sm" className="absolute top-3 right-3">
+					<Button variant="secondary" size="sm" className="absolute top-3 right-3 z-10">
 						<Pencil className="mr-2 h-3 w-3" />Ubah Banner
 					</Button>
 				</div>
 
 				{/* Store Info Overlay */}
 				<CardContent className="relative pt-0">
-					<div className="flex flex-col sm:flex-row gap-4 -mt-10 sm:-mt-12">
+					<div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
 						{/* Logo */}
-						<div className="relative">
-							<Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-background shadow-lg">
-								{store.logoUrl && <AvatarImage src={store.logoUrl} alt={store.name} />}
-								<AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">
-									{store.name?.charAt(0) || "T"}
-								</AvatarFallback>
-							</Avatar>
-							<button className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:bg-primary/90 transition-colors">
+						<div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-full border-4 border-background shadow-lg bg-background -mt-12 sm:-mt-14 z-10">
+							{store.logoUrl ? (
+								<Image
+									src={store.logoUrl}
+									alt={`Logo ${store.name}`}
+									fill
+									className="object-cover rounded-full"
+									sizes="(max-width: 640px) 96px, 112px"
+									unoptimized
+								/>
+							) : (
+								<div className="w-full h-full rounded-full flex items-center justify-center bg-primary/10 text-primary text-xl sm:text-3xl font-bold">
+									{store.name?.charAt(0)?.toUpperCase()}
+								</div>
+							)}
+							<button className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:bg-primary/90 transition-colors z-20 border-2 border-background">
 								<Pencil className="h-3 w-3" />
 							</button>
 						</div>
 
 						{/* Name & Meta */}
-						<div className="flex-1 pt-2 sm:pt-4">
-							<div className="flex flex-col sm:flex-row sm:items-center gap-2">
-								<h2 className="text-xl font-bold">{store.name}</h2>
-								{store.isVerified && (
-									<Badge variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 w-fit dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950">
-										Terverifikasi
-									</Badge>
-								)}
-							</div>
-							<div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
-								<div className="flex items-center gap-1">
-									<Globe className="h-3.5 w-3.5" />
-									kawanbelanja.com/{store.domainSlug}
-								</div>
-								{store.address?.cityName && (
-									<div className="flex items-center gap-1">
-										<MapPin className="h-3.5 w-3.5" />
-										{store.address.cityName}, {store.address.provinceName}
+						<div className="flex-1 pt-3 sm:pt-4 pb-2">
+							<div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+								<div className="space-y-1.5">
+									<div className="flex items-center gap-2">
+										<h2 className="text-xl sm:text-2xl font-bold">{store.name}</h2>
+										{store.isVerified && (
+											<Badge variant="outline" className="border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950">
+												Terverifikasi
+											</Badge>
+										)}
 									</div>
-								)}
-								<div className="flex items-center gap-1">
-									<Clock className="h-3.5 w-3.5" />
-									{store.openTime || "09:00"} - {store.closeTime || "21:00"}
+									<div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+										<div className="flex items-center gap-1.5">
+											<Globe className="h-4 w-4" />
+											<span>kawanbelanja.com/{store.domainSlug}</span>
+										</div>
+										{store.address?.cityName && (
+											<div className="flex items-center gap-1.5">
+												<MapPin className="h-4 w-4" />
+												<span>{store.address.cityName}, {store.address.provinceName}</span>
+											</div>
+										)}
+										<div className="flex items-center gap-1.5">
+											<Clock className="h-4 w-4" />
+											<span>{store.openTime || "09:00"} - {store.closeTime || "21:00"}</span>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -398,11 +419,10 @@ function CourierConfigSection({ store }) {
 						{AVAILABLE_COURIERS.map(courier => {
 							const isChecked = selected.includes(courier.code)
 							return (
-								<button
+								<div
 									key={courier.code}
-									type="button"
 									onClick={() => toggleCourier(courier.code)}
-									className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${isChecked
+									className={`flex items-center gap-3 p-3 rounded-lg border text-left cursor-pointer transition-all ${isChecked
 											? "border-primary bg-primary/5 ring-1 ring-primary/20"
 											: "border-border hover:border-primary/30"
 										}`}
@@ -410,13 +430,13 @@ function CourierConfigSection({ store }) {
 									<Checkbox
 										checked={isChecked}
 										onCheckedChange={() => toggleCourier(courier.code)}
-										className="shrink-0"
+										className="shrink-0 pointer-events-none"
 									/>
 									<div className="min-w-0">
 										<p className="text-sm font-semibold">{courier.name}</p>
 										<p className="text-[11px] text-muted-foreground">{courier.desc}</p>
 									</div>
-								</button>
+								</div>
 							)
 						})}
 					</div>

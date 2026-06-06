@@ -125,7 +125,7 @@ export function AddressForm({
 		setValue("provinceName", area.provinceName, { shouldValidate: true })
 		setValue("cityName", area.cityName, { shouldValidate: true })
 		setValue("kecamatanName", area.kecamatanName, { shouldValidate: true })
-		setValue("zipcode", area.postalCode, { shouldValidate: true })
+		setValue("zipcode", area.postalCode ? String(area.postalCode) : "", { shouldValidate: true })
 		// Set IDs (for backward compatibility)
 		setValue("provinceId", area.provinceName)
 		setValue("cityId", area.cityName)

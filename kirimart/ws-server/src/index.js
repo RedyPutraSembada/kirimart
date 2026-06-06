@@ -38,11 +38,17 @@ const PORT = process.env.PORT || 3001
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379"
 const WS_SECRET = process.env.WS_SECRET || "kawanbelanja-ws-secret-2026"
 const DATABASE_URL = process.env.DATABASE_URL
-const ALLOWED_ORIGINS = [
-	"http://localhost:3000",
-	"http://localhost:3001",
-	"https://unintermingled-noncoincident-chandler.ngrok-free.app",
-]
+
+// ALLOWED_ORIGINS bisa di-set via env (comma-separated) atau pakai default development
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+	? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+	: [
+		"http://localhost:3000",
+		"http://localhost:3001",
+		"https://kawanbelanja.com",
+		"https://www.kawanbelanja.com",
+		"https://unintermingled-noncoincident-chandler.ngrok-free.app",
+	]
 
 // ============================================
 // INISIALISASI

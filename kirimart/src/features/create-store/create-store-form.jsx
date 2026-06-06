@@ -24,6 +24,7 @@ import { env } from "@/config/env"
 import { uploadFile } from "@/lib/upload"
 import { toast } from "sonner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { AddressForm } from "@/components/shared/address-form"
 
 const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || 2
 
@@ -42,8 +43,18 @@ export function CreateStoreForm() {
 		defaultValues: {
 			name: "",
 			domainSlug: "",
-			province: "",
-			city: "",
+			recipientName: "",
+			recipientPhone: "",
+			label: "Toko",
+			biteshipAreaId: "",
+			provinceName: "",
+			cityName: "",
+			kecamatanName: "",
+			provinceId: "",
+			cityId: "",
+			kecamatanId: "",
+			kelurahanId: "",
+			zipcode: "",
 			detailAddress: "",
 			logo: "",
 			banner: "",
@@ -86,8 +97,13 @@ export function CreateStoreForm() {
 	return (
 		<div className="w-full max-w-2xl mx-auto p-6 bg-card rounded-xl border shadow-sm">
 			<div className="mb-8 text-center">
-				<div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-					<StoreIcon className="w-6 h-6 text-primary" />
+				<div className="mx-auto relative w-20 h-20 mb-4 drop-shadow-md">
+					<Image 
+						src="/images/kawanbelanja.png" 
+						alt="Logo Kawan Belanja" 
+						fill
+						className="object-contain"
+					/>
 				</div>
 				<h2 className="text-2xl font-bold">Buka Toko Anda</h2>
 				<p className="text-muted-foreground mt-2">
@@ -372,60 +388,16 @@ export function CreateStoreForm() {
 						/>
 					</div>
 
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-						<FormField
-							control={form.control}
-							name="province"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Provinsi Asal</FormLabel>
-									<FormControl>
-										<Input placeholder="Jawa Barat" {...field} disabled={isPending} />
-									</FormControl>
-									<FormDescription>
-										*Akan diubah ke dropdown RajaOngkir nanti
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						<FormField
-							control={form.control}
-							name="city"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Kota Asal</FormLabel>
-									<FormControl>
-										<Input placeholder="Bandung" {...field} disabled={isPending} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
+					<div className="border-t pt-6">
+						<h3 className="text-sm font-semibold mb-1">Informasi Alamat Toko</h3>
+						<p className="text-xs text-muted-foreground mb-4">Tentukan lokasi toko Anda untuk keperluan penjemputan barang.</p>
+						
+						<AddressForm 
+							title="Alamat Penjemputan (Toko)" 
+							description="Alamat ini digunakan oleh kurir untuk mengambil paket dari toko Anda dan menghitung ongkos kirim."
+							showLabel={false}
 						/>
 					</div>
-
-					<FormField
-						control={form.control}
-						name="detailAddress"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Alamat Lengkap Toko</FormLabel>
-								<FormControl>
-									<Textarea
-										placeholder="Jl. Merdeka No. 123, RT 01/RW 02..."
-										className="resize-none"
-										{...field}
-										disabled={isPending}
-									/>
-								</FormControl>
-								<FormDescription>
-									Alamat ini akan digunakan oleh kurir saat menjemput (pickup) pesanan.
-								</FormDescription>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
 
 					<Button type="submit" className="w-full" disabled={isPending}>
 						{isPending ? (

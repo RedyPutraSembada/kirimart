@@ -32,8 +32,11 @@ export async function createStore(formData) {
 			}
 		}
 
-		const { name, domainSlug, province, city, detailAddress, logo, banner, description, bankName, bankAccountNumber, bankAccountHolder } =
-			validatedFields.data
+		const { 
+			name, domainSlug, detailAddress, logo, banner, description, bankName, bankAccountNumber, bankAccountHolder,
+			recipientName, recipientPhone, label, biteshipAreaId, provinceName, cityName, kecamatanName,
+			provinceId, cityId, kecamatanId, kelurahanId, zipcode, latitude, longitude
+		} = validatedFields.data
 
 		// 3. Cek apakah domain_slug sudah dipakai orang lain
 		const existingStore = await db.query.stores.findFirst({
@@ -54,14 +57,26 @@ export async function createStore(formData) {
 				.insert(addresses)
 				.values({
 					userId: session.user.id,
-					provinceId: province, // Nanti diubah jadi ID RajaOngkir
-					cityId: city, // Nanti diubah jadi ID RajaOngkir
-					detailAddress: detailAddress,
+					label: label || "Toko",
+					biteshipAreaId,
+					provinceId,
+					provinceName,
+					cityId,
+					cityName,
+					kecamatanId,
+					kecamatanName,
+					kelurahanId,
+					zipcode,
+					detailAddress,
+					recipientName,
+					recipientPhone,
+					latitude,
+					longitude,
 				})
 				.returning({ id: addresses.id })
 
 			// B. Insert Store
-			await tx.insert(stores).values({
+			const [newStore] = await tx.insert(stores).values({
 				userId: session.user.id,
 				addressId: newAddress.id,
 				name: name,
@@ -72,7 +87,10 @@ export async function createStore(formData) {
 				bankName: bankName,
 				bankAccountNumber: bankAccountNumber,
 				bankAccountHolder: bankAccountHolder,
-			})
+			}).returning({ id: stores.id })
+
+			// Update Address with the new Store ID
+			await tx.update(addresses).set({ storeId: newStore.id }).where(eq(addresses.id, newAddress.id))
 
 			// C. Update Role User menjadi Seller (Gunakan Better Auth API jika ada, atau update manual)
 			// Karena Better Auth punya tabel user sendiri, kita bisa mengupdate langsung menggunakan Drizzle

@@ -127,10 +127,19 @@ export function UserProfile() {
 													onChange={async (e) => {
 														const file = e.target.files?.[0]
 														if (file) {
-															
-																toast.error("Gagal mengunggah foto.")
-															
-															setIsLoadingImage(false)
+															setIsLoadingImage(true)
+															try {
+																const uploadedUrl = await uploadFile(file)
+																if (uploadedUrl) {
+																	field.onChange(uploadedUrl)
+																} else {
+																	toast.error("Gagal mengunggah foto.")
+																}
+															} catch (error) {
+																toast.error("Terjadi kesalahan saat mengunggah foto.")
+															} finally {
+																setIsLoadingImage(false)
+															}
 														}
 													}}
 												/>

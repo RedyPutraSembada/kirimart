@@ -399,7 +399,7 @@ export function Navbar() {
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2 text-primary font-semibold">
-                        <Link href="/seller-registration"><Store className="h-3.5 w-3.5" /> Buka Toko</Link>
+                        <Link href="/create-store"><Store className="h-3.5 w-3.5" /> Buka Toko</Link>
                       </DropdownMenuItem>
                     </>
                   )}

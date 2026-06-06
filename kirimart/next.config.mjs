@@ -8,6 +8,9 @@ const withSerwist = withSerwistInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Standalone output untuk Docker production build
+  // Menghasilkan .next/standalone dengan server.js + minimal node_modules
+  output: 'standalone',
   allowedDevOrigins: [
     'unintermingled-noncoincident-chandler.ngrok-free.app',
   ],

@@ -39,11 +39,12 @@ function StoreInfoCard({ store, isLoading }) {
 			<Card className="overflow-hidden">
 				<div className="h-40 md:h-52 bg-muted animate-pulse" />
 				<CardContent className="pt-0">
-					<div className="flex items-center gap-4 -mt-12">
-						<Skeleton className="h-24 w-24 rounded-full border-4 border-background" />
-						<div className="space-y-2 pt-4">
-							<Skeleton className="h-5 w-40" />
-							<Skeleton className="h-4 w-56" />
+					<div className="flex gap-4">
+						<Skeleton className="h-24 w-24 sm:h-28 sm:w-28 rounded-full border-4 border-background -mt-12 sm:-mt-14" />
+						<div className="space-y-2 pt-4 flex-1">
+							<Skeleton className="h-6 w-48" />
+							<Skeleton className="h-4 w-64" />
+							<Skeleton className="h-4 w-full max-w-lg mt-2" />
 						</div>
 					</div>
 				</CardContent>
@@ -56,7 +57,7 @@ function StoreInfoCard({ store, isLoading }) {
 	return (
 		<Card className="overflow-hidden">
 			{/* Banner */}
-			<div className="relative h-40 md:h-52">
+			<div className="relative w-full aspect-[21/9] sm:aspect-[7/2]">
 				{store.bannerUrl ? (
 					<Image
 						src={store.bannerUrl}
@@ -74,53 +75,59 @@ function StoreInfoCard({ store, isLoading }) {
 
 			{/* Store Info */}
 			<CardContent className="pt-0">
-				<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 -mt-12">
-					<div className="relative h-24 w-24 shrink-0 rounded-full border-4 border-background shadow-lg overflow-hidden bg-background">
+				<div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+					<div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-full border-4 border-background shadow-lg overflow-hidden bg-background -mt-12 sm:-mt-14 z-10">
 						{store.logoUrl ? (
 							<Image
 								src={store.logoUrl}
 								alt={`Logo ${store.name}`}
 								fill
 								className="object-cover"
-								sizes="80px"
+								sizes="(max-width: 640px) 96px, 112px"
 								unoptimized
 							/>
 						) : (
-							<div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary text-xl font-bold">
+							<div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary text-xl sm:text-3xl font-bold">
 								{store.name?.charAt(0)?.toUpperCase()}
 							</div>
 						)}
 					</div>
 
-					<div className="flex-1 pt-2 sm:pt-4">
-						<div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
-							<h2 className="text-lg font-bold">{store.name}</h2>
-							<Badge variant="outline" className={`w-fit text-xs ${
-								store.status === 'active'
-									? 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950'
-									: 'border-red-300 text-red-700 bg-red-50 dark:border-red-700 dark:text-red-400 dark:bg-red-950'
-							}`}>
-								{store.status === 'active' ? 'Aktif' : store.status === 'banned' ? 'Ditangguhkan' : 'Nonaktif'}
-							</Badge>
-						</div>
-						<div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
-							<div className="flex items-center gap-1">
-								<Globe className="h-3.5 w-3.5" />
-								kawanbelanja.com/{store.domainSlug}
-							</div>
-							{store.address?.cityName && (
-								<div className="flex items-center gap-1">
-									<MapPin className="h-3.5 w-3.5" />
-									{store.address.cityName}, {store.address.provinceName}
+					<div className="flex-1 pt-3 sm:pt-4 pb-2">
+						<div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+							<div className="space-y-1.5">
+								<div className="flex items-center gap-2">
+									<h2 className="text-xl sm:text-2xl font-bold">{store.name}</h2>
+									<Badge variant="outline" className={`w-fit text-xs ${
+										store.status === 'active'
+											? 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950'
+											: 'border-red-300 text-red-700 bg-red-50 dark:border-red-700 dark:text-red-400 dark:bg-red-950'
+									}`}>
+										{store.status === 'active' ? 'Aktif' : store.status === 'banned' ? 'Ditangguhkan' : 'Nonaktif'}
+									</Badge>
 								</div>
-							)}
-							<div className="flex items-center gap-1">
-								<Clock className="h-3.5 w-3.5" />
-								{store.openTime || "09:00"} - {store.closeTime || "21:00"}
+								<div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+									<div className="flex items-center gap-1.5">
+										<Globe className="h-4 w-4" />
+										<span>kawanbelanja.com/{store.domainSlug}</span>
+									</div>
+									{store.address?.cityName && (
+										<div className="flex items-center gap-1.5">
+											<MapPin className="h-4 w-4" />
+											<span>{store.address.cityName}, {store.address.provinceName}</span>
+										</div>
+									)}
+									<div className="flex items-center gap-1.5">
+										<Clock className="h-4 w-4" />
+										<span>{store.openTime || "09:00"} - {store.closeTime || "21:00"}</span>
+									</div>
+								</div>
 							</div>
 						</div>
 						{store.description && (
-							<p className="text-sm text-muted-foreground mt-2 line-clamp-2">{store.description}</p>
+							<p className="text-sm text-muted-foreground mt-4 line-clamp-2 max-w-3xl leading-relaxed">
+								{store.description}
+							</p>
 						)}
 					</div>
 				</div>

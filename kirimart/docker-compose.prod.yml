@@ -1,0 +1,296 @@
+# ============================================
+# KawanBelanja — Production Docker Compose
+# ============================================
+#
+# Menjalankan SEMUA service dalam Docker:
+#   1. Nginx Proxy Manager  → Reverse proxy + SSL (UI di :81)
+#   2. PostgreSQL 16         → Database utama
+#   3. Redis 7               → Cache, Queue, Pub/Sub
+#   4. Next.js App           → Frontend + API
+#   5. WS Server             → WebSocket + BullMQ
+#   6. File Uploader         → Upload & serve media
+#
+# ============================================
+#
+# STRUKTUR DIRECTORY DI SERVER:
+#
+#   /home/deploy/kawanbelanja/
+#   ├── kirimart/                   ← git clone (repo ini)
+#   │   ├── Dockerfile              ← Next.js
+#   │   ├── docker-compose.prod.yml ← file ini
+#   │   ├── .env.production         ← environment production
+#   │   └── ws-server/Dockerfile    ← WS Server
+#   └── file-uploader/              ← git clone (repo uploader)
+#       └── Dockerfile              ← File Uploader
+#
+# ============================================
+#
+# PERINTAH:
+#
+#   # Pertama kali (build semua image + start):
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+#   # Start tanpa rebuild:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+#   # Stop semua:
+#   docker compose -f docker-compose.prod.yml down
+#
+#   # Lihat log:
+#   docker compose -f docker-compose.prod.yml logs -f nextjs
+#
+#   # Jalankan migrasi database:
+#   docker compose -f docker-compose.prod.yml --profile tools run --rm migrate
+#
+#   # Rebuild satu service:
+#   docker compose -f docker-compose.prod.yml up --build -d nextjs
+#
+#   # Lihat resource usage:
+#   docker stats
+#
+# ============================================
+
+services:
+  # ──────────────────────────────────────────
+  # 1. NGINX PROXY MANAGER
+  #    Reverse proxy + Auto SSL + Web UI
+  #    Admin UI: http://IP_VPS:81
+  #    Default login: admin@example.com / changeme
+  # ──────────────────────────────────────────
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: kirimart-npm
+    restart: unless-stopped
+    ports:
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS
+      - "81:81"      # Admin UI
+    volumes:
+      - npm-data:/data
+      - npm-letsencrypt:/etc/letsencrypt
+    networks:
+      - kirimart-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:81"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ──────────────────────────────────────────
+  # 2. POSTGRESQL 16
+  #    Database utama KawanBelanja
+  # ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: kirimart-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PG_DATABASE:-kirimart}
+      POSTGRES_USER: ${PG_USER:-kirimart}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?PG_PASSWORD harus diisi di .env.production}
+      # Tuning untuk VPS 4GB RAM
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    command: >
+      postgres
+        -c shared_buffers=256MB
+        -c effective_cache_size=1GB
+        -c work_mem=4MB
+        -c maintenance_work_mem=64MB
+        -c max_connections=50
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c wal_buffers=8MB
+        -c checkpoint_completion_target=0.9
+        -c log_min_duration_statement=1000
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-kirimart} -d ${PG_DATABASE:-kirimart}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - kirimart-net
+
+  # ──────────────────────────────────────────
+  # 3. REDIS 7
+  #    Cache, BullMQ Queue, Socket.IO Adapter
+  # ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: kirimart-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+        --appendonly yes
+        --maxmemory 200mb
+        --maxmemory-policy allkeys-lru
+        --tcp-backlog 511
+        --save 60 1000
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - kirimart-net
+
+  # ──────────────────────────────────────────
+  # 4. NEXT.JS APP (Production)
+  #    Frontend + API + Server Actions
+  # ──────────────────────────────────────────
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kawanbelanja-app:latest
+    container_name: kirimart-app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      # Override: gunakan hostname Docker internal (bukan localhost)
+      - DATABASE_URL=postgres://${PG_USER:-kirimart}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE:-kirimart}
+      - REDIS_URL=redis://redis:6379
+      - WS_SERVER_URL=http://ws-server:3001
+      - BETTER_AUTH_URL=https://${DOMAIN:-kawanbelanja.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+    networks:
+      - kirimart-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ──────────────────────────────────────────
+  # 5. WEBSOCKET SERVER
+  #    Socket.IO + BullMQ Workers
+  # ──────────────────────────────────────────
+  ws-server:
+    build:
+      context: ./ws-server
+      dockerfile: Dockerfile
+    image: kawanbelanja-ws:latest
+    container_name: kirimart-ws
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgres://${PG_USER:-kirimart}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE:-kirimart}
+      - WS_SECRET=${WS_SECRET}
+      - ALLOWED_ORIGINS=https://${DOMAIN:-kawanbelanja.com}
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - kirimart-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ──────────────────────────────────────────
+  # 6. FILE UPLOADER
+  #    Upload & serve media (gambar/video produk)
+  # ──────────────────────────────────────────
+  file-uploader:
+    build:
+      context: ../file-uploader
+      dockerfile: Dockerfile
+    image: kawanbelanja-uploader:latest
+    container_name: kirimart-uploader
+    restart: unless-stopped
+    environment:
+      - PORT=4004
+      - APP_URI=https://upload.${DOMAIN:-kawanbelanja.com}
+      - UPLOAD_URI=https://upload.${DOMAIN:-kawanbelanja.com}
+      - ALLOWED_ORIGINS=https://${DOMAIN:-kawanbelanja.com}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-50}
+      - UPLOAD_API_KEY=${UPLOAD_API_KEY}
+      - RATE_LIMIT_MAX=25
+      - RATE_LIMIT_WINDOW_MINUTES=1
+    volumes:
+      - upload-data:/app/public
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - kirimart-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ──────────────────────────────────────────
+  # TOOL: DATABASE MIGRATION
+  # Dijalankan manual: docker compose --profile tools run --rm migrate
+  # ──────────────────────────────────────────
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: kirimart-migrate
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgres://${PG_USER:-kirimart}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE:-kirimart}
+    command: npx drizzle-kit push
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - tools
+    networks:
+      - kirimart-net
+
+# ──────────────────────────────────────────
+# VOLUMES — Data Persisten
+# ──────────────────────────────────────────
+volumes:
+  pg-data:
+    driver: local
+  redis-data:
+    driver: local
+  npm-data:
+    driver: local
+  npm-letsencrypt:
+    driver: local
+  upload-data:
+    driver: local
+
+# ──────────────────────────────────────────
+# NETWORK — Semua service terhubung di sini
+# ──────────────────────────────────────────
+networks:
+  kirimart-net:
+    driver: bridge
