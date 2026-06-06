@@ -1,5 +1,5 @@
 /**
- * BullMQ Background Job Worker — KiriMart
+ * BullMQ Background Job Worker — Kawan Belanja
  *
  * Menjalankan scheduled jobs yang dijadwalkan dari Next.js:
  *
@@ -39,8 +39,9 @@ const redisConnection = parseRedisUrl(REDIS_URL)
 // QUEUES
 // ============================================
 
-export const orderQueue = new Queue("kirimart-orders", { connection: redisConnection })
-export const paymentQueue = new Queue("kirimart-payments", { connection: redisConnection })
+export const orderQueue = new Queue("kawanbelanja-orders", { connection: redisConnection })
+export const paymentQueue = new Queue("kawanbelanja-payments", { connection: redisConnection })
+export const scoringQueue = new Queue("kawanbelanja-scoring", { connection: redisConnection })
 
 // ============================================
 // DATABASE POOL (terpisah dari auth pool)
@@ -95,6 +96,10 @@ async function processAutoComplete(job) {
 
 		if (order.status !== "shipped") {
 			console.log(`[JOB] Order #${orderId} status is "${order.status}", not "shipped". Skipping.`)
+			// Jika status "complained", pesanan sedang dikomplain → jangan auto-complete
+			if (order.status === "complained") {
+				console.log(`[JOB] Order #${orderId} is under complaint. Will not auto-complete.`)
+			}
 			await client.query("ROLLBACK")
 			return { skipped: true, reason: `status_${order.status}` }
 		}
@@ -231,7 +236,7 @@ export function initWorkers() {
 	console.log("[WORKER] Starting BullMQ workers...")
 
 	// Worker untuk order queue
-	const orderWorker = new Worker("kirimart-orders", async (job) => {
+	const orderWorker = new Worker("kawanbelanja-orders", async (job) => {
 		switch (job.name) {
 			case "auto-complete":
 				return await processAutoComplete(job)
@@ -252,7 +257,7 @@ export function initWorkers() {
 	})
 
 	// Worker untuk payment queue
-	const paymentWorker = new Worker("kirimart-payments", async (job) => {
+	const paymentWorker = new Worker("kawanbelanja-payments", async (job) => {
 		switch (job.name) {
 			case "expire-payment":
 				return await processExpirePayment(job)
@@ -272,9 +277,37 @@ export function initWorkers() {
 		console.error(`[WORKER] ❌ Payment job "${job.name}" failed:`, err.message)
 	})
 
-	console.log("[WORKER] ✅ BullMQ workers started (orders + payments)")
+	// Worker untuk scoring queue
+	const scoringWorker = new Worker("kawanbelanja-scoring", async (job) => {
+		switch (job.name) {
+			case "recalculate-scores":
+				const { recalculateAllScores } = await import("./score-calculator.js")
+				return await recalculateAllScores(getJobPool())
+			default:
+				console.warn(`[WORKER] Unknown scoring job: ${job.name}`)
+		}
+	}, {
+		connection: redisConnection,
+		concurrency: 1,
+	})
 
-	return { orderWorker, paymentWorker }
+	scoringWorker.on("completed", (job, result) => {
+		console.log(`[WORKER] ✅ Scoring job "${job.name}" completed:`, result)
+	})
+
+	scoringWorker.on("failed", (job, err) => {
+		console.error(`[WORKER] ❌ Scoring job "${job.name}" failed:`, err.message)
+	})
+
+	// Jadwalkan recalculation tiap 6 jam otomatis jika belum ada
+	scoringQueue.add("recalculate-scores", {}, {
+		repeat: { pattern: "0 */6 * * *" },
+		jobId: "fair-rank-scheduler"
+	}).then(() => console.log("[QUEUE] Scheduled recurring Fair Rank calculation (every 6 hours)"));
+
+	console.log("[WORKER] ✅ BullMQ workers started (orders + payments + scoring)")
+
+	return { orderWorker, paymentWorker, scoringWorker }
 }
 
 // ============================================
@@ -330,7 +363,9 @@ export async function cancelExpirePayment(paymentId) {
 export async function closeWorkers(workers) {
 	if (workers?.orderWorker) await workers.orderWorker.close()
 	if (workers?.paymentWorker) await workers.paymentWorker.close()
+	if (workers?.scoringWorker) await workers.scoringWorker.close()
 	await orderQueue.close()
 	await paymentQueue.close()
+	await scoringQueue.close()
 	if (jobPool) await jobPool.end()
 }

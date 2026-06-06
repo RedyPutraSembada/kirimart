@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 
 export function Footer() {
   return (
@@ -6,8 +7,8 @@ export function Footer() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-8">
         <div className="md:col-span-5 space-y-6">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="h-8 w-8 rounded-lg overflow-hidden bg-white/20 dark:bg-white/5 p-1 border border-white/20 dark:border-white/10 backdrop-blur-md">
-              <img src="/images/kawanbelanja.png" alt="Logo" className="h-full w-full object-contain" />
+            <div className="h-8 w-8 rounded-lg overflow-hidden bg-white/20 dark:bg-white/5 p-1 border border-white/20 dark:border-white/10 backdrop-blur-md relative">
+              <Image src="/images/kawanbelanja.png" alt="Logo" fill sizes="32px" className="object-contain" />
             </div>
             <div className="flex items-center gap-0">
               <span className="text-2xl font-black tracking-tighter text-white">kawan</span>

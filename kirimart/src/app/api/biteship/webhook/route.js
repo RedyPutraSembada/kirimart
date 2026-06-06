@@ -143,6 +143,15 @@ export async function POST(request) {
 						if (status === "delivered") {
 							const { scheduleAutoComplete } = await import("@/lib/jobs")
 							await scheduleAutoComplete(order.id)
+
+							// === COD: Jika pembayaran COD, tandai sebagai paid saat delivered ===
+							if (order.paymentMethod === "cod") {
+								const { payments } = await import("@/config/db/schema")
+								await db.update(payments)
+									.set({ status: "paid", paidAt: new Date() })
+									.where(eq(payments.orderId, order.id))
+								console.log(`[BITESHIP WEBHOOK] COD Order #${order.id} marked as paid (delivered)`)
+							}
 						}
 						
 						// === EMAIL NOTIFICATIONS ===

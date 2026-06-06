@@ -466,7 +466,7 @@ export function CartView() {
             </Card>
             <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
               <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
-              <span>Transaksi dilindungi proteksi pembeli KiriMart</span>
+              <span>Transaksi dilindungi proteksi pembeli Kawan Belanja</span>
             </div>
           </div>
         </div>

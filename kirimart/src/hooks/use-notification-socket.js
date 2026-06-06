@@ -108,17 +108,25 @@ export function useNotificationSocket(sessionToken, { storeId = null, onNotifica
 			return { ...old, data: [notif, ...old.data] }
 		})
 
-		// 3. Delayed refetch sebagai backup
-		setTimeout(() => {
-			queryClient.invalidateQueries({ queryKey: ["notif-unread-count"] })
-			queryClient.invalidateQueries({ queryKey: ["my-notifications"] })
-		}, 2000)
-
-		// 3.5 Invalidate order-related caches agar halaman pesanan juga real-time
+		// 3. Delayed refetch sebagai backup (menghindari race condition dengan DB commit)
 		const orderRelatedTypes = [
 			"new_order", "payment_success", "order_processing",
 			"order_shipped", "order_delivered", "order_status_changed",
 		]
+		
+		setTimeout(() => {
+			queryClient.invalidateQueries({ queryKey: ["notif-unread-count"] })
+			queryClient.invalidateQueries({ queryKey: ["my-notifications"] })
+			
+			if (orderRelatedTypes.includes(notif.type)) {
+				queryClient.invalidateQueries({ queryKey: ["my-transactions"] })
+				queryClient.invalidateQueries({ queryKey: ["seller-orders"] })
+				queryClient.invalidateQueries({ queryKey: ["tracking"] })
+				queryClient.invalidateQueries({ queryKey: ["order-detail"] })
+			}
+		}, 1500)
+
+		// 3.5 Invalidate segera untuk order-related caches agar terasa cepat (optimistic)
 		if (orderRelatedTypes.includes(notif.type)) {
 			queryClient.invalidateQueries({ queryKey: ["my-transactions"] })
 			queryClient.invalidateQueries({ queryKey: ["seller-orders"] })
@@ -128,7 +136,7 @@ export function useNotificationSocket(sessionToken, { storeId = null, onNotifica
 
 		// 4. Broadcast ke komponen lain (misal navbar di halaman beda)
 		try {
-			const channel = new BroadcastChannel("kirimart-notif")
+			const channel = new BroadcastChannel("kawanbelanja-notif")
 			channel.postMessage({ type: "new-notification", notif })
 			channel.close()
 		} catch { /* BroadcastChannel not supported */ }

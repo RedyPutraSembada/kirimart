@@ -7,7 +7,7 @@
  * 3. Jika session valid dan belum expired → return data user
  * 4. Jika tidak valid → throw error (koneksi ditolak)
  *
- * Tabel "session" dibuat otomatis oleh Better Auth di database KiriMart.
+ * Tabel "session" dibuat otomatis oleh Better Auth di database Kawan Belanja.
  * Struktur: id, userId, token, expiresAt, ...
  */
 

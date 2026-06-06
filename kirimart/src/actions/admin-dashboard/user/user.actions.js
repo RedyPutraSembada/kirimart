@@ -129,6 +129,19 @@ export async function banUserAction(userId, data) {
 			banExpires: parsed.data.banExpires || null,
 		}).where(eq(user.id, userId))
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id, // Admin
+				storeId: null,
+				action: "BAN_USER",
+				entityType: "user",
+				entityId: userId,
+				details: { reason: parsed.data.banReason }
+			})
+		} catch (e) { console.error(e) }
+
 		return { success: true }
 	} catch (error) {
 		console.error("banUser error", error)
@@ -151,6 +164,19 @@ export async function unbanUserAction(userId) {
 			banReason: null,
 			banExpires: null,
 		}).where(eq(user.id, userId))
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id, // Admin
+				storeId: null,
+				action: "UNBAN_USER",
+				entityType: "user",
+				entityId: userId,
+				details: {}
+			})
+		} catch (e) { console.error(e) }
 
 		return { success: true }
 	} catch (error) {
@@ -175,6 +201,19 @@ export async function deleteUserAction(userId) {
 
 		// Hapus permanen
 		await db.delete(user).where(eq(user.id, userId))
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id, // Admin
+				storeId: null,
+				action: "DELETE_USER",
+				entityType: "user",
+				entityId: userId,
+				details: {}
+			})
+		} catch (e) { console.error(e) }
 
 		return { success: true }
 	} catch (error) {

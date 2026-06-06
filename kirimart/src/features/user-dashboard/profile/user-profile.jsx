@@ -15,12 +15,11 @@ import { Save, Loader2, Camera, User as UserIcon, Lock, Eye, EyeOff } from "luci
 import { authClient } from "@/lib/auth-client"
 import { updateProfileSchema } from "@/lib/validations/user-dashboard/profile"
 import { env } from "@/config/env"
+import { uploadFile } from "@/lib/upload"
 import { toast } from "sonner"
 import { updateProfileAction } from "@/actions/user-dashboard/profile.actions"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-const uriUpload = env.NEXT_PUBLIC_UPLOAD_URI
-const uploadApiKey = env.NEXT_PUBLIC_UPLOAD_API_KEY
 const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || 2
 
 export function UserProfile() {
@@ -69,24 +68,6 @@ export function UserProfile() {
 			})
 		}
 	}, [user, form])
-
-	async function uploadImage(file) {
-		const formData = new FormData()
-		formData.append("file", file)
-		try {
-			const response = await fetch(`${uriUpload}/upload`, {
-				method: "POST",
-				headers: { "x-api-key": uploadApiKey ?? "" },
-				body: formData,
-			})
-			if (!response.ok) throw new Error(`Error: ${response.statusText}`)
-			const data = await response.json()
-			return data?.file?.url ?? ""
-		} catch (error) {
-			console.error("Upload error:", error)
-			return ""
-		}
-	}
 
 	const onSubmit = async (values) => {
 		await updateMutation.mutateAsync(values)
@@ -146,20 +127,19 @@ export function UserProfile() {
 													onChange={async (e) => {
 														const file = e.target.files?.[0]
 														if (file) {
-															const fileSizeMB = file.size / (1024 * 1024)
-															if (fileSizeMB > MAX_FILE_SIZE_MB) {
-																toast.error(`Ukuran file maksimal ${MAX_FILE_SIZE_MB}MB`)
-																return
-															}
 															setIsLoadingImage(true)
-															const url = await uploadImage(file)
-															if (url) {
-																field.onChange(url)
-																toast.success("Foto berhasil diunggah!")
-															} else {
-																toast.error("Gagal mengunggah foto.")
+															try {
+																const uploadedUrl = await uploadFile(file)
+																if (uploadedUrl) {
+																	field.onChange(uploadedUrl)
+																} else {
+																	toast.error("Gagal mengunggah foto.")
+																}
+															} catch (error) {
+																toast.error("Terjadi kesalahan saat mengunggah foto.")
+															} finally {
+																setIsLoadingImage(false)
 															}
-															setIsLoadingImage(false)
 														}
 													}}
 												/>

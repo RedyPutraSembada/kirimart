@@ -22,7 +22,7 @@ export async function getMyStore() {
             with: {
                 address: true,
                 products: {
-                    columns: { id: true, name: true, soldCount: true },
+                    columns: { id: true, name: true, soldCount: true, visibilityScore: true },
                 },
             }
         });
@@ -204,9 +204,22 @@ export async function updateStoreProfile(data) {
             })
             .where(eq(stores.id, myStore.id))
 
-        return { success: true, message: "Profil toko berhasil diperbarui!" }
+        		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id,
+				storeId: myStore.id,
+				action: "UPDATE_STORE_INFO",
+				entityType: "store",
+				entityId: myStore.id,
+				details: { name: data.name.trim(), domainSlug: data.domainSlug.trim() }
+			})
+		} catch (e) { console.error(e) }
+
+		return { success: true, message: "Profil toko berhasil diperbarui!" }
     } catch (error) {
         console.error("Error updating store profile:", error)
         return { success: false, error: "Gagal menyimpan profil toko." }
     }
-}
+}

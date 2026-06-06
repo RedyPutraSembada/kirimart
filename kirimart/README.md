@@ -18,7 +18,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Dokumentasi Kawan Belanja
+
+Berikut adalah dokumen-dokumen penting terkait fitur dan panduan aplikasi:
+
+- 🗺️ **[Roadmap & Feature Tracker](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/docs/roadmap-feature-tracker.md)** — Status fitur dan roadmap pengembangan.
+- 🛡️ **[Panduan Keamanan (Security Hardening)](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/docs/security-guide.md)** — Menjelaskan library keamanan seperti `isomorphic-dompurify` (XSS) dan `ioredis` (Rate Limit).
+- 📱 **[Panduan PWA](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/docs/pwa-implementation-guide.md)** — Panduan instalasi aplikasi via Progressive Web App.
+- 💬 **[Websocket & Redis Setup](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/docs/websocket-redis-docker.md)** — Dokumentasi fitur real-time (Chat, Notifikasi).
+- 🏆 **[Sistem Peringkat Toko (Fair Rank)](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/docs/fair-rank-system.md)** — Algoritma perhitungan skor toko.
+- 📧 **[Sistem Notifikasi](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/docs/notification-system.md)** — Konsep trigger notifikasi aplikasi.
+- ⚙️ **[Auto-Complete Cron Job](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/docs/auto-complete-cron-job.md)** — Penjelasan job otomatis selesaikan pesanan menggunakan BullMQ.
+
+---
 
 ## Learn More
 

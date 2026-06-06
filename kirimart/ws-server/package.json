@@ -1,7 +1,7 @@
 {
-  "name": "kirimart-ws-server",
+  "name": "kawanbelanja-ws-server",
   "version": "1.0.0",
-  "description": "WebSocket microservice for KiriMart real-time features (chat, notifications, tracking)",
+  "description": "WebSocket microservice for Kawan Belanja real-time features (chat, notifications, tracking)",
   "main": "src/index.js",
   "type": "module",
   "scripts": {

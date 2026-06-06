@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
 	Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
@@ -21,11 +22,9 @@ import { categorySchema } from "@/lib/validations/admin-dashboard/category/categ
 import { updateCategory } from "@/actions/admin-dashboard/category/category.actions"
 import { useGetAllCategoriesForDropdown } from "@/app/data/admin-dashboard/category/category-data"
 import { env } from "@/config/env"
+import { uploadFile } from "@/lib/upload"
 import { Checkbox } from "@/components/ui/checkbox"
 
-const uriUpload = env.NEXT_PUBLIC_UPLOAD_URI
-const uploadApiKey = env.NEXT_PUBLIC_UPLOAD_API_KEY
-const MAX_FILE_SIZE_MB = 1
 
 export function FormEditCategory({ dataCategory }) {
 	const queryClient = useQueryClient()
@@ -69,23 +68,6 @@ export function FormEditCategory({ dataCategory }) {
 			await updateMutation.mutateAsync(data)
 		} catch {
 			setIsPending(false)
-		}
-	}
-
-	async function uploadImage(file) {
-		const formData = new FormData()
-		formData.append("file", file)
-		try {
-			const response = await fetch(`${uriUpload}/upload`, {
-				method: "POST",
-				headers: { "x-api-key": uploadApiKey ?? "" },
-				body: formData,
-			})
-			if (!response.ok) throw new Error(`Error: ${response.statusText}`)
-			const data = await response.json()
-			return data?.file?.url ?? ""
-		} catch {
-			return ""
 		}
 	}
 
@@ -225,7 +207,7 @@ export function FormEditCategory({ dataCategory }) {
 											<div className="flex items-center gap-4">
 												{imagePreview ? (
 													<div className="relative h-16 w-16 rounded-md border overflow-hidden bg-muted">
-														<img src={imagePreview} alt="Preview icon" className="w-full h-full object-cover" />
+														<Image src={imagePreview} alt="Preview icon" fill sizes="64px" className="object-cover" unoptimized />
 														<button
 															type="button"
 															onClick={() => {
@@ -249,15 +231,13 @@ export function FormEditCategory({ dataCategory }) {
 																setIsLoadingImage(true)
 																const file = e.target.files?.[0]
 																if (file) {
-																	if (file.size / (1024 * 1024) > MAX_FILE_SIZE_MB) {
-																		setFormError("iconUrl", { type: "manual", message: `Ukuran maksimal ${MAX_FILE_SIZE_MB}MB` })
-																	} else {
+																	
 																		clearErrors("iconUrl")
-																		const url = await uploadImage(file)
+																		const url = await uploadFile(file)
 																		if (url) {
 																			field.onChange(url)
 																			setImagePreview(URL.createObjectURL(file))
-																		}
+																		
 																	}
 																}
 																setIsLoadingImage(false)

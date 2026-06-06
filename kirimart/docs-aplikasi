@@ -1,0 +1,526 @@
+# 📖 Deep Dive: Aplikasi KawanBelanja (KiriMart)
+
+> **Analisis menyeluruh** arsitektur, integrasi Docker, alur data, dan cara menjalankan aplikasi.
+
+---
+
+## 1. Gambaran Umum Arsitektur
+
+Aplikasi **KawanBelanja** adalah **marketplace e-commerce** yang terdiri dari **4 komponen utama** yang berjalan secara terpisah namun terintegrasi:
+
+```mermaid
+graph TB
+    subgraph "HOST MACHINE (Windows)"
+        NEXTJS["🖥️ Next.js 16<br/>Port 3000<br/><i>bun dev</i>"]
+        PGDB["🐘 PostgreSQL<br/>Port 5432<br/>Database: kirimart"]
+        NGROK["🌐 Ngrok Tunnel<br/>Port 3000 → Public URL"]
+        UPLOADER["📂 File Uploader<br/>Port 4004<br/><i>npm start</i>"]
+    end
+
+    subgraph "DOCKER CONTAINERS"
+        REDIS["🔴 Redis 7 Alpine<br/>Port 6379<br/>Container: kirimart-redis"]
+        WS["⚡ WS Server<br/>Port 3001<br/>Container: kirimart-ws"]
+    end
+
+    subgraph "EXTERNAL SERVICES"
+        MIDTRANS["💳 Midtrans<br/>Payment Gateway"]
+        BITESHIP["🚚 Biteship<br/>Shipping API"]
+        RESEND["📧 Resend<br/>Email Service"]
+        GOOGLE["🔐 Google OAuth"]
+    end
+
+    NEXTJS -->|"Drizzle ORM"| PGDB
+    NEXTJS -->|"POST /emit (REST)"| WS
+    NEXTJS -->|"POST /jobs/schedule (REST)"| WS
+    NEXTJS -->|"ioredis Cache"| REDIS
+    WS -->|"Redis Adapter + BullMQ"| REDIS
+    WS -->|"pg Pool (Auth + Jobs)"| PGDB
+    NGROK -->|"Proxy HTTP"| NEXTJS
+
+    MIDTRANS -->|"Webhook via Ngrok"| NEXTJS
+    BITESHIP -->|"Webhook via Ngrok"| NEXTJS
+    NEXTJS -->|"API Call"| MIDTRANS
+    NEXTJS -->|"API Call"| BITESHIP
+    NEXTJS -->|"Send Email"| RESEND
+    NEXTJS -->|"OAuth"| GOOGLE
+
+    Browser["🌐 Browser"] -->|"HTTP/HTTPS"| NEXTJS
+    Browser -->|"WebSocket (Socket.IO)"| WS
+```
+
+---
+
+## 2. Komponen Sistem — Detail Lengkap
+
+### 2.1. Next.js 16 App (Port 3000)
+
+| Aspek | Detail |
+|-------|--------|
+| **Framework** | Next.js 16.2.4 (App Router) |
+| **Runtime** | Bun (development) |
+| **Database ORM** | Drizzle ORM + node-postgres |
+| **Auth** | Better Auth (email/password + Google OAuth + Email OTP) |
+| **Styling** | TailwindCSS v4 + shadcn/ui (Radix) |
+| **State** | TanStack React Query v5 |
+| **PWA** | Serwist (Service Worker) |
+| **Validasi** | Zod v4 + t3-oss/env-nextjs |
+
+**Struktur Routing:**
+
+```
+src/app/
+├── (auth)/              → Sign-in, Sign-up
+├── (public)/            → Homepage, Katalog, Product Detail, Cart, Checkout, Chat, Store
+├── (protected)/         → Create Store, Seller Registration, User Dashboard
+├── admin-dashboard/     → Admin panel
+├── seller-dashboard/    → Seller panel
+├── api/
+│   ├── auth/[...all]/   → Better Auth API routes
+│   ├── midtrans/        → Payment webhooks (notification, pay-account, recurring)
+│   └── biteship/webhook → Shipping status webhooks
+└── data/                → Data fetching utilities
+```
+
+**Server Actions** (di `src/actions/`):
+
+```
+actions/
+├── admin-dashboard/     → Admin operations
+├── kiriminaja/          → (Legacy) shipping integration
+├── protected/           → Store creation, seller registration
+├── public/              → Notification creation, public queries
+├── seller-dashboard/    → Seller order management
+└── user-dashboard/      → User order management
+```
+
+**Library Kunci** (`src/lib/`):
+
+| File | Fungsi |
+|------|--------|
+| [auth.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/auth.js) | Konfigurasi Better Auth (email, Google, OTP, roles) |
+| [midtrans.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/midtrans.js) | Snap API, Core API, signature verification |
+| [ws-emit.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/ws-emit.js) | Helper mengirim event ke WS Server via REST |
+| [jobs.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/jobs.js) | Helper menjadwalkan background jobs via WS Server |
+| [redis.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/redis.js) | Redis client singleton untuk caching |
+| [cache.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/cache.js) | Cache layer menggunakan Redis |
+| [rate-limit.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/rate-limit.js) | Rate limiter berbasis Redis |
+| [sanitize.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/sanitize.js) | XSS protection (DOMPurify) |
+| [platform-fee.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/platform-fee.js) | Kalkulasi fee platform |
+| [pg-fee.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/lib/pg-fee.js) | Kalkulasi fee payment gateway |
+| [proxy.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/proxy.js) | Route protection (pengganti middleware Next.js 16) |
+
+---
+
+### 2.2. WebSocket Server — Docker Container (Port 3001)
+
+> Container: `kirimart-ws` | Image: `kirimart-ws-server` (Node.js 22 Alpine, ~60MB)
+
+**Entry point:** [ws-server/src/index.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/src/index.js)
+
+**Fungsi utama:**
+
+1. **Socket.IO WebSocket Server** — koneksi real-time dari browser
+2. **Express REST API** — endpoint `/emit` dan `/jobs/schedule` untuk Next.js
+3. **Redis Adapter** — scaling multi-instance 
+4. **BullMQ Workers** — background job processor
+
+**Namespace WebSocket:**
+
+| Namespace | File | Fungsi |
+|-----------|------|--------|
+| `/chat` | [chat.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/src/namespaces/chat.js) | Real-time chat (join room, send message, typing indicator) |
+| `/notifications` | [notifications.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/src/namespaces/notifications.js) | Push notifications (new-order, order-status, dll) |
+
+**REST Endpoints:**
+
+| Endpoint | File | Fungsi |
+|----------|------|--------|
+| `POST /emit` | [emit.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/src/api/emit.js) | Next.js → WS broadcast ke browser |
+| `POST /jobs/schedule` | [jobs.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/src/api/jobs.js) | Jadwalkan background job (BullMQ) |
+| `GET /jobs/stats` | [jobs.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/src/api/jobs.js) | Status antrian jobs |
+| `GET /health` | [index.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/src/index.js) | Docker healthcheck |
+
+**Autentikasi WS:**
+- Setiap koneksi WebSocket harus mengirim `sessionToken` via `socket.handshake.auth`
+- WS Server memverifikasi token dengan query langsung ke tabel `session` di PostgreSQL
+- Koneksi ditolak jika token tidak valid atau expired
+- Menggunakan `host.docker.internal` untuk akses PostgreSQL di Windows host dari dalam container
+
+**BullMQ Workers** ([worker.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/src/jobs/worker.js)):
+
+| Queue | Job | Delay | Fungsi |
+|-------|-----|-------|--------|
+| `kawanbelanja-orders` | `auto-complete` | 7 hari | Auto-complete order + tambah saldo seller |
+| `kawanbelanja-payments` | `expire-payment` | 24 jam | Cancel order & restore stok jika belum bayar |
+| `kawanbelanja-scoring` | `recalculate-scores` | Cron setiap 6 jam | Hitung ulang visibility score (Fair Rank) |
+
+---
+
+### 2.3. Redis — Docker Container (Port 6379)
+
+> Container: `kirimart-redis` | Image: `redis:7-alpine`
+
+**Digunakan untuk:**
+
+1. **Socket.IO Redis Adapter** — sinkronisasi event antar WS instances
+2. **BullMQ Queue Backend** — menyimpan delayed/scheduled jobs 
+3. **Cache Layer** — caching query results dari Next.js (via `src/lib/cache.js`)
+4. **Rate Limiting** — throttle request API (via `src/lib/rate-limit.js`)
+
+**Konfigurasi:**
+- Persistence: `appendonly yes` (data tidak hilang saat restart)
+- Volume: `redis-data` (Docker named volume)
+- Healthcheck: `redis-cli ping` setiap 10 detik
+
+---
+
+### 2.4. PostgreSQL (Port 5432) — Host Machine
+
+> **TIDAK** di Docker. Berjalan langsung di Windows.
+
+**Database:** `kirimart` | **User:** `postgres` | **Password:** `root`
+
+**28 tabel schema** ([schema directory](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/config/db/schema)):
+
+| Grup | Tabel |
+|------|-------|
+| **Auth** | `user`, `session`, `account`, `verification` |
+| **Store** | `stores`, `store_metrics`, `store_followers` |
+| **Product** | `products`, `product_images`, `categories` |
+| **Order** | `orders`, `order_items`, `payments`, `shipments` |
+| **Communication** | `conversations`, `messages`, `notifications` |
+| **Commerce** | `carts`, `cart_items`, `wishlists`, `vouchers` |
+| **Admin** | `platform_settings`, `withdrawals`, `refunds`, `complaints` |
+| **Analytics** | `reviews`, `score_logs`, `activity_logs` |
+
+---
+
+## 3. Docker Compose — Detail Integrasi
+
+File: [docker-compose.yml](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/docker-compose.yml)
+
+```mermaid
+graph LR
+    subgraph "Docker Network (bridge)"
+        REDIS["kirimart-redis<br/>redis:7-alpine<br/>:6379"]
+        WS["kirimart-ws<br/>node:22-alpine<br/>:3001"]
+    end
+
+    WS -->|"redis://redis:6379"| REDIS
+    WS -->|"host.docker.internal:5432"| PG["PostgreSQL<br/>(Host Windows)"]
+
+    NEXTJS["Next.js<br/>(Host Windows)"] -->|"localhost:6379"| REDIS
+    NEXTJS -->|"localhost:3001"| WS
+    NEXTJS -->|"localhost:5432"| PG
+```
+
+> [!IMPORTANT]
+> **Perbedaan penting koneksi di dalam Docker vs Host:**
+> - **WS Server (di Docker)** mengakses PostgreSQL via `host.docker.internal:5432`
+> - **WS Server (di Docker)** mengakses Redis via `redis:6379` (Docker service name)
+> - **Next.js (di Host)** mengakses semua via `localhost` (6379, 3001, 5432)
+
+**Startup order:**
+1. `redis` start dulu → healthcheck `redis-cli ping`
+2. `ws-server` start **setelah** Redis healthy (depends_on + condition)
+3. Next.js di-start **manual** dari host (`bun dev`)
+
+**Dockerfile WS Server** ([Dockerfile](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/Dockerfile)):
+- Multi-stage build (deps → runner)
+- Production-only dependencies (`npm install --omit=dev`)
+- Image final ~60MB
+- Healthcheck: `wget http://localhost:3001/health` setiap 30 detik
+
+---
+
+## 4. Alur Data End-to-End
+
+### 4.1. Alur Pembayaran (Midtrans)
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant N as Next.js
+    participant M as Midtrans
+    participant WS as WS Server
+    participant R as Redis/BullMQ
+    participant DB as PostgreSQL
+
+    B->>N: Checkout (Server Action)
+    N->>DB: Create Order + Payment (status: pending)
+    N->>M: Create Snap Token / Core API Charge
+    M-->>N: Token + Payment URL
+    N->>WS: POST /jobs/schedule (expire-payment, 24h)
+    WS->>R: Add delayed job to queue
+    N-->>B: Redirect ke payment page
+
+    B->>M: User bayar
+    M->>N: Webhook POST /api/midtrans/notification
+    N->>N: Verify signature SHA512
+    N->>DB: Update payment.status = 'paid', order.status = 'processing'
+    N->>WS: POST /jobs/schedule (cancel-expire-payment)
+    WS->>R: Remove delayed job
+    N->>DB: Create notification record
+    N->>WS: POST /emit (notifications, store:X, new-order)
+    WS-->>B: Socket.IO → Toast + Sound + Badge update
+```
+
+### 4.2. Alur Pengiriman (Biteship)
+
+```mermaid
+sequenceDiagram
+    participant Courier as Biteship/Kurir
+    participant N as Next.js
+    participant DB as PostgreSQL
+    participant WS as WS Server
+    participant R as Redis/BullMQ
+    participant B as Browser (Buyer)
+
+    Courier->>N: Webhook POST /api/biteship/webhook
+    N->>N: Verify x-biteship-signature
+    N->>DB: Update shipment.status & order.status
+    N->>DB: Create notification record
+    N->>WS: POST /emit (notification → user:buyerId)
+    WS-->>B: Socket.IO → Real-time update
+
+    alt Status = "delivered"
+        N->>WS: POST /jobs/schedule (auto-complete, 7 hari)
+        WS->>R: Add delayed job
+        Note over R: Setelah 7 hari...
+        R->>WS: BullMQ Worker processes job
+        WS->>DB: order.status = 'completed' + tambah saldo seller + update soldCount
+    end
+```
+
+### 4.3. Alur Chat Real-Time
+
+```mermaid
+sequenceDiagram
+    participant A as User A (Browser)
+    participant WS as WS Server
+    participant B as User B (Browser)
+    participant N as Next.js
+    participant DB as PostgreSQL
+
+    A->>WS: socket.emit("join-conversation", {id: 1})
+    B->>WS: socket.emit("join-conversation", {id: 1})
+
+    A->>WS: socket.emit("send-message", {convId: 1, message: ...})
+    WS-->>B: socket.emit("new-message", {...}) [broadcast ke room]
+    
+    A->>N: Server Action: saveMessage() [simpan ke DB]
+    N->>DB: INSERT INTO messages (...)
+    
+    A->>WS: socket.emit("typing", {convId: 1, isTyping: true})
+    WS-->>B: socket.emit("user-typing", {...})
+```
+
+> [!NOTE]
+> Chat menggunakan pola **"optimistic relay"**:
+> - WS Server hanya sebagai **relay/pemancar** — broadcast pesan ke room
+> - **Penyimpanan data** dilakukan oleh client melalui Next.js Server Action
+> - Ini memisahkan tanggung jawab: WS = speed, Next.js = persistence
+
+### 4.4. Alur Notifikasi Real-Time
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant NP as NotificationProvider
+    participant WS as WS Server
+    participant N as Next.js
+
+    B->>NP: Mount (layout level)
+    NP->>NP: Extract session token dari cookie
+    NP->>WS: Connect /notifications (auth: sessionToken)
+    WS->>WS: Verify session via PostgreSQL
+    WS->>WS: Auto-join room user:{userId}
+
+    Note over N: Event terjadi (webhook, action)
+    N->>WS: POST /emit (notifications, user:X, "notification", data)
+    WS-->>NP: socket.on("notification", data)
+    NP->>NP: Update React Query cache (unread count + list)
+    NP->>NP: Toast + Sound + BroadcastChannel
+    NP->>NP: Invalidate related queries (orders, tracking)
+```
+
+---
+
+## 5. Fair Rank System (Scoring Algorithm)
+
+File: [score-calculator.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/ws-server/src/jobs/score-calculator.js)
+
+Berjalan sebagai **cron job BullMQ setiap 6 jam** di WS Server.
+
+**Formula Score:**
+
+| Komponen | Max | Detail |
+|----------|-----|--------|
+| **Product Quality** | 40 | Rating (15) + Review count (10) + Sold count (10) + Discount (5) |
+| **Store Reputation** | 40 | Rating (15) + Verified (10) + Reviews (10) + Complaint penalty (-5) |
+| **Activity Bonus** | 20 | Active voucher (5) + Profile completeness (5) + Fresh product (5) |
+| **Freshness Boost** | 30 | Produk baru < 7 hari mendapat boost linear |
+| **Randomizer** | 10 | Hash-based pseudo-random per 6 jam (anti-monopoli) |
+| **Total** | ~140 | Skor disimpan di `products.visibility_score` |
+
+Setelah kalkulasi, Redis cache `cache:products:*` di-invalidate.
+
+---
+
+## 6. Keamanan & Proteksi
+
+### Route Protection ([proxy.js](file:///c:/Putra/Ngoding%20AntiGravity/set-ecomerce/kirimart/src/proxy.js))
+
+| Rule | Route | Aksi |
+|------|-------|------|
+| Closed routes | (configurable) | Redirect ke `/` |
+| Auth routes | `/sign-in`, `/sign-up` | Redirect ke `/` jika sudah login |
+| Admin routes | `/admin-dashboard/*` | Harus login + role = `admin` |
+| Seller routes | `/seller-dashboard/*` | Harus login + role = `seller` |
+| Protected routes | `/create-store/*` | Harus login (any role) |
+
+### Inter-Service Security
+
+| Komunikasi | Mekanisme |
+|------------|-----------|
+| Next.js → WS Server | Header `x-ws-secret` (shared secret) |
+| Browser → WS Server | Session token verification via PostgreSQL |
+| Midtrans → Next.js | SHA512 signature verification |
+| Biteship → Next.js | Custom header signature |
+| Next.js → Midtrans | HTTP Basic Auth (Base64 encoded Server Key) |
+
+---
+
+## 7. Cara Menjalankan Aplikasi — Step by Step
+
+### Prasyarat
+- **Node.js** 22+ 
+- **Bun** (package manager & runtime)
+- **Docker Desktop** (untuk Redis & WS Server)
+- **PostgreSQL** terinstall di Windows (port 5432)
+- **Ngrok** (untuk expose webhook ke internet)
+
+### Step 1: Start PostgreSQL
+```bash
+# Pastikan PostgreSQL service berjalan di Windows
+# Database: kirimart, User: postgres, Password: root
+```
+
+### Step 2: Start Docker Containers (Redis + WS Server)
+```bash
+cd c:\Putra\Ngoding AntiGravity\set-ecomerce\kirimart
+
+# Pertama kali (build image WS Server):
+docker compose up --build -d
+
+# Selanjutnya (tanpa rebuild):
+docker compose up -d
+
+# Cek status:
+docker compose ps
+# Expected: kirimart-redis (healthy), kirimart-ws (healthy)
+```
+
+### Step 3: Start File Uploader Service
+```bash
+cd c:\Putra\Ngoding\MyFundAction-V2-New\file-uploader
+npm start
+# Berjalan di port 4004
+```
+
+### Step 4: Start Next.js Development Server
+```bash
+cd c:\Putra\Ngoding AntiGravity\set-ecomerce\kirimart
+bun dev
+# Berjalan di port 3000
+# Menggunakan --webpack flag (bukan turbopack)
+```
+
+### Step 5: Start Ngrok Tunnel (untuk webhook)
+```bash
+ngrok http --domain=unintermingled-noncoincident-chandler.ngrok-free.app 3000
+# Mengexpose localhost:3000 ke URL publik
+# Webhook Midtrans & Biteship mengarah ke URL ini
+```
+
+### Status Saat Ini (Running)
+
+| Service | Port | Status | Command |
+|---------|------|--------|---------|
+| Next.js | 3000 | ✅ Running | `bun dev` |
+| WS Server | 3001 | ✅ Healthy | Docker container |
+| Redis | 6379 | ✅ Healthy | Docker container |
+| PostgreSQL | 5432 | ✅ Running | Windows service |
+| File Uploader | 4004 | ✅ Running | `npm start` |
+| Ngrok | - | ✅ Running | ngrok tunnel |
+
+---
+
+## 8. Database Management Commands
+
+```bash
+# Push schema ke database
+bun run db:push
+
+# Generate migration
+bun run db:generate
+
+# Apply migration
+bun run db:migrate
+
+# Open Drizzle Studio (visual DB editor)
+bun run db:studio
+```
+
+---
+
+## 9. Ringkasan Integrasi Pihak Ketiga
+
+| Service | Tipe | Env Variables | Penggunaan |
+|---------|------|---------------|------------|
+| **Midtrans** | Payment Gateway | `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY` | Snap API, Core API, webhook |
+| **Biteship** | Shipping | `BITESHIP_API_KEY`, `BITESHIP_WEBHOOK_SECRET` | Tarif ongkir, tracking, webhook |
+| **Resend** | Email | `RESEND_API_KEY` | Verifikasi email, OTP, notif order |
+| **Google OAuth** | Auth | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Login via Google |
+| **Ngrok** | Tunnel | Domain tetap | Expose webhook endpoint |
+
+> [!TIP]
+> Semua integrasi pihak ketiga **saat ini menggunakan mode sandbox/test**:
+> - Midtrans: `MIDTRANS_IS_PRODUCTION=false` + key prefix `Mid-server-...`
+> - Biteship: key prefix `biteship_test.`
+> - Resend: Hanya bisa kirim ke email verified
+
+---
+
+## 10. Diagram Ringkasan: Yang Berjalan di Mana
+
+````carousel
+```mermaid
+graph TB
+    subgraph "💻 Windows Host (langsung)"
+        A["Next.js :3000<br/>bun dev"]
+        B["PostgreSQL :5432<br/>Windows Service"]
+        C["File Uploader :4004<br/>npm start"]
+        D["Ngrok Tunnel<br/>→ :3000"]
+    end
+```
+<!-- slide -->
+```mermaid
+graph TB
+    subgraph "🐳 Docker Containers"
+        E["Redis :6379<br/>redis:7-alpine<br/>kirimart-redis"]
+        F["WS Server :3001<br/>node:22-alpine<br/>kirimart-ws"]
+    end
+    F --> E
+```
+<!-- slide -->
+```mermaid
+graph TB
+    subgraph "☁️ External APIs"
+        G["Midtrans (Payment)"]
+        H["Biteship (Shipping)"]
+        I["Resend (Email)"]
+        J["Google (OAuth)"]
+    end
+```
+````

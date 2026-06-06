@@ -1,4 +1,4 @@
-# WebSocket, Redis & Docker — Panduan Lengkap KiriMart
+# WebSocket, Redis & Docker — Panduan Lengkap Kawan Belanja
 
 > Dokumen ini dibuat untuk developer yang **belum pernah** menggunakan WebSocket, Redis,
 > maupun Docker. Setiap konsep dijelaskan dari nol dengan analogi sederhana.
@@ -11,8 +11,8 @@
 2. [Apa itu Redis?](#2-apa-itu-redis)
 3. [Apa itu Docker?](#3-apa-itu-docker)
 4. [Apa itu BullMQ?](#4-apa-itu-bullmq)
-5. [Mengapa KiriMart Butuh Semua Ini?](#5-mengapa-kirimart-butuh-semua-ini)
-6. [Arsitektur KiriMart (Sebelum vs Sesudah)](#6-arsitektur-kirimart)
+5. [Mengapa Kawan Belanja Butuh Semua Ini?](#5-mengapa-kawanbelanja-butuh-semua-ini)
+6. [Arsitektur Kawan Belanja (Sebelum vs Sesudah)](#6-arsitektur-kawanbelanja)
 7. [Cara Menjalankan (Step by Step)](#7-cara-menjalankan)
 8. [Penjelasan Setiap File di ws-server/](#8-penjelasan-file)
 9. [Cara Kerja Komunikasi Next.js ↔ WebSocket](#9-cara-kerja-komunikasi)
@@ -74,9 +74,9 @@ Bayangkan Redis seperti **papan pengumuman digital** di kantor:
   (jam buka, menu hari ini) ditempel di sini supaya semua orang bisa
   baca langsung tanpa perlu ke lemari arsip.
 
-### Kapan Redis Digunakan di KiriMart?
+### Kapan Redis Digunakan di Kawan Belanja?
 
-| Kegunaan | Analogi | Contoh di KiriMart |
+| Kegunaan | Analogi | Contoh di Kawan Belanja |
 |----------|---------|---------------------|
 | **Cache** | Papan pengumuman | Daftar kategori disimpan di Redis 1 jam, jadi navbar tidak query DB terus |
 | **Pub/Sub** | Interkom kantor | WS Server Container-1 bilang ke Container-2: "Hey, ada chat baru untuk user X!" |
@@ -97,7 +97,7 @@ Redis di-restart, data hilang. Tapi tidak masalah karena:
 ### Analogi Sederhana
 
 Bayangkan Anda punya 3 aplikasi yang harus jalan bersamaan:
-1. Next.js (KiriMart)
+1. Next.js (Kawan Belanja)
 2. Redis (cache & queue)
 3. WebSocket Server (real-time chat)
 
@@ -155,7 +155,7 @@ berjalan di laptop Anda, BullMQ juga berjalan.
 
 ---
 
-## 5. Mengapa KiriMart Butuh Semua Ini?
+## 5. Mengapa Kawan Belanja Butuh Semua Ini?
 
 ### Masalah yang Diselesaikan
 
@@ -170,7 +170,7 @@ berjalan di laptop Anda, BullMQ juga berjalan.
 
 ---
 
-## 6. Arsitektur KiriMart
+## 6. Arsitektur Kawan Belanja
 
 ### SEBELUM (Saat Ini)
 
@@ -200,7 +200,7 @@ Browser ──WebSocket──► WS-SERVER ──Redis Pub/Sub──► WS-SERVE
 
 | Service | Port | Keterangan |
 |---------|------|------------|
-| Next.js (KiriMart) | 3000 | Sudah ada, tidak berubah |
+| Next.js (Kawan Belanja) | 3000 | Sudah ada, tidak berubah |
 | File Uploader | 4004 | Sudah ada, tidak berubah |
 | **WebSocket Server** | **3001** | BARU — Socket.IO + REST API |
 | **Redis** | **6379** | BARU — Cache, Pub/Sub, Queue |
@@ -216,8 +216,8 @@ Browser ──WebSocket──► WS-SERVER ──Redis Pub/Sub──► WS-SERVE
 ### Langkah 1: Jalankan Redis + WS Server
 
 ```bash
-# Buka terminal BARU di folder project kirimart
-cd c:\Putra\Ngoding AntiGravity\set-ecomerce\kirimart
+# Buka terminal BARU di folder project kawanbelanja
+cd c:\Putra\Ngoding AntiGravity\set-ecomerce\kawanbelanja
 
 # Jalankan semua container
 docker compose up --build
@@ -310,7 +310,7 @@ Next.js mengirim request ke sini setiap kali ada event penting, contoh:
 
 ```
 POST http://localhost:3001/emit
-Header: x-ws-secret: kirimart-ws-secret-2026
+Header: x-ws-secret: kawanbelanja-ws-secret-2026
 Body: {
   "namespace": "notifications",
   "room": "store:5",
@@ -391,7 +391,7 @@ netstat -aon | findstr :6379
 3. Cek log: `docker compose logs ws-server`
 
 ### "Authentication failed" saat connect WebSocket
-1. Pastikan Anda sudah login di KiriMart (ada session di database)
+1. Pastikan Anda sudah login di Kawan Belanja (ada session di database)
 2. Cek apakah `DATABASE_URL` di docker-compose.yml sama dengan yang di `.env`
 
 ### "Redis connection refused"
@@ -465,7 +465,7 @@ log `[WS-SERVER] Connected to Redis`.
    ├── socket.on("new-message") → tambah ke localMessages (deduplicated)
    ├── socket.on("sidebar-update") → setQueryData langsung (optimistic)
    ├── Unread badge di navbar di-increment via setQueryData
-   ├── BroadcastChannel("kirimart-chat") → navbar di halaman lain juga update
+   ├── BroadcastChannel("kawanbelanja-chat") → navbar di halaman lain juga update
    └── Delayed refetch (2 detik) sebagai backup sync dari server
 ```
 
@@ -548,11 +548,11 @@ Badge angka unread chat muncul di 3 tempat:
 
 ```javascript
 // Di chat-view.jsx: broadcast saat terima pesan baru
-const channel = new BroadcastChannel('kirimart-chat')
+const channel = new BroadcastChannel('kawanbelanja-chat')
 channel.postMessage({ type: 'unread-update' })
 
 // Di navbar.jsx: listen broadcast
-const channel = new BroadcastChannel('kirimart-chat')
+const channel = new BroadcastChannel('kawanbelanja-chat')
 channel.onmessage = (event) => {
   if (event.data?.type === 'unread-update') {
     queryClient.invalidateQueries({ queryKey: ["chat-unread-count"] })
@@ -861,7 +861,7 @@ Jika Redis mati atau tidak tersedia:
 
 ```bash
 # Dari terminal (perlu WS_SECRET)
-curl -H "x-ws-secret: kirimart-ws-secret-2026" http://localhost:3001/jobs/stats
+curl -H "x-ws-secret: kawanbelanja-ws-secret-2026" http://localhost:3001/jobs/stats
 
 # Output:
 {

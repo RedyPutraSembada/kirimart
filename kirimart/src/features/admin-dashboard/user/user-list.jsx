@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -194,7 +195,9 @@ export function UserList() {
 												<TableCell>
 													<div className="flex items-center gap-3">
 														{u.image ? (
-															<img src={u.image} alt={u.name} className="h-8 w-8 rounded-full bg-muted object-cover" />
+															<div className="relative h-8 w-8 rounded-full overflow-hidden bg-muted shrink-0">
+																<Image src={u.image} alt={u.name} fill sizes="32px" className="object-cover" />
+															</div>
 														) : (
 															<div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
 																{u.name.substring(0, 2)}

@@ -9,7 +9,7 @@ const ROUTES = {
 	auth: ['/sign-in', '/sign-up'],
 	admin: ['/admin-dashboard'],
 	seller: ['/seller-dashboard'],
-	userProtected: ['/create-store', '/seller-registration'],
+	userProtected: ['/create-store'],
 	closed: [],
 }
 
@@ -116,5 +116,5 @@ export async function proxy(req) {
 // ============================================
 
 export const config = {
-	matcher: ['/sign-in', '/sign-up', '/admin-dashboard/:path*', '/seller-dashboard/:path*', '/create-store/:path*', '/seller-registration/:path*'],
+	matcher: ['/sign-in', '/sign-up', '/admin-dashboard/:path*', '/seller-dashboard/:path*', '/create-store/:path*'],
 }

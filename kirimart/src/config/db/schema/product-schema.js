@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, pgEnum, jsonb, decimal } from "drizzle-orm/pg-core"
+import { pgTable, serial, text, integer, pgEnum, jsonb, decimal, timestamp, index } from "drizzle-orm/pg-core"
 
 export const productStatusEnum = pgEnum("status", [
 	"active",
@@ -34,7 +34,14 @@ export const products = pgTable("products", {
 	// Status
 	status: productStatusEnum("status").default("active"),
 	bannedReason: text("banned_reason"),
-});
+	
+	// Fair Rank
+	visibilityScore: integer("visibility_score").notNull().default(50),
+	scoreUpdatedAt: timestamp("score_updated_at").defaultNow(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+	visibilityIdx: index("idx_products_visibility").on(table.visibilityScore),
+}));
 
 // Definitions for Options (UI Metadata)
 export const productOptions = pgTable("product_options", {

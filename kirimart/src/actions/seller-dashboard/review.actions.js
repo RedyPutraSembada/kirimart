@@ -153,6 +153,32 @@ export async function replyToReview(reviewId, replyText) {
 			})
 			.where(eq(reviews.id, parseInt(reviewId)))
 
+		// === REAL-TIME NOTIFICATION ke buyer ===
+		try {
+			const { createNotification } = await import("@/actions/public/notification.actions")
+			const { wsEmit } = await import("@/lib/ws-emit")
+
+			const notif = await createNotification(
+				review.userId,
+				"new_review_reply",
+				"💬 Penjual Membalas Ulasan Anda",
+				`Penjual membalas ulasan Anda pada produk "${product.name}".`,
+				{
+					reviewId: review.id,
+					productId: product.id,
+					productName: product.name,
+					storeId: store.id,
+				}
+			)
+
+			if (notif) {
+				await wsEmit("notifications", `user:${review.userId}`, "notification", notif)
+			}
+		} catch (notifError) {
+			// Notifikasi gagal tidak boleh menggagalkan proses utama
+			console.warn("[replyToReview] Failed to send notification:", notifError.message)
+		}
+
 		return { success: true, message: "Balasan berhasil dikirim." }
 	} catch (error) {
 		console.error("[replyToReview]", error)

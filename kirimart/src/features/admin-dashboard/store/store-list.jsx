@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,11 +14,9 @@ import {
 import {
 	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import {
-	Search, MoreHorizontal, ShieldAlert, Store as StoreIcon, StoreIcon as StoreX, CheckCircle, Trash2
-} from "lucide-react"
+import { Search, MoreHorizontal, ShieldAlert, Store as StoreIcon, StoreIcon as StoreX, CheckCircle, Trash2, BadgeCheck, XOctagon } from "lucide-react"
 import { useGetAdminStores } from "@/app/data/admin-dashboard/store/store-data"
-import { banStoreAction, unbanStoreAction, deleteStoreAction } from "@/actions/admin-dashboard/store/store.actions"
+import { banStoreAction, unbanStoreAction, deleteStoreAction, verifyStoreAction, unverifyStoreAction } from "@/actions/admin-dashboard/store/store.actions"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import ConfirmationDialog from "@/components/ui/confirmation-dialog"
 import { useState } from "react"
@@ -42,6 +41,8 @@ export function StoreList() {
 	const [banModal, setBanModal] = useState({ open: false, store: null, reason: '' })
 	const [unbanConfirm, setUnbanConfirm] = useState(null)
 	const [deleteConfirm, setDeleteConfirm] = useState(null)
+	const [verifyConfirm, setVerifyConfirm] = useState(null)
+	const [unverifyConfirm, setUnverifyConfirm] = useState(null)
 
 	const { data: storesData, isLoading, error } = useGetAdminStores(
 		{ 
@@ -91,6 +92,26 @@ export function StoreList() {
 			queryClient.invalidateQueries({ queryKey: ["admin-stores"] })
 			toast.success("Toko berhasil dihapus secara permanen")
 			setDeleteConfirm(null)
+		},
+		onError: (error) => toast.error(error.message)
+	})
+
+	const verifyMutation = useMutation({
+		mutationFn: (id) => verifyStoreAction(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin-stores"] })
+			toast.success("Toko berhasil diverifikasi")
+			setVerifyConfirm(null)
+		},
+		onError: (error) => toast.error(error.message)
+	})
+
+	const unverifyMutation = useMutation({
+		mutationFn: (id) => unverifyStoreAction(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin-stores"] })
+			toast.success("Verifikasi toko berhasil dicabut")
+			setUnverifyConfirm(null)
 		},
 		onError: (error) => toast.error(error.message)
 	})
@@ -156,14 +177,19 @@ export function StoreList() {
 												<TableCell>
 													<div className="flex items-center gap-3">
 														{s.logoUrl ? (
-															<img src={s.logoUrl} alt={s.name} className="h-8 w-8 rounded bg-muted object-cover" />
+															<div className="relative h-8 w-8 rounded overflow-hidden bg-muted shrink-0">
+																<Image src={s.logoUrl} alt={s.name} fill sizes="32px" className="object-cover" />
+															</div>
 														) : (
 															<div className="h-8 w-8 rounded bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
 																<StoreIcon className="h-4 w-4" />
 															</div>
 														)}
 														<div className="min-w-0">
-															<p className="font-medium truncate max-w-[200px]">{s.name}</p>
+															<p className="font-medium truncate max-w-[200px] flex items-center gap-1">
+																{s.name}
+																{s.isVerified && <BadgeCheck className="h-4 w-4 text-emerald-500" />}
+															</p>
 														</div>
 													</div>
 												</TableCell>
@@ -194,6 +220,16 @@ export function StoreList() {
 															) : (
 																<DropdownMenuItem onClick={() => setBanModal({ open: true, store: s, reason: '' })}>
 																	<StoreX className="mr-2 h-4 w-4 text-amber-600" />Blokir Toko
+																</DropdownMenuItem>
+															)}
+
+															{s.isVerified ? (
+																<DropdownMenuItem onClick={() => setUnverifyConfirm(s)}>
+																	<XOctagon className="mr-2 h-4 w-4 text-orange-600" />Cabut Verifikasi
+																</DropdownMenuItem>
+															) : (
+																<DropdownMenuItem onClick={() => setVerifyConfirm(s)}>
+																	<BadgeCheck className="mr-2 h-4 w-4 text-emerald-600" />Verifikasi Toko
 																</DropdownMenuItem>
 															)}
 															
@@ -280,6 +316,38 @@ export function StoreList() {
 				onConfirm={() => {
 					if (deleteConfirm) {
 						deleteMutation.mutate(deleteConfirm.id)
+					}
+				}}
+			/>
+
+			{/* Verify Confirmation */}
+			<ConfirmationDialog
+				open={!!verifyConfirm}
+				onClose={() => setVerifyConfirm(null)}
+				title='Verifikasi Toko?'
+				description={`Apakah Anda yakin ingin memverifikasi toko ${verifyConfirm?.name}? Toko akan mendapatkan badge "Toko Terverifikasi" dan poin tambahan +10 di Fair Rank System.`}
+				confirmText='Verifikasi'
+				cancelText='Batal'
+				isLoading={verifyMutation.isPending}
+				onConfirm={() => {
+					if (verifyConfirm) {
+						verifyMutation.mutate(verifyConfirm.id)
+					}
+				}}
+			/>
+
+			{/* Unverify Confirmation */}
+			<ConfirmationDialog
+				open={!!unverifyConfirm}
+				onClose={() => setUnverifyConfirm(null)}
+				title='Cabut Verifikasi Toko?'
+				description={`Apakah Anda yakin ingin mencabut verifikasi untuk toko ${unverifyConfirm?.name}? Toko akan kehilangan poin Fair Rank.`}
+				confirmText='Cabut Verifikasi'
+				cancelText='Batal'
+				isLoading={unverifyMutation.isPending}
+				onConfirm={() => {
+					if (unverifyConfirm) {
+						unverifyMutation.mutate(unverifyConfirm.id)
 					}
 				}}
 			/>

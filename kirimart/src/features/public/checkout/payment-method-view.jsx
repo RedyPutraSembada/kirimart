@@ -44,6 +44,19 @@ export function PaymentMethodView() {
 	const [selectedMethodId, setSelectedMethodId] = useState(null)
 	const [expandedGroups, setExpandedGroups] = useState({})
 	const [isProcessing, setIsProcessing] = useState(false)
+	const [checkoutState, setCheckoutState] = useState(null)
+
+	// Ambil state checkout (shipping, voucher, notes) dari localStorage
+	useEffect(() => {
+		try {
+			const saved = localStorage.getItem("kawanbelanja_checkout_state")
+			if (saved) {
+				setCheckoutState(JSON.parse(saved))
+			}
+		} catch (e) {
+			console.error("Failed to parse checkout state", e)
+		}
+	}, [])
 
 	// Auto-expand semua groups saat data dimuat
 	useEffect(() => {
@@ -57,7 +70,8 @@ export function PaymentMethodView() {
 	// Hitung totals
 	const subtotal = checkoutStores.reduce((sum, s) => sum + s.items.reduce((is, i) => is + i.price * i.qty, 0), 0)
 	const totalShipping = checkoutStores.reduce((sum, s) => {
-		const ship = s.shipping?.find(sh => sh.id === (s.selectedShippingId || s.shipping?.[0]?.id))
+		const savedShippingId = checkoutState?.selectedShipping?.[s.id]
+		const ship = s.shipping?.find(sh => sh.id === (savedShippingId || s.shipping?.[0]?.id))
 		return sum + (ship?.price || s.shipping?.[0]?.price || 0)
 	}, 0)
 
@@ -69,7 +83,8 @@ export function PaymentMethodView() {
 	const serviceFeeResult = calculateTotalServiceFee(subtotal, commissionTiers, selectedMethod, grossBeforePgFee)
 	const serviceFee = serviceFeeResult.total
 
-	const grandTotal = Math.max(0, grossBeforePgFee + serviceFee)
+	const totalDiscount = checkoutState?.appliedVouchers?.reduce((sum, v) => sum + v.discountAmount, 0) || 0
+	const grandTotal = Math.max(0, grossBeforePgFee + serviceFee - totalDiscount)
 
 	// Group metode
 	const groupedMethods = groupPaymentMethods(enabledMethods)
@@ -91,15 +106,19 @@ export function PaymentMethodView() {
 			const checkoutData = {
 				address: checkoutQuery?.data?.addresses?.[0] || null,
 				addressId: checkoutQuery?.data?.selectedAddressId,
-				stores: checkoutStores.map(store => ({
-					...store,
-					selectedShipping: store.shipping?.[0] || null,
-				})),
+				stores: checkoutStores.map(store => {
+					const savedShippingId = checkoutState?.selectedShipping?.[store.id]
+					return {
+						...store,
+						selectedShipping: store.shipping?.find(s => s.id === (savedShippingId || store.shipping?.[0]?.id)) || store.shipping?.[0] || null,
+						notes: checkoutState?.notes?.[store.id] || "",
+					}
+				}),
 				cartItemIds: checkoutStores.flatMap(store => store.items.map(i => i.cartItemId)),
-				appliedVouchers: [], // Vouchers sudah di-apply di checkout sebelumnya
+				appliedVouchers: checkoutState?.appliedVouchers || [],
 				subtotal,
 				totalShipping,
-				totalDiscount: 0,
+				totalDiscount,
 			}
 
 			const result = await createCoreApiTransaction(checkoutData, selectedMethodId)
@@ -242,15 +261,22 @@ export function PaymentMethodView() {
 										)}
 									</span>
 								</div>
+								{totalDiscount > 0 && (
+									<div className="flex justify-between text-sm">
+										<span className="text-muted-foreground">Diskon Voucher</span>
+										<span className="font-bold text-green-600">-{fmt(totalDiscount)}</span>
+									</div>
+								)}
 								<Separator />
 								<div className="flex justify-between">
 									<span className="font-bold">Total Pembayaran</span>
 									<span className="text-lg font-bold text-primary">
-										{selectedMethod ? fmt(grandTotal) : fmt(subtotal + totalShipping)}
+										{selectedMethod ? fmt(grandTotal) : fmt(subtotal + totalShipping - totalDiscount)}
 									</span>
 								</div>
 
 								<Button
+									type="button"
 									className="w-full h-11 font-bold text-sm"
 									onClick={handleConfirmPayment}
 									disabled={isProcessing || !selectedMethodId}
@@ -268,7 +294,7 @@ export function PaymentMethodView() {
 								</Button>
 
 								<p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-									Dengan menekan tombol di atas, kamu menyetujui <span className="text-primary font-medium">Syarat & Ketentuan</span> KiriMart
+									Dengan menekan tombol di atas, kamu menyetujui <span className="text-primary font-medium">Syarat & Ketentuan</span> Kawan Belanja
 								</p>
 							</CardContent>
 						</Card>

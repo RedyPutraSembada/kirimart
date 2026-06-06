@@ -1,4 +1,4 @@
-import { Database, LayoutDashboard, Package, ShoppingCart, Store, Tag, BarChart3, ShieldAlert, Wallet, Banknote, Settings, MessageCircle, Star } from 'lucide-react'
+import { Database, LayoutDashboard, Package, ShoppingCart, Store, Tag, BarChart3, ShieldAlert, Wallet, Banknote, Settings, MessageCircle, Star, RotateCcw } from 'lucide-react'
 
 export const menus = [
 	{
@@ -45,6 +45,11 @@ export const menus = [
 		title: 'Penarikan Dana',
 		url: '/admin-dashboard/withdrawals',
 		icon: Banknote,
+	},
+	{
+		title: 'Refund',
+		url: '/admin-dashboard/refunds',
+		icon: RotateCcw,
 	},
 	{
 		title: 'Pengaturan',

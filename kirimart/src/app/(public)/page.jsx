@@ -4,6 +4,7 @@ import { ProductCard } from "@/components/public/product-card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import Image from "next/image"
 import { getHomepageProducts, getPublicCategories } from "@/actions/public/storefront.actions"
 
 export default async function Home() {
@@ -69,7 +70,9 @@ export default async function Home() {
             {categories.slice(0, 8).map((cat, i) => (
               <Link key={cat.id} href={`/katalog?categoryId=${cat.id}`} className={`flex flex-col items-center gap-2 p-4 rounded-xl border border-border/40 transition-all cursor-pointer group ${categoryColors[i % categoryColors.length]}`}>
                 {cat.iconUrl ? (
-                  <img src={cat.iconUrl} alt={cat.name} className="h-7 w-7 md:h-8 md:w-8 object-contain group-hover:scale-110 transition-transform" />
+                  <div className="relative h-7 w-7 md:h-8 md:w-8 group-hover:scale-110 transition-transform">
+                    <Image src={cat.iconUrl} alt={cat.name} fill sizes="32px" unoptimized className="object-contain" />
+                  </div>
                 ) : (
                   <span className="text-2xl md:text-3xl group-hover:scale-110 transition-transform">📦</span>
                 )}
@@ -147,9 +150,9 @@ export default async function Home() {
           <div className="relative z-10 max-w-xl mx-auto space-y-4">
             <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Dapatkan Promo Eksklusif</h2>
             <p className="text-sm text-white/80">Daftarkan email untuk info promo & diskon menarik langsung ke inbox Anda.</p>
-            <div className="flex gap-2 max-w-md mx-auto">
-              <input type="email" placeholder="Masukkan email Anda" className="flex-1 rounded-full px-5 py-2.5 bg-white/15 border border-white/20 text-white placeholder:text-white/50 outline-none text-sm backdrop-blur" />
-              <Button className="rounded-full px-6 bg-white text-primary hover:bg-white/90 font-bold text-sm">Daftar</Button>
+            <div className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto w-full">
+              <input type="email" placeholder="Masukkan email Anda" className="flex-1 w-full rounded-full px-5 py-2.5 bg-white/15 border border-white/20 text-white placeholder:text-white/50 outline-none text-sm backdrop-blur" />
+              <Button className="w-full sm:w-auto rounded-full px-6 bg-white text-primary hover:bg-white/90 font-bold text-sm">Daftar</Button>
             </div>
           </div>
         </div>

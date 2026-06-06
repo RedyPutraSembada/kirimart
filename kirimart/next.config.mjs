@@ -1,5 +1,16 @@
+import withSerwistInit from "@serwist/next";
+
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.js", // We'll create this file next
+  swDest: "public/sw.js",
+  disable: process.env.NODE_ENV === "development",
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Standalone output untuk Docker production build
+  // Menghasilkan .next/standalone dengan server.js + minimal node_modules
+  output: 'standalone',
   allowedDevOrigins: [
     'unintermingled-noncoincident-chandler.ngrok-free.app',
   ],
@@ -18,4 +29,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

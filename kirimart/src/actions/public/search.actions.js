@@ -10,6 +10,8 @@
 import { db } from "@/config/db"
 import { products } from "@/config/db/schema"
 import { and, eq, ilike, desc, count } from "drizzle-orm"
+import { headers } from "next/headers"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 // ============================================
 // AUTOCOMPLETE (Navbar Search Bar)
@@ -23,11 +25,17 @@ import { and, eq, ilike, desc, count } from "drizzle-orm"
  * @returns {{ success: boolean, data: Array }}
  */
 export async function searchProductsAutocomplete(keyword) {
-	if (!keyword || keyword.trim().length < 2) {
-		return { success: true, data: [] }
-	}
-
 	try {
+		const ip = (await headers()).get("x-forwarded-for") || "unknown-ip"
+		const rateLimit = await checkRateLimit(`search_ac:${ip}`, 30, 60)
+		if (!rateLimit.success) {
+			return { success: false, data: [], error: "Terlalu banyak pencarian" }
+		}
+
+		if (!keyword || keyword.trim().length < 2) {
+			return { success: true, data: [] }
+		}
+
 		const result = await db.query.products.findMany({
 			where: and(
 				eq(products.status, "active"),
@@ -49,7 +57,7 @@ export async function searchProductsAutocomplete(keyword) {
 					columns: { name: true, domainSlug: true },
 				},
 			},
-			orderBy: [desc(products.soldCount)],
+			orderBy: [desc(products.visibilityScore)],
 			limit: 5,
 		})
 
@@ -73,6 +81,12 @@ export async function searchProductsAutocomplete(keyword) {
  */
 export async function searchProducts({ keyword = "", page = 1, perPage = 20 } = {}) {
 	try {
+		const ip = (await headers()).get("x-forwarded-for") || "unknown-ip"
+		const rateLimit = await checkRateLimit(`search:${ip}`, 20, 60)
+		if (!rateLimit.success) {
+			return { success: false, data: [], error: "Terlalu banyak pencarian. Harap tunggu sebentar." }
+		}
+
 		const offset = (page - 1) * perPage
 
 		const whereConditions = [eq(products.status, "active")]
@@ -101,7 +115,7 @@ export async function searchProducts({ keyword = "", page = 1, perPage = 20 } = 
 					columns: { id: true, name: true, slug: true },
 				},
 			},
-			orderBy: [desc(products.soldCount)],
+			orderBy: [desc(products.visibilityScore)],
 			limit: perPage,
 			offset,
 		})

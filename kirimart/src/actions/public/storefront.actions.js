@@ -60,12 +60,12 @@ export async function getHomepageProducts(options = {}) {
 			case "flash_sale":
 				// Produk yang punya originalPrice (sedang diskon)
 				extraWhere = and(baseWhere, isNotNull(products.originalPrice))
-				orderByClause = (p, { desc }) => [desc(p.soldCount)]
+				orderByClause = (p, { desc }) => [desc(p.visibilityScore)]
 				break
 			case "recommended":
 			default:
 				extraWhere = baseWhere
-				orderByClause = (p, { desc }) => [desc(p.soldCount)]
+				orderByClause = (p, { desc }) => [desc(p.visibilityScore)]
 				break
 		}
 
@@ -168,7 +168,7 @@ export async function getCatalogProducts(filters = {}) {
 				break
 			case "popular":
 			default:
-				orderByClause = (p, helpers) => [helpers.desc(p.soldCount)]
+				orderByClause = (p, helpers) => [helpers.desc(p.visibilityScore)]
 				break
 		}
 

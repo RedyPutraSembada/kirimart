@@ -104,7 +104,7 @@ export function PlatformSettingsView() {
 		saveMutation.mutate({
 			key: "master_meta_pixel_id",
 			value: masterPixelId, // we just save string, not JSON, so it's string in db
-			description: "Master Meta Pixel ID untuk analitik platform KiriMart.",
+			description: "Master Meta Pixel ID untuk analitik platform Kawan Belanja.",
 		})
 	}
 
@@ -383,7 +383,7 @@ export function PlatformSettingsView() {
 				<CardHeader>
 					<div className="flex items-center gap-2">
 						<Activity className="h-5 w-5" />
-						<CardTitle className="text-base">Master Meta Pixel (KiriMart)</CardTitle>
+						<CardTitle className="text-base">Master Meta Pixel (Kawan Belanja)</CardTitle>
 					</div>
 					<CardDescription>
 						Pixel utama milik platform untuk melacak semua transaksi, pengunjung, dan interaksi 

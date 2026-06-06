@@ -1,7 +1,7 @@
 import { OrderDetail } from "@/features/user-dashboard/orders/order-detail"
 
 export const metadata = {
-	title: "Detail Pesanan | KiriMart",
+	title: "Detail Pesanan | Kawan Belanja",
 }
 
 export default async function OrderDetailPage({ params }) {

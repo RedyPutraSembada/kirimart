@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -161,7 +162,13 @@ export function ProductList() {
 												<TableCell>
 													<div className="flex items-center gap-3">
 														{primaryImage ? (
-															<img src={primaryImage} alt={p.name} className="h-10 w-10 rounded border object-cover bg-muted" />
+															<div className="relative h-10 w-10 rounded border overflow-hidden bg-muted shrink-0">
+																{primaryImage.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+																	<video src={primaryImage} className="w-full h-full object-cover" muted loop playsInline />
+																) : (
+																	<Image src={primaryImage} alt={p.name} fill sizes="40px" className="object-cover" unoptimized />
+																)}
+															</div>
 														) : (
 															<div className="h-10 w-10 rounded border bg-muted flex items-center justify-center text-muted-foreground">
 																<Package className="h-5 w-5" />
