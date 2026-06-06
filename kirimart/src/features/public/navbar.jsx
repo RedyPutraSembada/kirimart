@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
   ShoppingCart, Search, User, ChevronDown, MapPin,
@@ -54,40 +55,40 @@ export function Navbar() {
   const userEmail = session?.user?.email
   const userImage = session?.user?.image
 
-  // Cart badge — reactive via React Query
+  // Cart badge — reactive
   const { data: cartData } = useQuery({
-    queryKey: ["cart-summary"],
+    queryKey: ["cart-summary", session?.user?.id],
     queryFn: getCartSummary,
     enabled: isLoggedIn,
     refetchOnWindowFocus: true,
   })
-  const cartCount = cartData?.data?.totalItems || 0
+  const cartCount = isLoggedIn ? (cartData?.data?.totalItems || 0) : 0
 
   // Chat unread badge
   const queryClient = useQueryClient()
   const { data: chatUnread } = useQuery({
-    queryKey: ["chat-unread-count"],
+    queryKey: ["chat-unread-count", session?.user?.id],
     queryFn: getUnreadChatCount,
     enabled: isLoggedIn,
     refetchOnWindowFocus: true,
     refetchInterval: 10000, // Polling tiap 10 detik sebagai fallback
   })
-  const chatCount = chatUnread?.data || 0
+  const chatCount = isLoggedIn ? (chatUnread?.data || 0) : 0
 
   // Notification unread badge
   const { data: notifUnread } = useQuery({
-    queryKey: ["notif-unread-count"],
+    queryKey: ["notif-unread-count", session?.user?.id],
     queryFn: getUnreadNotifCount,
     enabled: isLoggedIn,
     refetchOnWindowFocus: true,
     refetchInterval: 15000,
   })
-  const notifCount = notifUnread?.data || 0
+  const notifCount = isLoggedIn ? (notifUnread?.data || 0) : 0
 
   // Notification list (hanya fetch saat popover dibuka)
   const [notifOpen, setNotifOpen] = useState(false)
   const { data: notifsResult } = useQuery({
-    queryKey: ["my-notifications"],
+    queryKey: ["my-notifications", session?.user?.id],
     queryFn: getMyNotifications,
     enabled: isLoggedIn && notifOpen,
     staleTime: 0,
@@ -98,15 +99,15 @@ export function Navbar() {
   // Listen BroadcastChannel untuk update badge real-time
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return
-    
-    const chatChannel = new BroadcastChannel('kirimart-chat')
+
+    const chatChannel = new BroadcastChannel('kawanbelanja-chat')
     chatChannel.onmessage = (event) => {
       if (event.data?.type === 'unread-update') {
         queryClient.invalidateQueries({ queryKey: ["chat-unread-count"] })
       }
     }
 
-    const notifChannel = new BroadcastChannel('kirimart-notif')
+    const notifChannel = new BroadcastChannel('kawanbelanja-notif')
     notifChannel.onmessage = (event) => {
       if (event.data?.type === 'new-notification') {
         queryClient.invalidateQueries({ queryKey: ["notif-unread-count"] })
@@ -182,8 +183,8 @@ export function Navbar() {
       <nav className={`flex items-center justify-between w-full max-w-7xl h-14 px-6 rounded-full border border-border/50 bg-background/80 dark:bg-card/80 backdrop-blur-md shadow-sm pointer-events-auto transition-all duration-300 ${isScrolled ? 'max-w-6xl' : ''}`}>
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group shrink-0">
-          <div className="h-7 w-7 rounded-lg overflow-hidden">
-            <img src="/images/kawanbelanja.png" alt="Logo" className="h-full w-full object-contain" />
+          <div className="h-7 w-7 rounded-lg overflow-hidden relative">
+            <Image src="/images/kawanbelanja.png" alt="Logo" fill sizes="28px" className="object-contain" />
           </div>
           <div className="flex items-center gap-0">
             <span className="text-xl font-black tracking-tighter text-primary">kawan</span>
@@ -219,7 +220,7 @@ export function Navbar() {
                       className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl hover:bg-primary/5 hover:text-primary transition-colors text-center group w-full"
                     >
                       {cat.iconUrl ? (
-                        <img src={cat.iconUrl} alt={cat.name} className="h-6 w-6 object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
+                        <Image src={cat.iconUrl} alt={cat.name} width={24} height={24} unoptimized className="object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
                       ) : (
                         <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center text-muted-foreground text-[10px] font-bold">
                           {cat.name.charAt(0)}
@@ -251,14 +252,16 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           {/* Search Bar */}
           <div className="hidden lg:flex relative">
-            <SearchBar />
+            <Suspense fallback={<div className="h-10 w-64 bg-muted rounded-full animate-pulse" />}>
+              <SearchBar />
+            </Suspense>
           </div>
 
           <ThemeToggle />
 
-          {/* Chat */}
+          {/* Chat (Hidden on Mobile) */}
           {isLoggedIn && (
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative" asChild>
+            <Button variant="ghost" size="icon" className="hidden md:flex h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative" asChild>
               <Link href="/chat">
                 <MessageCircle className="h-4 w-4" />
                 {chatCount > 0 && (
@@ -301,9 +304,8 @@ export function Navbar() {
                       {notifList.slice(0, 15).map((notif) => (
                         <button
                           key={notif.id}
-                          className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors flex items-start gap-2.5 border-b border-border/20 last:border-0 ${
-                            !notif.isRead ? "bg-primary/5" : ""
-                          }`}
+                          className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors flex items-start gap-2.5 border-b border-border/20 last:border-0 ${!notif.isRead ? "bg-primary/5" : ""
+                            }`}
                           onClick={async () => {
                             if (!notif.isRead) {
                               // Optimistic: badge -1
@@ -348,8 +350,8 @@ export function Navbar() {
             </Popover>
           )}
 
-          {/* Cart */}
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative" asChild>
+          {/* Cart (Hidden on Mobile) */}
+          <Button variant="ghost" size="icon" className="hidden md:flex h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative" asChild>
             <Link href="/cart">
               <ShoppingCart className="h-4 w-4" />
               {cartCount > 0 && (
@@ -359,83 +361,85 @@ export function Navbar() {
           </Button>
 
           {/* Auth Section */}
-          {isPending ? (
-            <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
-          ) : isLoggedIn ? (
-            /* Logged In — User Dropdown */
-            <DropdownMenu>
-              <DropdownMenuTrigger className="outline-none">
-                <Avatar className="h-9 w-9 ring-2 ring-primary/20 hover:ring-primary/40 transition-all cursor-pointer">
-                  <AvatarImage src={userImage} alt={userName} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                    {getInitials(userName)}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-xl border-border/50">
-                {/* User Info */}
-                <DropdownMenuLabel className="px-3 py-2">
-                  <p className="text-sm font-bold truncate">{userName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
+          <div className="flex items-center gap-2">
+            {isPending ? (
+              <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+            ) : isLoggedIn ? (
+              /* Logged In — User Dropdown */
+              <DropdownMenu>
+                <DropdownMenuTrigger className="outline-none">
+                  <Avatar className="h-9 w-9 ring-2 ring-primary/20 hover:ring-primary/40 transition-all cursor-pointer">
+                    <AvatarImage src={userImage} alt={userName} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                      {getInitials(userName)}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-xl border-border/50">
+                  {/* User Info */}
+                  <DropdownMenuLabel className="px-3 py-2">
+                    <p className="text-sm font-bold truncate">{userName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
 
-                {/* Menus */}
-                <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
-                  <Link href="/user-dashboard"><User className="h-3.5 w-3.5" /> Profil Saya</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
-                  <Link href="/user-dashboard/address"><MapPin className="h-3.5 w-3.5" /> Alamat</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
-                  <Link href="/user-dashboard"><Package className="h-3.5 w-3.5" /> Pesanan Saya</Link>
-                </DropdownMenuItem>
+                  {/* Menus */}
+                  <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
+                    <Link href="/user-dashboard"><User className="h-3.5 w-3.5" /> Profil Saya</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
+                    <Link href="/user-dashboard/address"><MapPin className="h-3.5 w-3.5" /> Alamat</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
+                    <Link href="/user-dashboard/orders"><Package className="h-3.5 w-3.5" /> Pesanan Saya</Link>
+                  </DropdownMenuItem>
 
-                {/* Seller / Admin specific */}
-                {userRole === 'user' && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2 text-primary font-semibold">
-                      <Link href="/seller-registration"><Store className="h-3.5 w-3.5" /> Buka Toko</Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
+                  {/* Seller / Admin specific */}
+                  {userRole === 'user' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2 text-primary font-semibold">
+                        <Link href="/create-store"><Store className="h-3.5 w-3.5" /> Buka Toko</Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
 
-                {userRole === 'seller' && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
-                      <Link href="/seller-dashboard"><LayoutDashboard className="h-3.5 w-3.5" /> Dashboard Seller</Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
+                  {userRole === 'seller' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
+                        <Link href="/seller-dashboard"><LayoutDashboard className="h-3.5 w-3.5" /> Dashboard Seller</Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
 
-                {userRole === 'admin' && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
-                      <Link href="/admin-dashboard"><ShieldCheck className="h-3.5 w-3.5" /> Admin Dashboard</Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
+                  {userRole === 'admin' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild className="rounded-lg cursor-pointer gap-2">
+                        <Link href="/admin-dashboard"><ShieldCheck className="h-3.5 w-3.5" /> Admin Dashboard</Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
 
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="rounded-lg cursor-pointer gap-2 text-red-500 focus:text-red-500">
-                  <LogOut className="h-3.5 w-3.5" /> Keluar
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            /* Not Logged In */
-            <div className="flex items-center gap-2">
-              <Button asChild variant="ghost" size="sm" className="rounded-full h-9 text-xs font-semibold px-4 hidden sm:flex">
-                <Link href="/sign-up">Daftar</Link>
-              </Button>
-              <Button asChild variant="default" size="sm" className="rounded-full px-6 h-9 text-xs font-bold shadow-md shadow-primary/20 transition-transform active:scale-95 bg-primary hover:bg-primary/90">
-                <Link href="/sign-in">Masuk</Link>
-              </Button>
-            </div>
-          )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="rounded-lg cursor-pointer gap-2 text-red-500 focus:text-red-500">
+                    <LogOut className="h-3.5 w-3.5" /> Keluar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              /* Not Logged In */
+              <div className="flex items-center gap-2">
+                <Button asChild variant="ghost" size="sm" className="rounded-full h-9 text-xs font-semibold px-4 hidden sm:flex">
+                  <Link href="/sign-up">Daftar</Link>
+                </Button>
+                <Button asChild variant="default" size="sm" className="rounded-full px-6 h-9 text-xs font-bold shadow-md shadow-primary/20 transition-transform active:scale-95 bg-primary hover:bg-primary/90">
+                  <Link href="/sign-in">Masuk</Link>
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </nav>
     </header>

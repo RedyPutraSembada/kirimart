@@ -2,7 +2,7 @@ import { PaymentInstructionView } from "@/features/public/checkout/payment-instr
 import { Suspense } from "react"
 
 export const metadata = {
-  title: "Instruksi Pembayaran - KiriMart",
+  title: "Instruksi Pembayaran - Kawan Belanja",
   description: "Selesaikan pembayaran sesuai instruksi berikut",
 }
 

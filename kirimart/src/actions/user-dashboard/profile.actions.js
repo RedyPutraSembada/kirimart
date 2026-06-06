@@ -22,17 +22,37 @@ export async function updateProfileAction(data) {
 			return { success: false, error: "Data tidak valid" }
 		}
 
+		const phoneNumberToSave = parsed.data.phoneNumber?.trim() || null
+
+		// Check if phone number is already taken by someone else
+		if (phoneNumberToSave) {
+			const existingUser = await db.query.user.findFirst({
+				where: (users, { eq, and, ne }) => 
+					and(
+						eq(users.phoneNumber, phoneNumberToSave),
+						ne(users.id, session.user.id)
+					)
+			})
+			if (existingUser) {
+				return { success: false, error: "Nomor handphone sudah digunakan oleh pengguna lain." }
+			}
+		}
+
 		await db.update(user)
 			.set({
 				name: parsed.data.name,
 				image: parsed.data.image,
-				phoneNumber: parsed.data.phoneNumber,
+				phoneNumber: phoneNumberToSave,
 			})
 			.where(eq(user.id, session.user.id))
 
 		return { success: true }
 	} catch (error) {
 		console.error("updateProfileAction error", error)
+		// Catch unique constraint violation error code (Postgres: 23505)
+		if (error.code === '23505') {
+			return { success: false, error: "Nomor handphone sudah digunakan." }
+		}
 		return { success: false, error: "Terjadi kesalahan server" }
 	}
 }

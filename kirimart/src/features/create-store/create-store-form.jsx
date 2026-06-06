@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { createStoreSchema } from "@/lib/validations/protected/create-store"
 import { createStore } from "@/actions/protected/store.actions"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
 	Form,
@@ -20,12 +21,12 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { StoreIcon, Loader2 } from "lucide-react"
 import { env } from "@/config/env"
+import { uploadFile } from "@/lib/upload"
 import { toast } from "sonner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { AddressForm } from "@/components/shared/address-form"
 
-const uriUpload = env.NEXT_PUBLIC_UPLOAD_URI
-const uploadApiKey = env.NEXT_PUBLIC_UPLOAD_API_KEY
-const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB
+const MAX_FILE_SIZE_MB = env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || 2
 
 export function CreateStoreForm() {
 	const queryClient = useQueryClient()
@@ -42,8 +43,18 @@ export function CreateStoreForm() {
 		defaultValues: {
 			name: "",
 			domainSlug: "",
-			province: "",
-			city: "",
+			recipientName: "",
+			recipientPhone: "",
+			label: "Toko",
+			biteshipAreaId: "",
+			provinceName: "",
+			cityName: "",
+			kecamatanName: "",
+			provinceId: "",
+			cityId: "",
+			kecamatanId: "",
+			kelurahanId: "",
+			zipcode: "",
 			detailAddress: "",
 			logo: "",
 			banner: "",
@@ -83,32 +94,16 @@ export function CreateStoreForm() {
 		}
 	}
 
-	async function uploadImage(file) {
-		toast.info("Uploading image...")
-		const formData = new FormData()
-		formData.append('file', file)
-		const url = `${uriUpload}/upload`
-		try {
-			const response = await fetch(url, {
-				method: 'POST',
-				headers: { 'x-api-key': uploadApiKey ?? '' },
-				body: formData,
-			})
-			console.log('response upload', response)
-
-			if (!response.ok) throw new Error(`Error: ${response.statusText}`)
-			const data = await response.json()
-			return data?.file?.url ?? ''
-		} catch {
-			return ''
-		}
-	}
-
 	return (
 		<div className="w-full max-w-2xl mx-auto p-6 bg-card rounded-xl border shadow-sm">
 			<div className="mb-8 text-center">
-				<div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-					<StoreIcon className="w-6 h-6 text-primary" />
+				<div className="mx-auto relative w-20 h-20 mb-4 drop-shadow-md">
+					<Image 
+						src="/images/kawanbelanja.png" 
+						alt="Logo Kawan Belanja" 
+						fill
+						className="object-contain"
+					/>
 				</div>
 				<h2 className="text-2xl font-bold">Buka Toko Anda</h2>
 				<p className="text-muted-foreground mt-2">
@@ -181,19 +176,13 @@ export function CreateStoreForm() {
 												setIsLoadingLogo(true)
 												const file = e.target.files?.[0]
 												if (file) {
-													const fileSizeMB = file.size / (1024 * 1024)
-													if (fileSizeMB > MAX_FILE_SIZE_MB) {
-														setFormError('logo', {
-															type: 'manual',
-															message: `Ukuran file tidak boleh lebih dari ${MAX_FILE_SIZE_MB} MB.`,
-														})
-													} else {
-														clearErrors('logo')
-														const uploadedUrl = await uploadImage(file)
-														if (uploadedUrl) {
-															field.onChange(uploadedUrl)
-															setLogoPreview(URL.createObjectURL(file))
-														}
+
+													clearErrors('logo')
+													const uploadedUrl = await uploadFile(file)
+													if (uploadedUrl) {
+														field.onChange(uploadedUrl)
+														setLogoPreview(URL.createObjectURL(file))
+
 													}
 												}
 												setIsLoadingLogo(false)
@@ -204,10 +193,13 @@ export function CreateStoreForm() {
 										{!isLoadingLogo && field.value && logoPreview !== '' && (
 											<div className='w-full h-32 border p-2 border-dashed rounded-md shadow-md'>
 												<div className='relative w-full h-full'>
-													<img
+													<Image
 														alt='Preview logo'
-														className='w-full h-full object-contain rounded-md'
+														className='object-contain rounded-md'
 														src={logoPreview}
+														fill
+														sizes="128px"
+														unoptimized
 													/>
 												</div>
 											</div>
@@ -217,10 +209,13 @@ export function CreateStoreForm() {
 										{!isLoadingLogo && field.value && logoPreview === '' && (
 											<div className='w-full h-32 border p-2 border-dashed rounded-md shadow-md'>
 												<div className='relative w-full h-full'>
-													<img
+													<Image
 														alt='Preview logo'
-														className='w-full h-full object-contain rounded-md'
+														className='object-contain rounded-md'
 														src={field.value}
+														fill
+														sizes="128px"
+														unoptimized
 													/>
 												</div>
 											</div>
@@ -280,19 +275,13 @@ export function CreateStoreForm() {
 												setIsLoadingBanner(true)
 												const file = e.target.files?.[0]
 												if (file) {
-													const fileSizeMB = file.size / (1024 * 1024)
-													if (fileSizeMB > MAX_FILE_SIZE_MB) {
-														setFormError('banner', {
-															type: 'manual',
-															message: `Ukuran file tidak boleh lebih dari ${MAX_FILE_SIZE_MB} MB.`,
-														})
-													} else {
-														clearErrors('banner')
-														const uploadedUrl = await uploadImage(file)
-														if (uploadedUrl) {
-															field.onChange(uploadedUrl)
-															setBannerPreview(URL.createObjectURL(file))
-														}
+
+													clearErrors('banner')
+													const uploadedUrl = await uploadFile(file)
+													if (uploadedUrl) {
+														field.onChange(uploadedUrl)
+														setBannerPreview(URL.createObjectURL(file))
+
 													}
 												}
 												setIsLoadingBanner(false)
@@ -303,10 +292,13 @@ export function CreateStoreForm() {
 										{!isLoadingBanner && field.value && bannerPreview !== '' && (
 											<div className='w-full h-48 border p-2 border-dashed rounded-md shadow-md'>
 												<div className='relative w-full h-full'>
-													<img
+													<Image
 														alt='Preview banner'
-														className='w-full h-full object-cover rounded-md'
+														className='object-cover rounded-md'
 														src={bannerPreview}
+														fill
+														sizes="(max-width: 768px) 100vw, 33vw"
+														unoptimized
 													/>
 												</div>
 											</div>
@@ -316,10 +308,13 @@ export function CreateStoreForm() {
 										{!isLoadingBanner && field.value && bannerPreview === '' && (
 											<div className='w-full h-48 border p-2 border-dashed rounded-md shadow-md'>
 												<div className='relative w-full h-full'>
-													<img
+													<Image
 														alt='Preview banner'
-														className='w-full h-full object-cover rounded-md'
+														className='object-cover rounded-md'
 														src={field.value}
+														fill
+														sizes="(max-width: 768px) 100vw, 33vw"
+														unoptimized
 													/>
 												</div>
 											</div>
@@ -346,7 +341,7 @@ export function CreateStoreForm() {
 					<div className="border-t pt-6">
 						<h3 className="text-sm font-semibold mb-1">Informasi Rekening Bank</h3>
 						<p className="text-xs text-muted-foreground mb-4">Wajib diisi. Digunakan untuk pencairan dana penjualan Anda.</p>
-						
+
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							<FormField
 								control={form.control}
@@ -393,60 +388,16 @@ export function CreateStoreForm() {
 						/>
 					</div>
 
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-						<FormField
-							control={form.control}
-							name="province"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Provinsi Asal</FormLabel>
-									<FormControl>
-										<Input placeholder="Jawa Barat" {...field} disabled={isPending} />
-									</FormControl>
-									<FormDescription>
-										*Akan diubah ke dropdown RajaOngkir nanti
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						<FormField
-							control={form.control}
-							name="city"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Kota Asal</FormLabel>
-									<FormControl>
-										<Input placeholder="Bandung" {...field} disabled={isPending} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
+					<div className="border-t pt-6">
+						<h3 className="text-sm font-semibold mb-1">Informasi Alamat Toko</h3>
+						<p className="text-xs text-muted-foreground mb-4">Tentukan lokasi toko Anda untuk keperluan penjemputan barang.</p>
+						
+						<AddressForm 
+							title="Alamat Penjemputan (Toko)" 
+							description="Alamat ini digunakan oleh kurir untuk mengambil paket dari toko Anda dan menghitung ongkos kirim."
+							showLabel={false}
 						/>
 					</div>
-
-					<FormField
-						control={form.control}
-						name="detailAddress"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Alamat Lengkap Toko</FormLabel>
-								<FormControl>
-									<Textarea
-										placeholder="Jl. Merdeka No. 123, RT 01/RW 02..."
-										className="resize-none"
-										{...field}
-										disabled={isPending}
-									/>
-								</FormControl>
-								<FormDescription>
-									Alamat ini akan digunakan oleh kurir saat menjemput (pickup) pesanan.
-								</FormDescription>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
 
 					<Button type="submit" className="w-full" disabled={isPending}>
 						{isPending ? (

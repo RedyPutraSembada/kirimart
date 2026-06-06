@@ -1,7 +1,7 @@
 import { CheckoutView } from "@/features/public/checkout/checkout-view"
 
 export const metadata = {
-  title: "Checkout - KiriMart",
+  title: "Checkout - Kawan Belanja",
   description: "Selesaikan pembayaran dan pilih pengiriman",
 }
 

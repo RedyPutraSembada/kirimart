@@ -1,10 +1,10 @@
 # 🏛️ Arsitektur Aplikasi dan Alur Kerja (App Architecture & Flow)
 
-Dokumen ini menjelaskan struktur fundamental, teknologi, dan arsitektur otorisasi KiriMart. Ini adalah ringkasan penting untuk memahami bagaimana data dan logika mengalir di aplikasi.
+Dokumen ini menjelaskan struktur fundamental, teknologi, dan arsitektur otorisasi Kawan Belanja. Ini adalah ringkasan penting untuk memahami bagaimana data dan logika mengalir di aplikasi.
 
 ## 1. Tech Stack & Environment
 
-KiriMart adalah platform **Multi-Vendor E-Commerce** (seperti Tokopedia/Shopee).
+Kawan Belanja adalah platform **Multi-Vendor E-Commerce** (seperti Tokopedia/Shopee).
 
 - **Frontend & Backend Utama**: Next.js 16 (App Router), React 19, dijalankan menggunakan **Bun** runtime.
 - **Database**: PostgreSQL (dikelola dengan Drizzle ORM).

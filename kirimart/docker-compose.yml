@@ -20,7 +20,7 @@ services:
   # ──────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: kirimart-redis
+    container_name: kawanbelanja-redis
     ports:
       - "6379:6379"
     volumes:
@@ -28,7 +28,7 @@ services:
     # Perintah: aktifkan persistence agar data tidak hilang saat restart
     command: redis-server --appendonly yes
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -40,7 +40,7 @@ services:
     build:
       context: ./ws-server
       dockerfile: Dockerfile
-    container_name: kirimart-ws
+    container_name: kawanbelanja-ws
     ports:
       - "3001:3001"
     environment:

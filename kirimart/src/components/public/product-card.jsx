@@ -23,7 +23,7 @@ export function ProductCard({ product, className }) {
 
   // Cek status wishlist untuk produk ini
   const { data: wishlistData } = useQuery({
-    queryKey: ["wishlist-status", product.id],
+    queryKey: ["wishlist-status", product.id, session?.user?.id],
     queryFn: () => checkIsWishlisted(product.id),
     enabled: !!session,
     staleTime: 1000 * 60 * 5, // 5 menit
@@ -35,9 +35,9 @@ export function ProductCard({ product, className }) {
     mutationFn: () => toggleWishlist(product.id),
     onMutate: async () => {
       // Optimistic update — langsung ubah UI sebelum server merespons
-      await queryClient.cancelQueries({ queryKey: ["wishlist-status", product.id] })
-      const previous = queryClient.getQueryData(["wishlist-status", product.id])
-      queryClient.setQueryData(["wishlist-status", product.id], (old) => ({
+      await queryClient.cancelQueries({ queryKey: ["wishlist-status", product.id, session?.user?.id] })
+      const previous = queryClient.getQueryData(["wishlist-status", product.id, session?.user?.id])
+      queryClient.setQueryData(["wishlist-status", product.id, session?.user?.id], (old) => ({
         ...old,
         isWishlisted: !old?.isWishlisted,
       }))
@@ -58,7 +58,7 @@ export function ProductCard({ product, className }) {
     onError: (_err, _vars, context) => {
       // Rollback optimistic update jika gagal
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(["wishlist-status", product.id], context.previous)
+        queryClient.setQueryData(["wishlist-status", product.id, session?.user?.id], context.previous)
       }
       toast.error("Gagal memperbarui wishlist.")
     },
@@ -76,15 +76,19 @@ export function ProductCard({ product, className }) {
       className
     )}>
       {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-muted/30">
+      <div className="relative aspect-square overflow-hidden bg-black flex items-center justify-center">
         {product.img ? (
-          <Image
-            src={product.img}
-            alt={product.name}
-            fill
-            unoptimized
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-          />
+          product.img.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+            <video src={product.img} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+          ) : (
+            <Image
+              src={product.img}
+              alt={product.name}
+              fill
+              unoptimized
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          )
         ) : (
           <div className="w-full h-full flex items-center justify-center text-4xl text-muted-foreground">
             📦

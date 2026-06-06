@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
-import { updateOrderStatus, getOrderShippingDetail, shipOrderViaBiteship } from "@/actions/seller-dashboard/order.actions"
+import { updateOrderStatus, getOrderShippingDetail, shipOrderViaBiteship, confirmReturnReceived } from "@/actions/seller-dashboard/order.actions"
 import { trackOrderShipment } from "@/actions/public/tracking.actions"
 import { useGetSellerOrders } from "@/app/data/seller-dashboard/order/order-data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-	Search, MoreHorizontal, Eye, Truck, CheckCircle2, Clock, Package, CircleDollarSign, Loader2, PackageCheck, AlertCircle, MapPin, Printer, Navigation,
+	Search, MoreHorizontal, Eye, Truck, CheckCircle2, Clock, Package, CircleDollarSign, Loader2, PackageCheck, AlertCircle, MapPin, Printer, Navigation, AlertTriangle, RotateCcw, Ban, XCircle, FileText
 } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
@@ -33,7 +33,13 @@ const statusCfg = {
 	processing: { label: "Sedang Dikemas", cls: "border-orange-300 text-orange-700 bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:bg-orange-950", icon: PackageCheck },
 	shipped: { label: "Dalam Pengiriman", cls: "border-violet-300 text-violet-700 bg-violet-50 dark:border-violet-700 dark:text-violet-400 dark:bg-violet-950", icon: Truck },
 	completed: { label: "Selesai", cls: "border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950", icon: CheckCircle2 },
-	cancelled: { label: "Dibatalkan", cls: "border-red-300 text-red-700 bg-red-50 dark:border-red-700 dark:text-red-400 dark:bg-red-950", icon: Clock },
+	cancelled: { label: "Dibatalkan Pembeli", cls: "border-red-300 text-red-700 bg-red-50 dark:border-red-700 dark:text-red-400 dark:bg-red-950", icon: Clock },
+	cancelled_by_seller: { label: "Dibatalkan (Anda)", cls: "border-red-300 text-red-700 bg-red-50 dark:border-red-700 dark:text-red-400 dark:bg-red-950", icon: Ban },
+	complained: { label: "Komplain Masuk", cls: "border-rose-300 text-rose-700 bg-rose-50 dark:border-rose-700 dark:text-rose-400 dark:bg-rose-950", icon: AlertTriangle },
+	return_requested: { label: "Menunggu Resi Retur", cls: "border-rose-300 text-rose-700 bg-rose-50 dark:border-rose-700 dark:text-rose-400 dark:bg-rose-950", icon: Package },
+	return_shipped: { label: "Barang Retur Dikirim", cls: "border-indigo-300 text-indigo-700 bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:bg-indigo-950", icon: Truck },
+	refund_processing: { label: "Proses Refund", cls: "border-purple-300 text-purple-700 bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:bg-purple-950", icon: CircleDollarSign },
+	refunded: { label: "Dana Dikembalikan", cls: "border-slate-300 text-slate-700 bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:bg-slate-950", icon: RotateCcw },
 }
 
 // Label status detail berdasarkan shipments.status dari Biteship
@@ -46,13 +52,15 @@ const shipmentStatusLabel = {
 	in_transit: "Dalam Perjalanan",
 	dropping_off: "Kurir Mengantar",
 	delivered: "Tiba di Tujuan",
-	returned: "Dikembalikan",
+	return_in_transit: "Proses Retur",
+	returned: "Telah Diretur",
+	rejected: "Ditolak",
 	cancelled: "Dibatalkan",
 }
 
 const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 
-function OrderTable({ data, onProcess, onShip, onViewDetail, onTrack, onPrintLabel }) {
+function OrderTable({ data, onProcess, onShip, onViewDetail, onTrack, onPrintLabel, onCancel, onHandleComplaint }) {
 	return (
 		<div className="rounded-md border">
 			<Table>
@@ -123,6 +131,16 @@ function OrderTable({ data, onProcess, onShip, onViewDetail, onTrack, onPrintLab
 														<Printer className="mr-2 h-4 w-4" />Cetak Label
 													</DropdownMenuItem>
 												</>
+											)}
+											{['paid', 'processing'].includes(o.status) && (
+												<DropdownMenuItem onClick={() => onCancel(o)} className="text-red-600 focus:text-red-700 focus:bg-red-50">
+													<Ban className="mr-2 h-4 w-4" />Batalkan Pesanan
+												</DropdownMenuItem>
+											)}
+											{o.status === "complained" && o.complaint && (
+												<DropdownMenuItem onClick={() => onHandleComplaint(o)} className="text-amber-600 focus:text-amber-700 focus:bg-amber-50">
+													<AlertTriangle className="mr-2 h-4 w-4" />Tanggapi Komplain
+												</DropdownMenuItem>
 											)}
 										</DropdownMenuContent>
 									</DropdownMenu>
@@ -221,21 +239,47 @@ function TrackingContent({ orderId }) {
 
 export function OrderList() {
 	const queryClient = useQueryClient()
+	const [searchInput, setSearchInput] = useState("")
 	const [searchQuery, setSearchQuery] = useState("")
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setSearchQuery(searchInput)
+		}, 300)
+		return () => clearTimeout(timer)
+	}, [searchInput])
 	const [shipDialog, setShipDialog] = useState(null)
 	const [detailDialog, setDetailDialog] = useState(null)
 	const [trackingDialog, setTrackingDialog] = useState(null)
+	const [cancelDialog, setCancelDialog] = useState(null)
+	const [complaintDialog, setComplaintDialog] = useState(null)
 	const [pickupMethod, setPickupMethod] = useState("pickup")
 
 	const { data: queryData, isLoading, isError, refetch } = useGetSellerOrders()
 
 	const orders = queryData?.data || []
 
+	const confirmReturnMutation = useMutation({
+		mutationFn: (orderId) => confirmReturnReceived(orderId),
+		onSuccess: (result) => {
+			if (result.success) {
+				toast.success(result.message)
+				setDetailDialog(null)
+				queryClient.invalidateQueries({ queryKey: ["seller-orders"] })
+			} else {
+				toast.error(result.error)
+			}
+		}
+	})
+
 	// Filter orders by paid status from payment (only show orders whose payment was successful)
 	const paidOrders = orders.filter(o => !["pending"].includes(o.status) || o.payment?.status === "paid")
 
-	const processMutation = useMutation({
-		mutationFn: (orderId) => updateOrderStatus(orderId, "processing"),
+	const { mutate: processOrder, isPending: isProcessing } = useMutation({
+		mutationFn: async (orderId) => {
+			const { updateOrderStatus } = await import("@/actions/seller-dashboard/order.actions")
+			return updateOrderStatus(orderId, "processing")
+		},
 		onSuccess: (result) => {
 			if (result.success) {
 				toast.success(result.message)
@@ -244,7 +288,38 @@ export function OrderList() {
 				toast.error(result.error)
 			}
 		},
-		onError: () => toast.error("Terjadi kesalahan."),
+	})
+
+	const { mutate: cancelOrderMutate, isPending: isCanceling } = useMutation({
+		mutationFn: async ({ orderId, reason }) => {
+			const { cancelOrder } = await import("@/actions/seller-dashboard/order.actions")
+			return cancelOrder(orderId, reason)
+		},
+		onSuccess: (result) => {
+			if (result.success) {
+				toast.success(result.message)
+				setCancelDialog(null)
+				queryClient.invalidateQueries({ queryKey: ["seller-orders"] })
+			} else {
+				toast.error(result.error)
+			}
+		},
+	})
+
+	const { mutate: respondComplaintMutate, isPending: isResponding } = useMutation({
+		mutationFn: async ({ complaintId, action, response }) => {
+			const { handleComplaint } = await import("@/actions/seller-dashboard/order.actions")
+			return handleComplaint(complaintId, action, response)
+		},
+		onSuccess: (result) => {
+			if (result.success) {
+				toast.success(result.message)
+				setComplaintDialog(null)
+				queryClient.invalidateQueries({ queryKey: ["seller-orders"] })
+			} else {
+				toast.error(result.error)
+			}
+		},
 	})
 
 	// Fetch shipping detail saat dialog dibuka
@@ -273,7 +348,7 @@ export function OrderList() {
 	})
 
 	const handleProcess = (orderId) => {
-		processMutation.mutate(orderId)
+		processOrder(orderId)
 	}
 
 	const handleOpenShipDialog = (order) => {
@@ -314,6 +389,7 @@ export function OrderList() {
 		processing: filteredOrders.filter(o => o.status === "processing").length,
 		shipped: filteredOrders.filter(o => o.status === "shipped").length,
 		completed: filteredOrders.filter(o => o.status === "completed").length,
+		issues: filteredOrders.filter(o => ["complained", "refunded", "cancelled_by_seller", "cancelled"].includes(o.status)).length,
 	}
 
 	if (isLoading) {
@@ -369,8 +445,8 @@ export function OrderList() {
 						<Input
 							placeholder="Cari pesanan..."
 							className="pl-9"
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
+							value={searchInput}
+							onChange={(e) => setSearchInput(e.target.value)}
 						/>
 					</div>
 				</CardHeader>
@@ -382,21 +458,25 @@ export function OrderList() {
 							<TabsTrigger value="processing">Sedang Dikemas ({counts.processing})</TabsTrigger>
 							<TabsTrigger value="shipped">Dalam Pengiriman ({counts.shipped})</TabsTrigger>
 							<TabsTrigger value="completed">Selesai ({counts.completed})</TabsTrigger>
+							<TabsTrigger value="issues">Kendala ({counts.issues})</TabsTrigger>
 						</TabsList>
 						<TabsContent value="all">
-							<OrderTable data={filteredOrders} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} />
+							<OrderTable data={filteredOrders} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} onCancel={setCancelDialog} onHandleComplaint={setComplaintDialog} />
 						</TabsContent>
 						<TabsContent value="paid">
-							<OrderTable data={filteredOrders.filter(o => o.status === "paid")} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} />
+							<OrderTable data={filteredOrders.filter(o => o.status === "paid")} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} onCancel={setCancelDialog} onHandleComplaint={setComplaintDialog} />
 						</TabsContent>
 						<TabsContent value="processing">
-							<OrderTable data={filteredOrders.filter(o => o.status === "processing")} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} />
+							<OrderTable data={filteredOrders.filter(o => o.status === "processing")} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} onCancel={setCancelDialog} onHandleComplaint={setComplaintDialog} />
 						</TabsContent>
 						<TabsContent value="shipped">
-							<OrderTable data={filteredOrders.filter(o => o.status === "shipped")} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} />
+							<OrderTable data={filteredOrders.filter(o => o.status === "shipped")} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} onCancel={setCancelDialog} onHandleComplaint={setComplaintDialog} />
 						</TabsContent>
 						<TabsContent value="completed">
-							<OrderTable data={filteredOrders.filter(o => o.status === "completed")} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} />
+							<OrderTable data={filteredOrders.filter(o => o.status === "completed")} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} onCancel={setCancelDialog} onHandleComplaint={setComplaintDialog} />
+						</TabsContent>
+						<TabsContent value="issues">
+							<OrderTable data={filteredOrders.filter(o => ["complained", "refunded", "cancelled_by_seller", "cancelled"].includes(o.status))} onProcess={handleProcess} onShip={handleOpenShipDialog} onViewDetail={setDetailDialog} onTrack={handleOpenTrackingDialog} onPrintLabel={handlePrintLabel} onCancel={setCancelDialog} onHandleComplaint={setComplaintDialog} />
 						</TabsContent>
 					</Tabs>
 				</CardContent>
@@ -551,8 +631,26 @@ export function OrderList() {
 							</div>
 							{detailDialog.shipment?.awbNumber && (
 								<div className="border-t pt-3 space-y-1">
-									<p className="text-xs text-muted-foreground">Nomor Resi</p>
+									<p className="text-xs text-muted-foreground">Nomor Resi (Pengiriman ke Pembeli)</p>
 									<p className="text-sm font-mono font-bold">{detailDialog.shipment.courier} - {detailDialog.shipment.awbNumber}</p>
+								</div>
+							)}
+							{detailDialog.complaint?.returnAwbNumber && (
+								<div className="border-t pt-3 space-y-1">
+									<p className="text-xs text-muted-foreground">Nomor Resi Retur (Pengiriman ke Anda)</p>
+									<p className="text-sm font-mono font-bold">{detailDialog.complaint.returnCourier} - {detailDialog.complaint.returnAwbNumber}</p>
+								</div>
+							)}
+							{detailDialog.status === 'return_shipped' && (
+								<div className="border-t pt-4">
+									<Button 
+										className="w-full bg-indigo-600 hover:bg-indigo-700" 
+										onClick={() => confirmReturnMutation.mutate(detailDialog.id)}
+										disabled={confirmReturnMutation.isPending}
+									>
+										{confirmReturnMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+										Konfirmasi Barang Retur Diterima
+									</Button>
 								</div>
 							)}
 						</div>
@@ -573,6 +671,125 @@ export function OrderList() {
 					<TrackingContent orderId={trackingDialog?.id} />
 				</DialogContent>
 			</Dialog>
+
+			{/* Dialog: Batalkan Pesanan */}
+			<Dialog open={!!cancelDialog} onOpenChange={(open) => !open && setCancelDialog(null)}>
+				{cancelDialog && (
+					<CancelDialogContent 
+						cancelDialog={cancelDialog} 
+						onClose={() => setCancelDialog(null)} 
+						onSubmit={cancelOrderMutate} 
+						isCanceling={isCanceling} 
+					/>
+				)}
+			</Dialog>
+
+			{/* Dialog: Tanggapi Komplain */}
+			<Dialog open={!!complaintDialog} onOpenChange={(open) => !open && setComplaintDialog(null)}>
+				{complaintDialog && (
+					<ComplaintDialogContent 
+						complaintDialog={complaintDialog} 
+						onClose={() => setComplaintDialog(null)} 
+						onSubmit={respondComplaintMutate} 
+						isResponding={isResponding} 
+					/>
+				)}
+			</Dialog>
 		</div>
+	)
+}
+
+function ComplaintDialogContent({ complaintDialog, onClose, onSubmit, isResponding }) {
+	const [response, setResponse] = useState("")
+	return (
+		<DialogContent className="max-w-md">
+			<DialogHeader>
+				<DialogTitle className="flex items-center gap-2 text-amber-600">
+					<AlertTriangle className="h-5 w-5" /> Tanggapi Komplain
+				</DialogTitle>
+				<DialogDescription>Pembeli mengajukan komplain untuk pesanan #{complaintDialog?.id}.</DialogDescription>
+			</DialogHeader>
+			<div className="space-y-4 py-2">
+				<div className="rounded-lg border p-3 bg-muted/30 space-y-2">
+					<p className="text-xs font-semibold text-muted-foreground uppercase">Masalah dari Pembeli:</p>
+					<p className="text-sm">{complaintDialog?.complaint?.reason}</p>
+					{complaintDialog?.complaint?.evidenceUrl && (
+						<div className="mt-2">
+							<a href={complaintDialog.complaint.evidenceUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+								<FileText className="h-3 w-3" /> Lihat Foto Bukti
+							</a>
+						</div>
+					)}
+				</div>
+				
+				<div className="space-y-2">
+					<Label>Respon Anda (Opsional jika setuju)</Label>
+					<Input
+						placeholder="Tuliskan respon jika ada..."
+						value={response}
+						onChange={(e) => setResponse(e.target.value)}
+					/>
+				</div>
+				
+				<div className="text-xs text-muted-foreground space-y-1">
+					<p>• <strong className="text-emerald-600">Setuju:</strong> Dana pesanan akan di-refund ke pembeli.</p>
+					<p>• <strong className="text-red-600">Tolak:</strong> Dana pesanan akan diteruskan ke saldo toko Anda, komplain dianggap selesai.</p>
+				</div>
+			</div>
+			<DialogFooter className="flex-col sm:flex-row gap-2">
+				<Button variant="outline" onClick={onClose} className="sm:mr-auto">Batal</Button>
+				<Button
+					variant="destructive"
+					onClick={() => onSubmit({ complaintId: complaintDialog.complaint.id, action: "reject", response })}
+					disabled={isResponding || !response}
+				>
+					Tolak Komplain
+				</Button>
+				<Button
+					className="bg-emerald-600 hover:bg-emerald-700"
+					onClick={() => onSubmit({ complaintId: complaintDialog.complaint.id, action: "accept", response })}
+					disabled={isResponding}
+				>
+					Setuju (Refund)
+				</Button>
+			</DialogFooter>
+		</DialogContent>
+	)
+}
+
+function CancelDialogContent({ cancelDialog, onClose, onSubmit, isCanceling }) {
+	const [cancelReason, setCancelReason] = useState("")
+	return (
+		<DialogContent className="max-w-md">
+			<DialogHeader>
+				<DialogTitle className="flex items-center gap-2 text-red-600">
+					<Ban className="h-5 w-5" /> Batalkan Pesanan #{cancelDialog?.id}
+				</DialogTitle>
+				<DialogDescription>
+					Dana akan dikembalikan kepada pembeli (refund). Tindakan ini tidak dapat dibatalkan.
+				</DialogDescription>
+			</DialogHeader>
+			<div className="space-y-4 py-2">
+				<div className="space-y-2">
+					<Label>Alasan Pembatalan <span className="text-red-500">*</span></Label>
+					<Input
+						placeholder="Contoh: Stok barang habis / Produk cacat"
+						value={cancelReason}
+						onChange={(e) => setCancelReason(e.target.value)}
+					/>
+				</div>
+			</div>
+			<DialogFooter>
+				<Button variant="outline" onClick={onClose}>Kembali</Button>
+				<Button
+					variant="destructive"
+					onClick={() => onSubmit({ orderId: cancelDialog.id, reason: cancelReason })}
+					disabled={isCanceling || !cancelReason}
+				>
+					{isCanceling && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+					Konfirmasi Pembatalan
+				</Button>
+			</DialogFooter>
+		</DialogContent>
 	)
 }

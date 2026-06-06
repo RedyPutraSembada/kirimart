@@ -7,9 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import Image from "next/image"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getMyConversations, getConversationMessages, sendMessage as sendMessageAction } from "@/actions/public/chat.actions"
 import { useSocket } from "@/hooks/use-socket"
+import { uploadFile } from "@/lib/upload"
+import { toast } from "sonner"
 
 const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 
@@ -26,7 +29,9 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
   const [searchQuery, setSearchQuery] = useState("")
   const [localMessages, setLocalMessages] = useState([])
   const [typingUsers, setTypingUsers] = useState({}) // { conversationId: { userName, timeout } }
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const chatScrollRef = useRef(null) // Ref ke container scroll chat, BUKAN ke halaman
+  const fileInputRef = useRef(null)
   const inputRef = useRef(null)
   const typingTimeoutRef = useRef(null)
   const queryClient = useQueryClient()
@@ -183,7 +188,7 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
         })
         // Broadcast ke navbar agar badge update real-time
         try {
-          const channel = new BroadcastChannel('kirimart-chat')
+          const channel = new BroadcastChannel('kawanbelanja-chat')
           channel.postMessage({ type: 'unread-update' })
           channel.close()
         } catch (e) { /* BroadcastChannel not supported */ }
@@ -219,7 +224,7 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
 
   // ─── SEND MESSAGE ───
   const sendMutation = useMutation({
-    mutationFn: ({ convId, body }) => sendMessageAction(convId, body),
+    mutationFn: ({ convId, body, imageUrl }) => sendMessageAction(convId, body, imageUrl),
     onSuccess: (result) => {
       if (result.success) {
         // Messages: refetch langsung agar temp messages diganti real messages
@@ -273,6 +278,44 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
 
     sendMutation.mutate({ convId: activeConvId, body })
   }, [inputMsg, activeConvId, currentUserId, sendMutation, socket, queryClient])
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !activeConvId) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Ukuran gambar maksimal 2MB")
+      return
+    }
+
+    try {
+      setIsUploadingImage(true)
+      const url = await uploadFile(file)
+      if (!url) {
+        toast.error("Gagal mengupload gambar")
+        return
+      }
+
+      // Optimistic update
+      const optimisticMsg = {
+        id: `temp-${Date.now()}`,
+        senderId: currentUserId,
+        body: "",
+        imageUrl: url,
+        createdAt: new Date().toISOString(),
+        _optimistic: true,
+      }
+      setLocalMessages(prev => [...prev, optimisticMsg])
+
+      sendMutation.mutate({ convId: activeConvId, body: "", imageUrl: url })
+    } catch (error) {
+      console.error(error)
+      toast.error("Terjadi kesalahan saat upload")
+    } finally {
+      setIsUploadingImage(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
 
   // ─── TYPING INDICATOR — emit saat mengetik ───
   const handleInputChange = useCallback((e) => {
@@ -374,8 +417,8 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
                     )}
                   >
                     <div className="relative shrink-0">
-                      <div className="h-11 w-11 rounded-full overflow-hidden bg-white border">
-                        <img src={displayLogo} alt={displayName} className="h-full w-full object-contain" />
+                      <div className="h-11 w-11 rounded-full overflow-hidden bg-white border relative">
+                        <Image src={displayLogo} alt={displayName} fill sizes="44px" className="object-contain" />
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -415,11 +458,13 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div className="relative">
-                  <div className="h-9 w-9 rounded-full overflow-hidden bg-white border">
-                    <img
+                  <div className="h-9 w-9 rounded-full overflow-hidden bg-white border relative">
+                    <Image
                       src={activeConv.isSeller ? (activeConv.buyer.image || "/images/kawanbelanja.png") : activeConv.store.logo}
                       alt=""
-                      className="h-full w-full object-contain"
+                      fill
+                      sizes="36px"
+                      className="object-contain"
                     />
                   </div>
                   {isConnected && <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />}
@@ -462,8 +507,8 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
               return (
                 <div className="px-4 py-2.5 bg-muted/30 border-b border-border/30">
                   <Link href={`/product/${pc.id}`} className="flex items-center gap-3 group">
-                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted border shrink-0">
-                      <img src={pc.image} alt="" className="h-full w-full object-cover" />
+                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted border shrink-0 relative">
+                      <Image src={pc.image} alt="" fill sizes="40px" className="object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate group-hover:text-primary transition-colors">{pc.name}</p>
@@ -499,7 +544,13 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
                         msg._optimistic && "opacity-70"
                       )}>
                         {msg.imageUrl && (
-                          <img src={msg.imageUrl} alt="" className="rounded-lg max-h-48 object-cover" />
+                          <div className="relative h-48 w-48 max-w-full rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                            {msg.imageUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+                              <video src={msg.imageUrl} controls className="max-w-full max-h-full object-contain" />
+                            ) : (
+                              <Image src={msg.imageUrl} alt="" fill sizes="192px" className="object-cover" />
+                            )}
+                          </div>
                         )}
                         {msg.body && (
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
@@ -533,8 +584,21 @@ export function ChatView({ sessionToken, currentUserId, initialConversationId = 
             {/* Input */}
             <div className="p-3 border-t border-border/50 bg-background">
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary">
-                  <ImageIcon className="h-5 w-5" />
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp, video/mp4, video/webm, video/quicktime"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingImage}
+                >
+                  {isUploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-5 w-5" />}
                 </Button>
                 <Input
                   ref={inputRef}

@@ -3,7 +3,7 @@
 ## Latar Belakang
 
 Setelah kurir mengirimkan paket dan Biteship mengirim webhook `order.status = "delivered"`,
-status pesanan di KiriMart berubah menjadi `completed` (lewat webhook handler di `/api/biteship/webhook`).
+status pesanan di Kawan Belanja berubah menjadi `completed` (lewat webhook handler di `/api/biteship/webhook`).
 
 Namun, **ada masalah**: bagaimana jika webhook Biteship gagal terkirim atau 
 pembeli tidak pernah menekan tombol "Pesanan Diterima"?

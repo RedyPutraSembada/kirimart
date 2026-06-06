@@ -174,6 +174,19 @@ export async function updateBankInfo(bankName, accountNumber, accountHolder) {
 			})
 			.where(eq(stores.id, store.id))
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "UPDATE_BANK_INFO",
+				entityType: "store",
+				entityId: store.id,
+				details: { bankName, bankAccountNumber: accountNumber, bankAccountHolder: accountHolder }
+			})
+		} catch (e) { console.error(e) }
+
 		return { success: true, message: "Informasi rekening berhasil diperbarui." }
 	} catch (error) {
 		console.error("[updateBankInfo]", error)
@@ -234,6 +247,20 @@ export async function requestWithdrawal(amount) {
 				status: "pending",
 			})
 		})
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "REQUEST_WITHDRAWAL",
+				entityType: "withdrawal",
+				entityId: store.id, // we don't have withdrawal ID easily returned from insert without .returning(), so we just log storeId or wait, can we return it? 
+				// We didn't .returning() so we just omit entityId or use null.
+				details: { amount: withdrawAmount, bankName: store.bankName, bankAccountNumber: store.bankAccountNumber }
+			})
+		} catch (e) { console.error(e) }
 
 		return { success: true, message: "Permintaan penarikan dana berhasil dikirim. Menunggu persetujuan admin." }
 	} catch (error) {

@@ -29,18 +29,29 @@ const fmtNum = (n) => {
 
 export function ProductDetail({ product }) {
   // Prepare data from DB shape
-  const images = product.images?.map(img => img.imageUrl) || []
+  console.log(product, "product");
   const options = product.options || []
   const variants = product.variants || []
   const store = product.store || {}
   const hasVariants = options.length > 0 && variants.length > 0
 
-  const [activeImgUrl, setActiveImgUrl] = useState(images[0])
+  const baseImages = product.images?.map(img => img.imageUrl) || []
+  const variantImages = []
+  if (hasVariants) {
+    variants.forEach(v => {
+      if (v.imageUrl && !baseImages.includes(v.imageUrl) && !variantImages.includes(v.imageUrl)) {
+        variantImages.push(v.imageUrl)
+      }
+    })
+  }
+  const allImages = [...baseImages, ...variantImages]
+
+  const [activeImgUrl, setActiveImgUrl] = useState(allImages[0])
 
   // Sync image when product changes (for Next.js soft navigation)
   useEffect(() => {
-    setActiveImgUrl(images[0])
-    
+    setActiveImgUrl(allImages[0])
+
     // Trigger Pixel ViewContent
     const timer = setTimeout(() => {
       pixelViewContent(
@@ -70,7 +81,7 @@ export function ProductDetail({ product }) {
 
   // Cek status wishlist
   const { data: wishlistData } = useQuery({
-    queryKey: ["wishlist-status", product.id],
+    queryKey: ["wishlist-status", product.id, session?.user?.id],
     queryFn: () => checkIsWishlisted(product.id),
     enabled: !!session,
     staleTime: 1000 * 60 * 5, // 5 menit
@@ -81,9 +92,9 @@ export function ProductDetail({ product }) {
   const wishlistMutation = useMutation({
     mutationFn: () => toggleWishlist(product.id),
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["wishlist-status", product.id] })
-      const previous = queryClient.getQueryData(["wishlist-status", product.id])
-      queryClient.setQueryData(["wishlist-status", product.id], (old) => ({
+      await queryClient.cancelQueries({ queryKey: ["wishlist-status", product.id, session?.user?.id] })
+      const previous = queryClient.getQueryData(["wishlist-status", product.id, session?.user?.id])
+      queryClient.setQueryData(["wishlist-status", product.id, session?.user?.id], (old) => ({
         ...old,
         isWishlisted: !old?.isWishlisted,
       }))
@@ -100,7 +111,7 @@ export function ProductDetail({ product }) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(["wishlist-status", product.id], context.previous)
+        queryClient.setQueryData(["wishlist-status", product.id, session?.user?.id], context.previous)
       }
       toast.error("Gagal memperbarui wishlist.")
     },
@@ -192,6 +203,12 @@ export function ProductDetail({ product }) {
     }
   }, [selectedVariant])
 
+  const getOptionImageUrl = (optionName, optionValue) => {
+    if (!hasVariants) return null
+    const variantWithImage = variants.find(v => v.attributes[optionName] === optionValue && v.imageUrl)
+    return variantWithImage ? variantWithImage.imageUrl : null
+  }
+
   const isOptionDisabled = (optionName, value) => {
     if (!hasVariants) return false
     const potentialSelection = { ...selectedAttributes, [optionName]: value }
@@ -222,15 +239,19 @@ export function ProductDetail({ product }) {
           {/* ─── LEFT: Image Gallery ─── */}
           <div className="lg:col-span-5 space-y-3">
             {/* Main Image */}
-            <div className="aspect-square rounded-2xl overflow-hidden bg-card border border-border/50 relative group">
+            <div className="aspect-square rounded-2xl overflow-hidden bg-card border border-border/50 relative group bg-black flex items-center justify-center">
               {activeImgUrl ? (
-                <Image
-                  src={activeImgUrl}
-                  alt={product.name}
-                  fill
-                  unoptimized
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                activeImgUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+                  <video src={activeImgUrl} autoPlay muted loop playsInline className="w-full h-full object-contain" />
+                ) : (
+                  <Image
+                    src={activeImgUrl}
+                    alt={product.name}
+                    fill
+                    unoptimized
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                )
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-6xl text-muted-foreground">📦</div>
               )}
@@ -242,18 +263,22 @@ export function ProductDetail({ product }) {
               )}
             </div>
             {/* Thumbnails */}
-            {images.length > 1 && (
+            {allImages.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {images.map((img, i) => (
+                {allImages.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setActiveImgUrl(img)}
                     className={cn(
-                      "h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 relative",
+                      "h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 relative bg-black flex items-center justify-center",
                       activeImgUrl === img ? "border-primary ring-2 ring-primary/20" : "border-border/50 hover:border-primary/40"
                     )}
                   >
-                    <Image src={img} alt={`Preview ${i + 1}`} fill unoptimized className="object-cover" />
+                    {img.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
+                      <video src={img} className="w-full h-full object-cover" muted loop playsInline />
+                    ) : (
+                      <Image src={img} alt={`Preview ${i + 1}`} fill unoptimized className="object-cover" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -310,7 +335,22 @@ export function ProductDetail({ product }) {
                             <button
                               key={val}
                               disabled={disabled}
-                              onClick={() => setSelectedAttributes(prev => ({ ...prev, [option.name]: val }))}
+                              onClick={() => {
+                                const nextAttrs = { ...selectedAttributes, [option.name]: val }
+                                setSelectedAttributes(nextAttrs)
+                                
+                                if (option.displayType === "image") {
+                                  const optImg = getOptionImageUrl(option.name, val)
+                                  if (optImg) setActiveImgUrl(optImg)
+                                } else {
+                                  const nextVariant = variants.find(v =>
+                                    Object.entries(nextAttrs).every(([key, vVal]) => v.attributes[key] === vVal)
+                                  )
+                                  if (nextVariant?.imageUrl) {
+                                    setActiveImgUrl(nextVariant.imageUrl)
+                                  }
+                                }
+                              }}
                               className={cn(
                                 "relative px-3 py-1.5 rounded-lg border transition-all text-xs font-medium flex items-center gap-1.5",
                                 selected
@@ -319,14 +359,18 @@ export function ProductDetail({ product }) {
                                 disabled && "opacity-30 cursor-not-allowed line-through bg-muted"
                               )}
                             >
-                              {option.displayType === "image" && images[0] && (
-                                <div className="h-5 w-5 rounded overflow-hidden bg-muted border relative">
-                                  <Image src={images[0]} alt={val} fill unoptimized className="object-cover" />
+                              {option.displayType === "image" && (
+                                <div className="h-5 w-5 rounded overflow-hidden bg-muted border relative shrink-0">
+                                  {(() => {
+                                    const optImg = getOptionImageUrl(option.name, val) || allImages[0]
+                                    if (!optImg) return null
+                                    return <Image src={optImg} alt={val} fill unoptimized className="object-cover" />
+                                  })()}
                                 </div>
                               )}
                               {val}
                               {selected && (
-                                <Check className="h-3 w-3 text-primary" />
+                                <Check className="h-3 w-3 text-primary shrink-0" />
                               )}
                             </button>
                           )

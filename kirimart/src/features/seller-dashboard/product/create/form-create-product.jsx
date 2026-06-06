@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
 	Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -226,13 +227,30 @@ export function FormCreateProduct({ categories }) {
 				.map(combo => {
 					const key = attrKey(combo)
 					const saved = currentVarData[key] || {}
+					
+					let comboImageUrl = saved.imageUrl || null
+					if (!comboImageUrl) {
+						const options = form.getValues("options") || []
+						for (let i = 0; i < options.length; i++) {
+							if (options[i].displayType === "image") {
+								const optName = options[i].name
+								const valInCombo = combo[optName]
+								const valIdx = options[i].values?.indexOf(valInCombo)
+								if (valIdx !== undefined && valIdx !== -1 && optionValueImages[i]?.[valIdx]) {
+									comboImageUrl = optionValueImages[i][valIdx]
+									break
+								}
+							}
+						}
+					}
+
 					return {
 						attributes: combo,
 						price: saved.price !== undefined && saved.price !== "" ? Number(saved.price) : (Number(basePrice) || 0),
 						originalPrice: saved.originalPrice ? Number(saved.originalPrice) : null,
 						stock: saved.stock !== undefined && saved.stock !== "" ? Number(saved.stock) : (Number(baseStock) || 0),
 						sku: saved.sku || null,
-						imageUrl: saved.imageUrl || null,
+						imageUrl: comboImageUrl,
 					}
 				})
 
@@ -490,13 +508,13 @@ export function FormCreateProduct({ categories }) {
 																			return (
 																				<div key={valIdx} className="flex flex-col items-center gap-1">
 																					<label className="cursor-pointer group">
-																						<div className={`w-14 h-14 rounded-lg border-2 overflow-hidden flex items-center justify-center transition-all
+																						<div className={`relative w-14 h-14 rounded-lg border-2 overflow-hidden flex items-center justify-center transition-all
 																							${imgUrl
 																								? "border-primary/50 shadow-sm"
 																								: "border-dashed border-muted-foreground/30 hover:border-primary/50 bg-muted/20 hover:bg-muted/40"
 																							}`}>
 																							{imgUrl
-																								? <img src={imgUrl} className="w-full h-full object-cover" alt={val} />
+																								? <Image src={imgUrl} fill sizes="56px" className="object-cover" alt={val} unoptimized />
 																								: <ImageIcon className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
 																							}
 																						</div>
@@ -602,7 +620,7 @@ export function FormCreateProduct({ categories }) {
 																						const imgUrl = optionValueImages[optIdx]?.[valIdx]
 																						return (
 																							<span key={optName} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
-																								{imgUrl && <img src={imgUrl} className="w-3.5 h-3.5 rounded-full object-cover shrink-0" alt="" />}
+																								{imgUrl && <div className="relative w-3.5 h-3.5 shrink-0"><Image src={imgUrl} fill sizes="14px" className="rounded-full object-cover" alt="" unoptimized /></div>}
 																								{val}
 																							</span>
 																						)
@@ -677,20 +695,27 @@ export function FormCreateProduct({ categories }) {
 								</Card>
 							)}
 
-							{/* ── Foto Produk ───────────────────────────────────────────── */}
+							{/* ── Foto/Video Produk ───────────────────────────────────────────── */}
 							<Card>
-								<CardHeader><CardTitle>Foto Produk</CardTitle></CardHeader>
+								<CardHeader><CardTitle>Foto & Video Produk</CardTitle></CardHeader>
 								<CardContent>
 									<FormField control={form.control} name="images" render={({ field }) => (
 										<FormItem>
 											<FormControl>
 												<div className="grid grid-cols-4 gap-4">
-													{imagesPreviews.map((preview, idx) => (
-														<div key={idx} className="relative aspect-square rounded-lg border overflow-hidden group">
-															<img src={preview} className="w-full h-full object-cover" alt="" />
+													{imagesPreviews.map((previewObj, idx) => {
+														const isVid = typeof previewObj === 'object' ? previewObj.isVideo : (typeof previewObj === 'string' && previewObj.match(/\.(mp4|webm|mov)(\?.*)?$/i));
+														const srcUrl = typeof previewObj === 'object' ? previewObj.url : previewObj;
+														return (
+														<div key={idx} className="relative aspect-square rounded-lg border bg-black overflow-hidden group">
+															{isVid ? (
+																<video src={srcUrl} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+															) : (
+																<Image src={srcUrl} fill sizes="150px" className="object-cover" alt="" unoptimized />
+															)}
 															<button
 																type="button"
-																className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+																className="absolute top-1 right-1 z-10 bg-destructive text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
 																onClick={() => {
 																	setImagesPreviews(prev => prev.filter((_, i) => i !== idx))
 																	field.onChange(field.value.filter((_, i) => i !== idx))
@@ -699,12 +724,12 @@ export function FormCreateProduct({ categories }) {
 																<X className="h-3 w-3" />
 															</button>
 															{idx === 0 && (
-																<div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-center text-[10px] py-0.5">
+																<div className="absolute bottom-0 left-0 right-0 z-10 bg-black/50 text-white text-center text-[10px] py-0.5">
 																	Utama
 																</div>
 															)}
 														</div>
-													))}
+													)})}
 													{isLoadingImage ? (
 														<div className="aspect-square border rounded-lg flex items-center justify-center">
 															<Loader2 className="animate-spin" />
@@ -712,15 +737,15 @@ export function FormCreateProduct({ categories }) {
 													) : (
 														<label className="aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
 															<Plus className="h-6 w-6 text-muted-foreground" />
-															<span className="text-xs text-muted-foreground mt-1">Tambah Foto</span>
-															<Input type="file" accept="image/*" className="hidden" onChange={async e => {
+															<span className="text-xs text-muted-foreground mt-1">Tambah Media</span>
+															<Input type="file" accept="image/png, image/jpeg, image/jpg, video/mp4, video/webm, video/quicktime" className="hidden" onChange={async e => {
 																const file = e.target.files?.[0]
 																if (!file) return
 																setIsLoadingImage(true)
 																const url = await uploadFile(file)
 																if (url) {
 																	field.onChange([...(field.value || []), url])
-																	setImagesPreviews(prev => [...prev, URL.createObjectURL(file)])
+																	setImagesPreviews(prev => [...prev, { url: URL.createObjectURL(file), isVideo: file.type.startsWith("video/") }])
 																}
 																setIsLoadingImage(false)
 																e.target.value = ""

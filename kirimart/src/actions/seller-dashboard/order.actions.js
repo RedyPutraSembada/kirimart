@@ -7,7 +7,7 @@
 "use server"
 
 import { db } from "@/config/db"
-import { orders, stores, shipments, addresses } from "@/config/db/schema"
+import { orders, stores, shipments, addresses, complaints, refundRequests } from "@/config/db/schema"
 import { auth } from "@/lib/auth"
 import { eq, and, desc, sql } from "drizzle-orm"
 import { headers } from "next/headers"
@@ -63,6 +63,8 @@ export async function getSellerOrders() {
 					}
 				},
 				shipment: true,
+				complaint: true,
+				refundRequest: true,
 				user: {
 					columns: { id: true, name: true, email: true, image: true }
 				}
@@ -167,6 +169,19 @@ export async function updateOrderStatus(orderId, newStatus, shippingData = {}) {
 
 		const statusLabel = newStatus === "processing" ? "Dikemas" : "Dikirim"
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "UPDATE_ORDER_STATUS",
+				entityType: "order",
+				entityId: order.id,
+				details: { oldStatus: order.status, newStatus, awbNumber: shippingData.awbNumber || null }
+			})
+		} catch (e) { console.error(e) }
+
 		// === REAL-TIME NOTIFICATION ke buyer ===
 		try {
 			const { createNotification } = await import("@/actions/public/notification.actions")
@@ -202,8 +217,8 @@ export async function updateOrderStatus(orderId, newStatus, shippingData = {}) {
 			// === KIRIM EMAIL KE PEMBELI ===
 			if (order.user?.email) {
 				const emailSubject = newStatus === "processing" 
-					? `[KiriMart] Pesanan #${order.id} Sedang Dikemas` 
-					: `[KiriMart] Pesanan #${order.id} Telah Dikirim`;
+					? `[Kawan Belanja] Pesanan #${order.id} Sedang Dikemas` 
+					: `[Kawan Belanja] Pesanan #${order.id} Telah Dikirim`;
 				
 				const emailHtml = newStatus === "processing"
 					? getOrderProcessingEmail(order.user.name || "Pembeli", order.id, store.name)
@@ -250,7 +265,13 @@ export async function getOrderShippingDetail(orderId) {
 			),
 			with: {
 				payment: true,
-				items: true,
+				items: {
+					with: {
+						product: {
+							columns: { weightGram: true },
+						},
+					},
+				},
 				shipment: true,
 			},
 		})
@@ -309,7 +330,7 @@ export async function getOrderShippingDetail(orderId) {
 					name: item.productNameSnapshot,
 					description: item.variantNameSnapshot || "",
 					value: item.priceSnapshot,
-					weight: 200, // Default weight per item (gram)
+					weight: item.product?.weightGram || 200,
 					quantity: item.quantity,
 				})),
 				// Data notes
@@ -356,7 +377,13 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 			),
 			with: {
 				payment: true,
-				items: true,
+				items: {
+					with: {
+						product: {
+							columns: { weightGram: true },
+						},
+					},
+				},
 				shipment: true,
 				user: true,
 			},
@@ -439,14 +466,14 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 			courierCode: selectedShipping.courierCode,
 			courierType: selectedShipping.serviceCode,
 			deliveryType: deliveryType,
-			orderNote: `KiriMart Order #${order.id}`,
+			orderNote: `Kawan Belanja Order #${order.id}`,
 			items: order.items.map(item => ({
 				name: item.productNameSnapshot,
 				description: item.variantNameSnapshot || "",
 				category: "others",
 				value: item.priceSnapshot,
 				quantity: item.quantity,
-				weight: 200, // gram per item (TODO: ambil dari product.weightGram)
+				weight: item.product?.weightGram || 200,
 				height: 10,
 				length: 10,
 				width: 10,
@@ -505,6 +532,19 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 
 		console.log(`[shipOrderViaBiteship] Order #${orderId} shipped via Biteship! AWB: ${biteshipResult.data.courierWaybillId}`)
 
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "SUBMIT_SHIPPING_AWB",
+				entityType: "order",
+				entityId: order.id,
+				details: { biteshipOrderId: biteshipResult.data.id, awbNumber: biteshipResult.data.courierWaybillId }
+			})
+		} catch (e) { console.error(e) }
+
 		// === REAL-TIME NOTIFICATION & EMAIL ke buyer ===
 		try {
 			const { createNotification } = await import("@/actions/public/notification.actions")
@@ -534,7 +574,7 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 			
 			// === KIRIM EMAIL KE PEMBELI ===
 			if (order.user?.email) {
-				const emailSubject = `[KiriMart] Pesanan #${order.id} Telah Dikirim`
+				const emailSubject = `[Kawan Belanja] Pesanan #${order.id} Telah Dikirim`
 				const emailHtml = getOrderShippedEmail(order.user.name || "Pembeli", order.id, courierName, awb)
 				await sendEmail(order.user.email, emailSubject, emailHtml)
 			}
@@ -554,5 +594,447 @@ export async function shipOrderViaBiteship(orderId, pickupMethod = "pickup") {
 	} catch (error) {
 		console.error("[shipOrderViaBiteship] Error:", error)
 		return { success: false, error: "Terjadi kesalahan saat mengirim pesanan." }
+	}
+}
+
+// ============================================
+// CANCEL ORDER (Penjual membatalkan pesanan yang sudah dibayar)
+// ============================================
+
+/**
+ * Penjual membatalkan pesanan yang berstatus `paid` (sudah dibayar tapi belum diproses).
+ * Alasan: stok habis, produk rusak, dll.
+ * 
+ * Efek:
+ * 1. Status order → cancelled_by_seller
+ * 2. Stok produk dikembalikan
+ * 3. Refund request otomatis dibuat agar Admin bisa mentransfer uang kembali ke pembeli
+ * 
+ * @param {number} orderId
+ * @param {string} reason - Alasan pembatalan
+ */
+export async function cancelOrder(orderId, reason = "") {
+	try {
+		const store = await getSellerStore()
+		if (!store) {
+			return { success: false, error: "Toko tidak ditemukan." }
+		}
+
+		if (!reason || reason.trim().length < 5) {
+			return { success: false, error: "Alasan pembatalan wajib diisi (minimal 5 karakter)." }
+		}
+
+		const order = await db.query.orders.findFirst({
+			where: and(
+				eq(orders.id, parseInt(orderId)),
+				eq(orders.storeId, store.id)
+			),
+			with: {
+				user: true,
+				items: true,
+				shipment: true,
+			}
+		})
+
+		if (!order) {
+			return { success: false, error: "Pesanan tidak ditemukan." }
+		}
+
+		// Hanya bisa cancel jika status paid atau processing (belum picked oleh kurir)
+		if (!["paid", "processing"].includes(order.status)) {
+			return { success: false, error: `Pesanan dengan status "${order.status}" tidak bisa dibatalkan. Hanya pesanan yang berstatus "Dibayar" atau "Dikemas" yang bisa dibatalkan.` }
+		}
+
+		// Jika sudah ada order di Biteship, batalkan juga di sana
+		if (order.shipment?.biteshipOrderId) {
+			const { cancelBiteshipOrder } = await import("@/actions/public/biteship.actions")
+			const cancelResult = await cancelBiteshipOrder(order.shipment.biteshipOrderId, reason.trim())
+			if (!cancelResult.success) {
+				console.warn("[cancelOrder] Gagal cancel di Biteship:", cancelResult.error)
+				// Tetap lanjut cancel lokal — mungkin paket sudah di-pick kurir
+			}
+		}
+
+		await db.transaction(async (tx) => {
+			// 1. Update status order → cancelled_by_seller
+			await tx.update(orders)
+				.set({ status: "cancelled_by_seller", notes: `Dibatalkan penjual: ${reason.trim()}` })
+				.where(eq(orders.id, parseInt(orderId)))
+
+			// 2. Kembalikan stok produk
+			const { productVariants, products } = await import("@/config/db/schema")
+			for (const item of order.items) {
+				if (item.variantId) {
+					await tx.update(productVariants)
+						.set({ stock: sql`stock + ${item.quantity}` })
+						.where(eq(productVariants.id, item.variantId))
+				} else {
+					await tx.update(products)
+						.set({ baseStock: sql`COALESCE(base_stock, 0) + ${item.quantity}` })
+						.where(eq(products.id, item.productId))
+				}
+			}
+
+			// 3. Buat refund request otomatis
+			await tx.insert(refundRequests).values({
+				orderId: parseInt(orderId),
+				userId: order.userId,
+				complaintId: null,
+				amountRequested: order.grandTotal,
+			})
+		})
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "CANCEL_ORDER",
+				entityType: "order",
+				entityId: order.id,
+				details: { reason: reason.trim() }
+			})
+		} catch (e) { console.error(e) }
+
+		// Kirim notifikasi ke pembeli
+		try {
+			const { createNotification } = await import("@/actions/public/notification.actions")
+			const { wsEmit } = await import("@/lib/ws-emit")
+
+			const notif = await createNotification(
+				order.userId,
+				"order_cancelled",
+				"❌ Pesanan Dibatalkan Penjual",
+				`Pesanan #${order.id} dibatalkan oleh penjual: "${reason.trim()}". Anda akan menerima pengembalian dana.`,
+				{
+					orderId: order.id,
+					storeId: store.id,
+				}
+			)
+
+			if (notif) {
+				await wsEmit("notifications", `user:${order.userId}`, "notification", notif)
+			}
+		} catch (notifError) {
+			console.warn("[cancelOrder] Failed to send notification:", notifError.message)
+		}
+
+		return { success: true, message: "Pesanan berhasil dibatalkan. Refund akan diproses oleh Admin." }
+	} catch (error) {
+		console.error("[cancelOrder]", error)
+		return { success: false, error: "Gagal membatalkan pesanan." }
+	}
+}
+
+// ============================================
+// HANDLE COMPLAINT (Penjual merespon komplain pembeli)
+// ============================================
+
+/**
+ * Penjual menyetujui atau menolak komplain pembeli.
+ * 
+ * - Jika setuju (accept): Buat refund request, status komplain → accepted
+ * - Jika tolak (reject): Status komplain → rejected, order kembali ke status sebelumnya
+ * 
+ * @param {number} complaintId
+ * @param {'accept' | 'reject'} action
+ * @param {string} [response] - Penjelasan penjual (wajib jika reject)
+ */
+export async function handleComplaint(complaintId, action, response = "") {
+	try {
+		const store = await getSellerStore()
+		if (!store) {
+			return { success: false, error: "Toko tidak ditemukan." }
+		}
+
+		if (!["accept", "reject"].includes(action)) {
+			return { success: false, error: "Aksi tidak valid." }
+		}
+
+		if (action === "reject" && (!response || response.trim().length < 5)) {
+			return { success: false, error: "Alasan penolakan wajib diisi (minimal 5 karakter)." }
+		}
+
+		const complaint = await db.query.complaints.findFirst({
+			where: and(
+				eq(complaints.id, parseInt(complaintId)),
+				eq(complaints.storeId, store.id)
+			),
+			with: { order: true }
+		})
+
+		if (!complaint) {
+			return { success: false, error: "Komplain tidak ditemukan." }
+		}
+
+		if (complaint.status !== "pending") {
+			return { success: false, error: "Komplain ini sudah diproses." }
+		}
+
+		await db.transaction(async (tx) => {
+			if (action === "accept") {
+				// Setujui komplain → tunggu pembeli kirim balik barang
+				await tx.update(complaints)
+					.set({ status: "accepted", updatedAt: new Date() })
+					.where(eq(complaints.id, parseInt(complaintId)))
+
+				// Ubah status order menjadi return_requested
+				await tx.update(orders)
+					.set({ status: "return_requested" })
+					.where(eq(orders.id, complaint.orderId))
+			} else {
+				// Tolak komplain → order kembali ke status sebelumnya (completed/shipped)
+				await tx.update(complaints)
+					.set({
+						status: "rejected",
+						sellerResponse: response.trim(),
+						updatedAt: new Date(),
+					})
+					.where(eq(complaints.id, parseInt(complaintId)))
+
+				// Kembalikan status order (dari complained → completed)
+				await tx.update(orders)
+					.set({ status: "completed" })
+					.where(eq(orders.id, complaint.orderId))
+			}
+		})
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "RESPOND_COMPLAINT",
+				entityType: "complaint",
+				entityId: complaint.id,
+				details: { responseAction: action, sellerResponse: response.trim() }
+			})
+		} catch (e) { console.error(e) }
+
+		// Kirim notifikasi ke pembeli
+		try {
+			const { createNotification } = await import("@/actions/public/notification.actions")
+			const { wsEmit } = await import("@/lib/ws-emit")
+
+			const title = action === "accept"
+				? "✅ Komplain Disetujui"
+				: "❌ Komplain Ditolak"
+
+			const message = action === "accept"
+				? `Penjual telah menyetujui komplain Anda untuk pesanan #${complaint.orderId}. Silakan isi data rekening untuk proses refund.`
+				: `Penjual menolak komplain Anda untuk pesanan #${complaint.orderId}: "${response.trim()}"`
+
+			const notif = await createNotification(
+				complaint.userId,
+				action === "accept" ? "complaint_accepted" : "complaint_rejected",
+				title,
+				message,
+				{
+					orderId: complaint.orderId,
+					complaintId: complaint.id,
+				}
+			)
+
+			if (notif) {
+				await wsEmit("notifications", `user:${complaint.userId}`, "notification", notif)
+			}
+		} catch (notifError) {
+			console.warn("[handleComplaint] Failed to send notification:", notifError.message)
+		}
+
+		const label = action === "accept" ? "disetujui" : "ditolak"
+		return { success: true, message: `Komplain berhasil ${label}.` }
+	} catch (error) {
+		console.error("[handleComplaint]", error)
+		return { success: false, error: "Gagal memproses komplain." }
+	}
+}
+
+export async function confirmReturnReceived(orderId) {
+	try {
+		const store = await getSellerStore()
+		if (!store) {
+			return { success: false, error: "Toko tidak ditemukan." }
+		}
+
+		const order = await db.query.orders.findFirst({
+			where: and(
+				eq(orders.id, parseInt(orderId)),
+				eq(orders.storeId, store.id)
+			),
+		})
+
+		if (!order) {
+			return { success: false, error: "Pesanan tidak ditemukan." }
+		}
+
+		if (order.status !== "return_shipped") {
+			return { success: false, error: "Status pesanan tidak valid untuk aksi ini." }
+		}
+
+		const complaint = await db.query.complaints.findFirst({
+			where: and(
+				eq(complaints.orderId, parseInt(orderId)),
+				eq(complaints.storeId, store.id),
+				eq(complaints.status, "accepted")
+			)
+		})
+
+		if (!complaint) {
+			return { success: false, error: "Data komplain tidak ditemukan." }
+		}
+
+		await db.transaction(async (tx) => {
+			// Update status komplain jadi return_received (opsional, tapi bagus untuk rekam jejak)
+			await tx.update(complaints)
+				.set({ status: "return_received", updatedAt: new Date() })
+				.where(eq(complaints.id, complaint.id))
+
+			// Buat refund request untuk ditransfer admin
+			await tx.insert(refundRequests).values({
+				orderId: complaint.orderId,
+				userId: complaint.userId,
+				complaintId: complaint.id,
+				amountRequested: order.grandTotal - order.totalShipping,
+				bankName: complaint.bankName,
+				bankAccountNumber: complaint.bankAccountNumber,
+				bankAccountHolder: complaint.bankAccountHolder,
+			})
+
+			// Ubah status order menjadi refund_processing
+			await tx.update(orders)
+				.set({ status: "refund_processing" })
+				.where(eq(orders.id, complaint.orderId))
+		})
+
+		// === LOG ACTIVITY ===
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: store.userId,
+				storeId: store.id,
+				action: "UPDATE_ORDER_STATUS", // Same action logic as others or specific? The guide says "UPDATE_ORDER_STATUS" for order status changes. I will use "CONFIRM_RECEIVED" but this is seller confirming return...
+				entityType: "complaint",
+				entityId: complaint.id,
+				details: { orderStatus: "refund_processing", info: "Barang retur diterima penjual" }
+			})
+		} catch (e) { console.error(e) }
+
+		// Kirim notifikasi ke pembeli
+		try {
+			const { createNotification } = await import("@/actions/public/notification.actions")
+			const { wsEmit } = await import("@/lib/ws-emit")
+
+			const notif = await createNotification(
+				complaint.userId,
+				"return_received",
+				"📦 Barang Retur Diterima",
+				`Penjual telah menerima barang retur untuk pesanan #${orderId}. Dana Anda sedang diproses untuk dikembalikan oleh sistem.`,
+				{ orderId: complaint.orderId }
+			)
+			if (notif) {
+				await wsEmit("notifications", `user:${complaint.userId}`, "notification", notif)
+			}
+		} catch (notifError) {
+			console.warn("[confirmReturnReceived] Failed to send notification:", notifError.message)
+		}
+
+		return { success: true, message: "Barang retur berhasil dikonfirmasi. Dana sedang diproses untuk dikembalikan ke pembeli." }
+	} catch (error) {
+		console.error("[confirmReturnReceived]", error)
+		return { success: false, error: "Gagal mengonfirmasi penerimaan barang retur." }
+	}
+}
+
+// ============================================
+// SYNC ORDER WITH BITESHIP (Manual Sync)
+// ============================================
+
+/**
+ * Sinkronisasi status pesanan dari Biteship secara manual.
+ * Berguna saat webhook gagal/delay — seller bisa klik "Sync Status".
+ *
+ * @param {number} orderId
+ * @returns {{ success: boolean, data?: { status, awbNumber }, error?: string }}
+ */
+export async function syncOrderWithBiteship(orderId) {
+	try {
+		const store = await getSellerStore()
+		if (!store) {
+			return { success: false, error: "Toko tidak ditemukan." }
+		}
+
+		const order = await db.query.orders.findFirst({
+			where: and(
+				eq(orders.id, parseInt(orderId)),
+				eq(orders.storeId, store.id)
+			),
+			with: { shipment: true },
+		})
+
+		if (!order) {
+			return { success: false, error: "Pesanan tidak ditemukan." }
+		}
+
+		if (!order.shipment?.biteshipOrderId) {
+			return { success: false, error: "Pesanan ini belum memiliki order di Biteship." }
+		}
+
+		const { retrieveBiteshipOrder } = await import("@/actions/public/biteship.actions")
+		const result = await retrieveBiteshipOrder(order.shipment.biteshipOrderId)
+
+		if (!result.success) {
+			return { success: false, error: result.error || "Gagal mengambil data dari Biteship." }
+		}
+
+		const bsData = result.data
+
+		// Update shipment di database
+		const updateData = {
+			status: bsData.status,
+		}
+		if (bsData.courierWaybillId) {
+			updateData.awbNumber = bsData.courierWaybillId
+		}
+
+		await db.update(shipments)
+			.set(updateData)
+			.where(eq(shipments.id, order.shipment.id))
+
+		// Update order status berdasarkan status Biteship
+		const orderStatusMap = {
+			"confirmed": "shipped",
+			"allocated": "shipped",
+			"picking_up": "shipped",
+			"picked": "shipped",
+			"in_transit": "shipped",
+			"dropping_off": "shipped",
+			"delivered": "shipped", // Tetap shipped — tunggu buyer konfirmasi
+			"rejected": "cancelled",
+			"cancelled": "cancelled",
+		}
+
+		const newOrderStatus = orderStatusMap[bsData.status]
+		if (newOrderStatus && order.status !== newOrderStatus) {
+			await db.update(orders)
+				.set({ status: newOrderStatus })
+				.where(eq(orders.id, order.id))
+		}
+
+		console.log(`[syncOrderWithBiteship] Order #${orderId} synced: ${bsData.status}, AWB: ${bsData.courierWaybillId}`)
+
+		return {
+			success: true,
+			data: {
+				status: bsData.status,
+				awbNumber: bsData.courierWaybillId || order.shipment.awbNumber,
+			},
+			message: `Status berhasil disinkronkan: ${bsData.status}`,
+		}
+	} catch (error) {
+		console.error("[syncOrderWithBiteship]", error)
+		return { success: false, error: "Gagal sinkronisasi status pesanan." }
 	}
 }

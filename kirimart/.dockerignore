@@ -1,0 +1,52 @@
+# Dependencies (akan di-install ulang di Docker)
+node_modules
+.pnp
+.pnp.js
+
+# Build output (akan di-build ulang)
+.next
+out
+
+# Testing
+coverage
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docker (hindari recursive copy)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Development files
+*.md
+docs/
+LICENSE
+AGENTS.md
+CLAUDE.md
+
+# Environment (production env akan di-copy secara eksplisit)
+.env
+.env.local
+.env.development
+.env.example
+
+# Temporary
+*.log
+tmp/
+
+# Test files
+test_*.js
+truncate.js
+
+# Build locks (npm ci pakai package-lock.json)
+bun.lock
