@@ -15,7 +15,7 @@
 # STRUKTUR DIRECTORY DI SERVER:
 #
 #   /home/deploy/kawanbelanja/
-#   ├── kirimart/                   ← git clone (repo ini)
+#   ├── kawanbelanja/                   ← git clone (repo ini)
 #   │   ├── Dockerfile              ← Next.js
 #   │   ├── docker-compose.prod.yml ← file ini
 #   │   ├── .env.production         ← environment production
@@ -59,19 +59,19 @@ services:
   # ──────────────────────────────────────────
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:latest
-    container_name: kirimart-npm
+    container_name: kawanbelanja-npm
     restart: unless-stopped
     ports:
-      - "80:80"      # HTTP
-      - "443:443"    # HTTPS
-      - "81:81"      # Admin UI
+      - "80:80" # HTTP
+      - "443:443" # HTTPS
+      - "81:81" # Admin UI
     volumes:
       - npm-data:/data
       - npm-letsencrypt:/etc/letsencrypt
     networks:
-      - kirimart-net
+      - kawanbelanja-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:81"]
+      test: [ "CMD", "curl", "-f", "http://localhost:81" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -82,11 +82,11 @@ services:
   # ──────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    container_name: kirimart-postgres
+    container_name: kawanbelanja-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${PG_DATABASE:-kirimart}
-      POSTGRES_USER: ${PG_USER:-kirimart}
+      POSTGRES_DB: ${PG_DATABASE:-kawanbelanja}
+      POSTGRES_USER: ${PG_USER:-kawanbelanja}
       POSTGRES_PASSWORD: ${PG_PASSWORD:?PG_PASSWORD harus diisi di .env.production}
       # Tuning untuk VPS 4GB RAM
       POSTGRES_INITDB_ARGS: "--data-checksums"
@@ -105,7 +105,7 @@ services:
     volumes:
       - pg-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-kirimart} -d ${PG_DATABASE:-kirimart}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${PG_USER:-kawanbelanja} -d ${PG_DATABASE:-kawanbelanja}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -115,7 +115,7 @@ services:
         limits:
           memory: 512M
     networks:
-      - kirimart-net
+      - kawanbelanja-net
 
   # ──────────────────────────────────────────
   # 3. REDIS 7
@@ -123,7 +123,7 @@ services:
   # ──────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: kirimart-redis
+    container_name: kawanbelanja-redis
     restart: unless-stopped
     command: >
       redis-server
@@ -135,7 +135,7 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -144,7 +144,7 @@ services:
         limits:
           memory: 256M
     networks:
-      - kirimart-net
+      - kawanbelanja-net
 
   # ──────────────────────────────────────────
   # 4. NEXT.JS APP (Production)
@@ -155,14 +155,14 @@ services:
       context: .
       dockerfile: Dockerfile
     image: kawanbelanja-app:latest
-    container_name: kirimart-app
+    container_name: kawanbelanja-app
     restart: unless-stopped
     env_file:
       - .env.production
     environment:
       - NODE_ENV=production
       # Override: gunakan hostname Docker internal (bukan localhost)
-      - DATABASE_URL=postgres://${PG_USER:-kirimart}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE:-kirimart}
+      - DATABASE_URL=postgres://${PG_USER:-kawanbelanja}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE:-kawanbelanja}
       - REDIS_URL=redis://redis:6379
       - WS_SERVER_URL=http://ws-server:3001
       - BETTER_AUTH_URL=https://${DOMAIN:-kawanbelanja.com}
@@ -176,7 +176,7 @@ services:
         limits:
           memory: 800M
     networks:
-      - kirimart-net
+      - kawanbelanja-net
     logging:
       driver: "json-file"
       options:
@@ -192,12 +192,12 @@ services:
       context: ./ws-server
       dockerfile: Dockerfile
     image: kawanbelanja-ws:latest
-    container_name: kirimart-ws
+    container_name: kawanbelanja-ws
     restart: unless-stopped
     environment:
       - PORT=3001
       - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgres://${PG_USER:-kirimart}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE:-kirimart}
+      - DATABASE_URL=postgres://${PG_USER:-kawanbelanja}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE:-kawanbelanja}
       - WS_SECRET=${WS_SECRET}
       - ALLOWED_ORIGINS=https://${DOMAIN:-kawanbelanja.com}
     depends_on:
@@ -210,7 +210,7 @@ services:
         limits:
           memory: 256M
     networks:
-      - kirimart-net
+      - kawanbelanja-net
     logging:
       driver: "json-file"
       options:
@@ -226,7 +226,7 @@ services:
       context: ../file-uploader
       dockerfile: Dockerfile
     image: kawanbelanja-uploader:latest
-    container_name: kirimart-uploader
+    container_name: kawanbelanja-uploader
     restart: unless-stopped
     environment:
       - PORT=4004
@@ -244,7 +244,7 @@ services:
         limits:
           memory: 128M
     networks:
-      - kirimart-net
+      - kawanbelanja-net
     logging:
       driver: "json-file"
       options:
@@ -260,10 +260,10 @@ services:
       context: .
       dockerfile: Dockerfile
       target: builder
-    container_name: kirimart-migrate
+    container_name: kawanbelanja-migrate
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgres://${PG_USER:-kirimart}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE:-kirimart}
+      - DATABASE_URL=postgres://${PG_USER:-kawanbelanja}:${PG_PASSWORD}@postgres:5432/${PG_DATABASE:-kawanbelanja}
     command: npx drizzle-kit push
     depends_on:
       postgres:
@@ -271,7 +271,7 @@ services:
     profiles:
       - tools
     networks:
-      - kirimart-net
+      - kawanbelanja-net
 
 # ──────────────────────────────────────────
 # VOLUMES — Data Persisten
@@ -292,5 +292,5 @@ volumes:
 # NETWORK — Semua service terhubung di sini
 # ──────────────────────────────────────────
 networks:
-  kirimart-net:
+  kawanbelanja-net:
     driver: bridge

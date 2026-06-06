@@ -77,7 +77,7 @@ docker compose -f $COMPOSE_FILE up -d postgres redis nginx-proxy-manager
 # Tunggu PostgreSQL healthy
 echo "      Waiting for PostgreSQL to be ready..."
 RETRIES=30
-until docker compose -f $COMPOSE_FILE exec -T postgres pg_isready -U kirimart > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
+until docker compose -f $COMPOSE_FILE exec -T postgres pg_isready -U kawanbelanja > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
     RETRIES=$((RETRIES-1))
     sleep 2
 done
