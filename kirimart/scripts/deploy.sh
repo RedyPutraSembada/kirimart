@@ -52,9 +52,9 @@ echo "[1/5] Pulling latest code..."
 git pull origin main 2>/dev/null || git pull origin master 2>/dev/null || echo "⚠️  Git pull skipped"
 
 # Pull file-uploader juga
-if [ -d "../file-uploader" ]; then
+if [ -d "../../file-uploader-kawanbelanja" ]; then
     echo "      Pulling file-uploader..."
-    cd ../file-uploader
+    cd ../../file-uploader-kawanbelanja
     git pull origin main 2>/dev/null || git pull origin master 2>/dev/null || echo "⚠️  Uploader pull skipped"
     cd "$PROJECT_DIR"
 fi
