@@ -36,7 +36,7 @@ import { initWorkers, closeWorkers } from "./jobs/worker.js"
 
 const PORT = process.env.PORT || 3001
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379"
-const WS_SECRET = process.env.WS_SECRET || "kawanbelanja-ws-secret-2026"
+const WS_SECRET = process.env.WS_SECRET || "kawan-belanja-ws-secret-2026"
 const DATABASE_URL = process.env.DATABASE_URL
 
 // ALLOWED_ORIGINS bisa di-set via env (comma-separated) atau pakai default development
