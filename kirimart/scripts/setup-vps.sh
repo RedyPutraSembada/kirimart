@@ -25,7 +25,18 @@ apt update && apt upgrade -y
 # ── 2. Install Docker ──
 echo "[2/8] Installing Docker..."
 if ! command -v docker &> /dev/null; then
-    curl -fsSL https://get.docker.com | sh
+    # Try official script first
+    if ! curl -fsSL https://get.docker.com | sh; then
+        echo "⚠️ Official script failed (likely due to EOL OS). Trying manual fallback..."
+        apt-get update
+        apt-get install -y ca-certificates curl
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+        chmod a+r /etc/apt/keyrings/docker.asc
+        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu focal stable" > /etc/apt/sources.list.d/docker.list
+        apt-get update
+        apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-ce-rootless-extras docker-buildx-plugin || true
+    fi
     systemctl enable docker
     systemctl start docker
     echo "✅ Docker installed"
