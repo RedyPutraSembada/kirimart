@@ -63,27 +63,27 @@ fi
 echo ""
 if [ "$DO_REBUILD" = true ]; then
     echo "[2/5] Building ALL images (force rebuild)..."
-    docker compose -f $COMPOSE_FILE build --no-cache
+    docker compose --env-file .env.production -f $COMPOSE_FILE build --no-cache
 else
     echo "[2/5] Building images (cache enabled)..."
-    docker compose -f $COMPOSE_FILE build
+    docker compose --env-file .env.production -f $COMPOSE_FILE build
 fi
 
 # ── 3. Start infrastructure first (Postgres, Redis, NPM) ──
 echo ""
 echo "[3/5] Starting infrastructure (Postgres, Redis, NPM)..."
-docker compose -f $COMPOSE_FILE up -d postgres redis nginx-proxy-manager
+docker compose --env-file .env.production -f $COMPOSE_FILE up -d postgres redis nginx-proxy-manager
 
 # Tunggu PostgreSQL healthy
 echo "      Waiting for PostgreSQL to be ready..."
 RETRIES=30
-until docker compose -f $COMPOSE_FILE exec -T postgres pg_isready -U kawanbelanja > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
+until docker compose --env-file .env.production -f $COMPOSE_FILE exec -T postgres pg_isready -U kawanbelanja > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
     RETRIES=$((RETRIES-1))
     sleep 2
 done
 
 if [ $RETRIES -eq 0 ]; then
-    echo "❌ PostgreSQL gagal start! Cek logs: docker compose -f $COMPOSE_FILE logs postgres"
+    echo "❌ PostgreSQL gagal start! Cek logs: docker compose --env-file .env.production -f $COMPOSE_FILE logs postgres"
     exit 1
 fi
 echo "      ✅ PostgreSQL ready"
@@ -92,7 +92,7 @@ echo "      ✅ PostgreSQL ready"
 if [ "$DO_MIGRATE" = true ]; then
     echo ""
     echo "[4/5] Running database migrations..."
-    docker compose -f $COMPOSE_FILE --profile tools run --rm migrate
+    docker compose --env-file .env.production -f $COMPOSE_FILE --profile tools run --rm migrate
     echo "      ✅ Migrations complete"
 else
     echo ""
@@ -102,7 +102,7 @@ fi
 # ── 5. Start application services ──
 echo ""
 echo "[5/5] Starting application services..."
-docker compose -f $COMPOSE_FILE up -d
+docker compose --env-file .env.production -f $COMPOSE_FILE up -d
 
 # ── Status ──
 echo ""
@@ -110,9 +110,9 @@ echo "============================================"
 echo "  ✅ Deployment Complete!"
 echo "============================================"
 echo ""
-docker compose -f $COMPOSE_FILE ps
+docker compose --env-file .env.production -f $COMPOSE_FILE ps
 echo ""
 echo "  Cek resource: docker stats"
-echo "  Cek logs:     docker compose -f $COMPOSE_FILE logs -f nextjs"
+echo "  Cek logs:     docker compose --env-file .env.production -f $COMPOSE_FILE logs -f nextjs"
 echo ""
 echo "============================================"
