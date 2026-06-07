@@ -1,0 +1,28 @@
+services:
+  nginx:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: kb-nginx
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+      - '81:81'
+    volumes:
+      - kb-npm-data:/data
+      - kb-npm-letsencrypt:/etc/letsencrypt
+    networks:
+      - kawanbelanja-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+volumes:
+  kb-npm-data:
+    name: kb-npm-data
+  kb-npm-letsencrypt:
+    name: kb-npm-letsencrypt
+
+networks:
+  kawanbelanja-net:
+    external: true
