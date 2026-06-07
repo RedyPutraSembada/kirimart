@@ -1,0 +1,27 @@
+services:
+  uploader:
+    build:
+      context: ../../../file-uploader-kawanbelanja
+      dockerfile: Dockerfile
+      args:
+        - ENV_FILE=.env.example
+    container_name: kb-uploader
+    restart: unless-stopped
+    env_file:
+      - ../.env.production
+    volumes:
+      - kb-upload-data:/app/public
+    networks:
+      - kawanbelanja-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  kb-upload-data:
+    name: kb-upload-data
+
+networks:
+  kawanbelanja-net:
+    external: true
