@@ -11,6 +11,7 @@ const nextConfig = {
   // Standalone output untuk Docker production build
   // Menghasilkan .next/standalone dengan server.js + minimal node_modules
   output: 'standalone',
+  serverExternalPackages: ['kysely', '@better-auth/kysely-adapter'],
   allowedDevOrigins: [
     'unintermingled-noncoincident-chandler.ngrok-free.app',
   ],

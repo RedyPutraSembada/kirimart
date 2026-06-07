@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kb-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${PG_DATABASE}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+    volumes:
+      - kb-pg-data:/var/lib/postgresql/data
+    networks:
+      - kawanbelanja-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    command: >
+      postgres 
+      -c shared_buffers=128MB 
+      -c max_connections=50 
+      -c log_min_duration_statement=1000
+
+volumes:
+  kb-pg-data:
+    name: kb-pg-data
+
+networks:
+  kawanbelanja-net:
+    external: true
