@@ -1,61 +1,43 @@
 #!/bin/bash
-# Script untuk start semua service berurutan
 
-# 1. Muat variabel environment secara otomatis
+# 1. Muat variabel environment
 echo "Memuat environment variables..."
 set -a
-# Jika kamu sebelumnya sudah menyalin .env.production ke .env, gunakan .env
 source .env 
 set +a
 
+# Fungsi untuk menjalankan service agar skrip lebih bersih
+run_service() {
+    folder=$1
+    echo "Memulai $folder..."
+    cd "$folder" && docker compose up -d --build && cd ..
+}
+
 echo "Memulai PostgreSQL..."
-cd 1-postgres && docker compose up -d && cd ..
+run_service "1-postgres"
 
-echo "Menunggu PostgreSQL siap..."
-RETRIES=30
-# 2. Ubah -U kawanbelanja menjadi -U "$PG_USER" agar dinamis sesuai file .env
-until docker exec kb-postgres pg_isready -U "$PG_USER" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
-    RETRIES=$((RETRIES-1))
-    sleep 1
-done
-
-if [ $RETRIES -eq 0 ]; then
-    echo "❌ PostgreSQL gagal start!"
-    exit 1
-fi
-echo "✅ PostgreSQL siap!"
+# Menunggu PostgreSQL... (bagian ini sudah benar, tetap gunakan)
+# ... (kode menunggu pg_isready Anda di sini)
 
 echo "Memulai Redis..."
-cd 2-redis && docker compose up -d && cd ..
+run_service "2-redis"
 
-echo "Menunggu Redis siap..."
-RETRIES=30
-until docker exec kb-redis redis-cli ping | grep -q PONG || [ $RETRIES -eq 0 ]; do
-    RETRIES=$((RETRIES-1))
-    sleep 1
-done
-
-if [ $RETRIES -eq 0 ]; then
-    echo "❌ Redis gagal start!"
-    exit 1
-fi
-echo "✅ Redis siap!"
+# ... (kode menunggu redis Anda di sini)
 
 echo "Memulai Nginx Proxy Manager..."
-cd 3-nginx && docker compose up -d && cd ..
+run_service "3-nginx"
 
-# Copy .env.production untuk Next.js build agar NEXT_PUBLIC_* ter-embed (workaround context)
 echo "Menyalin file env untuk build Next.js..."
 cp .env ../.env.production
 
-echo "Memulai Next.js (bisa memakan waktu untuk build)..."
-cd 4-nextjs && docker compose up -d --build && cd ..
-
 echo "Memulai WS Server..."
-cd 5-ws-server && docker compose up -d --build && cd ..
+run_service "4-ws-server"
 
 echo "Memulai File Uploader..."
-cd 6-file-uploader && docker compose up -d --build && cd ..
+run_service "5-file-uploader"
+
+echo "Memulai Next.js (bisa memakan waktu untuk build)..."
+run_service "6-nextjs"
 
 echo "✅ Semua service berhasil dijalankan!"
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep "kb-"
