@@ -4,7 +4,7 @@ import { headers } from "next/headers"
 
 export default async function NewProductEditPage({ params }) {
     // Memaksa halaman dirender secara dinamis untuk menghindari bug SWC di Alpine Linux
-    headers();
+    await headers();
 
     const id = (await params).id
 
