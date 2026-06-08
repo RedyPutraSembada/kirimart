@@ -1,7 +1,7 @@
 services:
   uploader:
     build:
-      context: ../../../file-uploader-kawanbelanja
+      context: ../../../../file-uploader-kawanbelanja
       dockerfile: Dockerfile
       args:
         - ENV_FILE=.env.example
