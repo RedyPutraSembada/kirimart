@@ -1,6 +1,7 @@
-export const dynamic = 'force-dynamic';
 import { getCategories, getProductById } from "@/actions/seller-dashboard/product/product.actions"
 import { FormEditProduct } from "@/features/seller-dashboard/product/edit/form-edit-product"
+
+export const dynamic = 'force-dynamic';
 
 export default async function NewProductEditPage({ params }) {
     const id = (await params).id
