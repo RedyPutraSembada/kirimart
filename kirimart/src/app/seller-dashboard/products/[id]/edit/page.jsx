@@ -1,9 +1,11 @@
 import { getCategories, getProductById } from "@/actions/seller-dashboard/product/product.actions"
 import { FormEditProduct } from "@/features/seller-dashboard/product/edit/form-edit-product"
-
-export const dynamic = 'force-dynamic';
+import { headers } from "next/headers"
 
 export default async function NewProductEditPage({ params }) {
+    // Memaksa halaman dirender secara dinamis untuk menghindari bug SWC di Alpine Linux
+    headers();
+
     const id = (await params).id
 
     const dataProduct = await getProductById(id)
