@@ -1,12 +1,20 @@
 #!/bin/bash
 # Script untuk start semua service berurutan
 
+# 1. Muat variabel environment secara otomatis
+echo "Memuat environment variables..."
+set -a
+# Jika kamu sebelumnya sudah menyalin .env.production ke .env, gunakan .env
+source .env 
+set +a
+
 echo "Memulai PostgreSQL..."
 cd 1-postgres && docker compose up -d && cd ..
 
 echo "Menunggu PostgreSQL siap..."
 RETRIES=30
-until docker exec kb-postgres pg_isready -U kawanbelanja > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
+# 2. Ubah -U kawanbelanja menjadi -U "$PG_USER" agar dinamis sesuai file .env
+until docker exec kb-postgres pg_isready -U "$PG_USER" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
     RETRIES=$((RETRIES-1))
     sleep 1
 done
@@ -37,8 +45,8 @@ echo "Memulai Nginx Proxy Manager..."
 cd 3-nginx && docker compose up -d && cd ..
 
 # Copy .env.production untuk Next.js build agar NEXT_PUBLIC_* ter-embed (workaround context)
-echo "Menyalin .env.production untuk build Next.js..."
-cp .env.production ../kirimart/.env.production
+echo "Menyalin file env untuk build Next.js..."
+cp .env ../kirimart/.env.production
 
 echo "Memulai Next.js (bisa memakan waktu untuk build)..."
 cd 4-nextjs && docker compose up -d --build && cd ..
