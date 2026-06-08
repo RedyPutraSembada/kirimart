@@ -46,7 +46,7 @@ cd 3-nginx && docker compose up -d && cd ..
 
 # Copy .env.production untuk Next.js build agar NEXT_PUBLIC_* ter-embed (workaround context)
 echo "Menyalin file env untuk build Next.js..."
-cp .env ../kirimart/.env.production
+cp .env ../.env.production
 
 echo "Memulai Next.js (bisa memakan waktu untuk build)..."
 cd 4-nextjs && docker compose up -d --build && cd ..
