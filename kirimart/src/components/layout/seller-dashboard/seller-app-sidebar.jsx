@@ -14,7 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { menusSeller } from '@/config/constants/menu'
 import { env } from '@/config/env'
 import { useSession } from '@/lib/auth-client'
-import { AppleIcon, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import * as React from 'react'
 import { NavUser } from '../dashboard/nav-user'
@@ -28,10 +29,15 @@ export function SellerAppSidebar({ ...props }) {
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton asChild className='data-[slot=sidebar-menu-button]:p-1.5!'>
+						<SidebarMenuButton size='lg' asChild>
 							<Link href='/'>
-								<AppleIcon className='size-5!' />
-								<span className='text-base font-semibold'>{env.NEXT_PUBLIC_APP_NAME} Seller</span>
+								<div className='flex aspect-square size-8 items-center justify-center rounded-lg'>
+									<Image src='/images/kawanbelanja.png' alt='Logo' width={32} height={32} className='rounded-md object-contain' />
+								</div>
+								<div className='flex flex-col gap-0.5 leading-none'>
+									<span className='font-semibold text-base'>{env.NEXT_PUBLIC_APP_NAME}</span>
+									<span className='text-xs text-muted-foreground'>Seller Panel</span>
+								</div>
 							</Link>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
