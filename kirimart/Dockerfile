@@ -30,9 +30,12 @@ COPY package.json bun.lock* ./
 RUN bun install
 
 # ===== Stage 2: Build Application =====
-FROM oven/bun:1-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
+
+# Install bun untuk menjalankan script build
+RUN npm install -g bun
 
 # Copy dependencies dari stage sebelumnya
 COPY --from=deps /app/node_modules ./node_modules
@@ -40,15 +43,13 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy semua source code
 COPY . .
 
-# Copy .env.production agar NEXT_PUBLIC_* vars ter-embed saat build
-# File ini HARUS sudah ada di build context sebelum docker build
+# Copy .env.production
 COPY .env.production .env.production
 
-# Set environment untuk build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build Next.js (standalone output)
+# Build Next.js
 RUN bun run build
 
 # ===== Stage 3: Production Runner =====

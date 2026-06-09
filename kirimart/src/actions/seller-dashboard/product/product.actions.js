@@ -111,17 +111,17 @@ export async function createProduct(data) {
 			}
 
 			// 5. Log Activity
-			// try {
-			// 	const { logActivity } = await import("@/lib/activity-logger")
-			// 	await logActivity({
-			// 		userId: session.user.id,
-			// 		storeId: store.id,
-			// 		action: "CREATE_PRODUCT",
-			// 		entityType: "product",
-			// 		entityId: newProduct.id,
-			// 		details: { name: validData.name }
-			// 	}, tx)
-			// } catch (e) { console.error(e) }
+			try {
+				const { logActivity } = await import("@/lib/activity-logger")
+				await logActivity({
+					userId: session.user.id,
+					storeId: store.id,
+					action: "CREATE_PRODUCT",
+					entityType: "product",
+					entityId: newProduct.id,
+					details: { name: validData.name }
+				}, tx)
+			} catch (e) { console.error(e) }
 
 			return { success: true }
 		})
@@ -203,17 +203,17 @@ export async function updateProduct(productId, data) {
 			}
 
 			// 5. Log Activity
-			// try {
-			// 	const { logActivity } = await import("@/lib/activity-logger")
-			// 	await logActivity({
-			// 		userId: session.user.id,
-			// 		storeId: store.id,
-			// 		action: "UPDATE_PRODUCT",
-			// 		entityType: "product",
-			// 		entityId: productId,
-			// 		details: { name: validData.name }
-			// 	}, tx)
-			// } catch (e) { console.error(e) }
+			try {
+				const { logActivity } = await import("@/lib/activity-logger")
+				await logActivity({
+					userId: session.user.id,
+					storeId: store.id,
+					action: "UPDATE_PRODUCT",
+					entityType: "product",
+					entityId: productId,
+					details: { name: validData.name }
+				}, tx)
+			} catch (e) { console.error(e) }
 
 			return { success: true }
 		})
@@ -297,17 +297,17 @@ export async function deleteProduct(productId) {
 		await db.delete(products).where(eq(products.id, productId))
 
 		// === LOG ACTIVITY ===
-		// try {
-		// 	const { logActivity } = await import("@/lib/activity-logger")
-		// 	await logActivity({
-		// 		userId: session.user.id,
-		// 		storeId: store.id,
-		// 		action: "DELETE_PRODUCT",
-		// 		entityType: "product",
-		// 		entityId: productId,
-		// 		details: {}
-		// 	})
-		// } catch (e) { console.error(e) }
+		try {
+			const { logActivity } = await import("@/lib/activity-logger")
+			await logActivity({
+				userId: session.user.id,
+				storeId: store.id,
+				action: "DELETE_PRODUCT",
+				entityType: "product",
+				entityId: productId,
+				details: {}
+			})
+		} catch (e) { console.error(e) }
 
 		return { success: true }
 	} catch (error) {

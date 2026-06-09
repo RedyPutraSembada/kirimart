@@ -16,7 +16,7 @@ services:
       resources:
         limits:
           memory: 256M
-    command: redis-server --appendonly yes --maxmemory 200mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 200mb --maxmemory-policy noeviction
 
 volumes:
   kb-redis-data:

@@ -9,6 +9,8 @@ services:
     restart: unless-stopped
     env_file:
       - ../.env.production
+    environment:
+      - PORT=4004
     volumes:
       - kb-upload-data:/app/public
     networks:
