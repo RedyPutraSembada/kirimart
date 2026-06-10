@@ -12,6 +12,14 @@ const nextConfig = {
   // Menghasilkan .next/standalone dengan server.js + minimal node_modules
   output: 'standalone',
   serverExternalPackages: ['kysely', '@better-auth/kysely-adapter'],
+  experimental: {
+    serverComponentsExternalPackages: [
+      'react-email',
+      '@react-email/components',
+      '@react-email/render',
+      'css-tree'
+    ]
+  },
   allowedDevOrigins: [
     'unintermingled-noncoincident-chandler.ngrok-free.app',
   ],
