@@ -67,6 +67,9 @@ COPY --from=builder /app/public ./public
 # standalone/ berisi server.js + node_modules minimal yang dibutuhkan
 COPY --from=builder --chown=bun:bun /app/.next/standalone ./
 
+# >>> TAMBAHKAN BARIS INI UNTUK MENGATASI BUG PATCH.JSON <<<
+COPY --from=builder --chown=node:node /app/node_modules/css-tree ./node_modules/css-tree
+
 # Copy static files (.next/static = JS/CSS bundles)
 COPY --from=builder --chown=bun:bun /app/.next/static ./.next/static
 
