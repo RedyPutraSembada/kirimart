@@ -15,7 +15,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 256M # Dinaikkan ke 256M atau 512M agar lebih aman dari OOMKilled
 
 volumes:
   kb-npm-data:
