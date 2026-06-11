@@ -1,7 +1,7 @@
 import withSerwistInit from "@serwist/next";
 
 const withSerwist = withSerwistInit({
-  swSrc: "src/app/sw.js", // We'll create this file next
+  swSrc: "src/app/sw.js", 
   swDest: "public/sw.js",
   disable: process.env.NODE_ENV === "development",
 });
@@ -9,17 +9,18 @@ const withSerwist = withSerwistInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Standalone output untuk Docker production build
-  // Menghasilkan .next/standalone dengan server.js + minimal node_modules
   output: 'standalone',
-  serverExternalPackages: ['kysely', '@better-auth/kysely-adapter'],
-  experimental: {
-    serverComponentsExternalPackages: [
-      'react-email',
-      '@react-email/components',
-      '@react-email/render',
-      'css-tree'
-    ]
-  },
+  
+  // SEMUA PAKET EKSTERNAL DISATUKAN DI SINI (ROOT LEVEL)
+  serverExternalPackages: [
+    'kysely', 
+    '@better-auth/kysely-adapter',
+    'react-email',
+    '@react-email/components',
+    '@react-email/render',
+    'css-tree'
+  ],
+
   allowedDevOrigins: [
     'unintermingled-noncoincident-chandler.ngrok-free.app',
   ],

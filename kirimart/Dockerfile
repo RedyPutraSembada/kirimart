@@ -1,86 +1,45 @@
-# ============================================
-# Dockerfile — KawanBelanja Next.js Production
-# ============================================
-#
-# Multi-stage build:
-#   1. deps    → Install dependencies
-#   2. builder → Build Next.js (standalone mode)
-#   3. runner  → Run production server
-#
-# Build:
-#   docker build -t kawanbelanja-app .
-#
-# Run:
-#   docker run -p 3000:3000 --env-file .env.production kawanbelanja-app
-#
-# ============================================
-
-# ===== Stage 1: Install Dependencies =====
-FROM oven/bun:1-alpine AS deps
-
-# libc6-compat diperlukan untuk beberapa native modules
+# --- Tahap 1: Base ---
+FROM oven/bun:1-alpine AS base
+WORKDIR /app
+# libc6-compat tetap diperlukan alpine untuk kestabilan modul backend
 RUN apk add --no-cache libc6-compat
 
-WORKDIR /app
-
-# Copy package files (support package.json and bun lockfile)
+# --- Tahap 2: Dependencies ---
+FROM base AS deps
 COPY package.json bun.lock* ./
-
-# Install ALL dependencies (termasuk devDependencies untuk build)
 RUN bun install
 
-# ===== Stage 2: Build Application =====
-FROM node:20-alpine AS builder
-
+# --- Tahap 3: Builder ---
+FROM base AS builder
 WORKDIR /app
-
-# Install bun untuk menjalankan script build
-RUN npm install -g bun
-
-# Copy dependencies dari stage sebelumnya
 COPY --from=deps /app/node_modules ./node_modules
-
-# Copy semua source code
 COPY . .
 
-# Copy .env.production
 COPY .env.production .env.production
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-
-# Build Next.js
 RUN bun run build
 
-# ===== Stage 3: Production Runner =====
+# --- Tahap 4: Runner ---
 FROM oven/bun:1-alpine AS runner
-
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copy public assets (favicon, images, manifest, sounds, dll)
+# Ambil hasil build standalone (Persis seperti aplikasi Anda yang lain)
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Copy standalone build output
-# standalone/ berisi server.js + node_modules minimal yang dibutuhkan
-COPY --from=builder --chown=bun:bun /app/.next/standalone ./
+# [KHUSUS KIRIMART] Menyalin css-tree utuh ke runner untuk mengatasi bug patch.json pada Bun Standalone
+COPY --from=builder /app/node_modules/css-tree ./node_modules/css-tree
 
-# >>> TAMBAHKAN BARIS INI UNTUK MENGATASI BUG PATCH.JSON <<<
-COPY --from=builder --chown=node:node /app/node_modules/css-tree ./node_modules/css-tree
-
-# Copy static files (.next/static = JS/CSS bundles)
-COPY --from=builder --chown=bun:bun /app/.next/static ./.next/static
-
-# Gunakan user non-root bawaan image bun
-USER bun
-
-# Port yang dipakai Next.js
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Jalankan standalone server dengan bun
+# Jalankan standalone server dengan Bun sebagai ROOT (Tanpa USER bun)
 CMD ["bun", "server.js"]
